@@ -68,7 +68,7 @@ Codex Tweaks.app
 - `Codex-Tweaks-vX.Y.Z-arm64.dmg`：仅支持 Apple 芯片
 - `Codex-Tweaks-vX.Y.Z-x86_64.dmg`：仅支持 Intel Mac
 
-发行版采用 ad-hoc 签名且未经过 Apple 公证。若 macOS 阻止首次打开，请在“系统设置 → 隐私与安全性”中确认打开。下载后可以使用同一 Release 中的 `SHA256SUMS` 校验文件完整性。
+打开 DMG 后，将 Codex Tweaks 图标拖移到“应用程序”文件夹即可安装。发行版采用 ad-hoc 签名且未经过 Apple 公证。若 macOS 阻止首次打开，请在“系统设置 → 隐私与安全性”中确认打开。下载后可以使用同一 Release 中的 `SHA256SUMS` 校验文件完整性。
 
 应用默认在启动时检查更新，也可以从“关于与更新”或菜单栏手动检查。正式版通道只接收稳定版本；测试版通道接收稳定版、Beta 与 RC，但不会接收 Alpha 或其他预发布类型。发现新版本后可以立即下载、稍后提醒，或跳过当前版本。
 

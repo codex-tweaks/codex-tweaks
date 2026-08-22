@@ -63,20 +63,18 @@ build_app() {
 create_dmg() (
   local app_name="$1"
   local dmg_name="$2"
-  local staging_dir
+  local settings_file
 
-  staging_dir="$(mktemp -d "${TMPDIR:-/tmp}/codex-tweaks-dmg.XXXXXX")"
-  trap 'rm -rf "$staging_dir"' EXIT
-  ditto "dist/${app_name}.app" "$staging_dir/${PRODUCT_NAME}.app"
-  ln -s /Applications "$staging_dir/Applications"
+  settings_file="$(mktemp "${TMPDIR:-/tmp}/codex-tweaks-dmgbuild.XXXXXX.json")"
+  trap 'rm -f "$settings_file"' EXIT
+  sed \
+    "s|Codex Tweaks-arm64.app|${app_name}.app|" \
+    scripts/dmgbuild.json \
+    > "$settings_file"
 
-  COPYFILE_DISABLE=1 hdiutil create \
-    -quiet \
-    -ov \
-    -fs HFS+ \
-    -format UDZO \
-    -volname "$PRODUCT_NAME" \
-    -srcfolder "$staging_dir" \
+  dmgbuild \
+    -s "$settings_file" \
+    "$PRODUCT_NAME" \
     "dist/${dmg_name}"
 
   echo "已创建 dist/${dmg_name}"

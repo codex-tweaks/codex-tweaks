@@ -1,0 +1,43 @@
+{
+  "title": "Codex Tweaks",
+  "volume_name": "Codex Tweaks",
+  "format": "UDZO",
+  "background": "scripts/dmg-background.png",
+  "files": [],
+  "symlinks": {
+    "Applications": "/Applications"
+  },
+  "window": {
+    "position": {
+      "x": 200,
+      "y": 150
+    },
+    "size": {
+      "width": 660,
+      "height": 440
+    }
+  },
+  "icon-size": 112,
+  "contents": [
+    {
+      "x": 180,
+      "y": 228,
+      "type": "file",
+      "path": "dist/Codex Tweaks-arm64.app",
+      "name": "Codex Tweaks.app"
+    },
+    {
+      "x": 480,
+      "y": 228,
+      "type": "link",
+      "path": "/Applications"
+    },
+    {
+      "x": 330,
+      "y": 1000,
+      "type": "position",
+      "path": ".background.tiff",
+      "hidden": true
+    }
+  ]
+}

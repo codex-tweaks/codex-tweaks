@@ -1,5 +1,6 @@
 [tools]
 actionlint = "1.7.12"
+"pipx:dmgbuild" = "1.6.7"
 shellcheck = "0.11.0"
 xcodegen = "2.46.0"
 

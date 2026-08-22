@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		09AE8B0020303164FEA244C9 /* InjectionScriptBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4132D354FF25B2E4BD946FE /* InjectionScriptBuilderTests.swift */; };
+		0C1AA02F95574A89518B4FFF /* UpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C4B014C4282346EC90203A /* UpdateView.swift */; };
 		0E09371136BF758B5CE8EBF6 /* CodexLauncherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F009F1629BDF7EAAECA9CE54 /* CodexLauncherTests.swift */; };
 		17B179AE9EB7BA3D313C8745 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A6E8317D1401E4D66BE07F /* AppLogger.swift */; };
 		20E842FFBE6F22751C5C61E9 /* CodexTweaksApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C054F18E9178A1188A15F944 /* CodexTweaksApp.swift */; };
@@ -18,12 +19,14 @@
 		6087A559D3E3BA2A74451813 /* CDPTargetSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97CA9852144C10DAED3BF792 /* CDPTargetSelectorTests.swift */; };
 		6B8D9368C4F6D59C4D871A04 /* CDPService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42394A29ABE26BEAD319D3C5 /* CDPService.swift */; };
 		6EE55D663F4BA7C8C133418A /* Tweaks in Resources */ = {isa = PBXBuildFile; fileRef = ED5BA7E20B31B6B736EF5A33 /* Tweaks */; };
+		7824CE3D453FE429FB9B83A2 /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 710989624754350B9549F3B1 /* UpdateChecker.swift */; };
 		94C33449DBA02945C7D244B0 /* InjectionScriptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6099D5DCAC584B867D1AE4DB /* InjectionScriptBuilder.swift */; };
 		9BD95832142FCA6E642F6E68 /* MenuBarContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */; };
 		AAAF623CB357736B59648B5B /* TweakResourceStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2955590779C022FAB0B06E9 /* TweakResourceStoreTests.swift */; };
 		BEF57B2143B4B2D80A1C5771 /* TweakResourceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40197E46D7C66D568ADC4F16 /* TweakResourceStore.swift */; };
 		D7A55C21FE48E9384D3029A5 /* CDPModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6EDF3247E154B189319CA49 /* CDPModels.swift */; };
 		F7A1ECDD4A02A3A692A8694D /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12AEDA74C8286F095B2A4E60 /* AppModel.swift */; };
+		FE9F87315CFFB24632464D85 /* UpdateCheckerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7410EB53AEF5033774F2E0F3 /* UpdateCheckerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,11 +48,14 @@
 		42394A29ABE26BEAD319D3C5 /* CDPService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CDPService.swift; sourceTree = "<group>"; };
 		6099D5DCAC584B867D1AE4DB /* InjectionScriptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InjectionScriptBuilder.swift; sourceTree = "<group>"; };
 		66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContent.swift; sourceTree = "<group>"; };
+		710989624754350B9549F3B1 /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
+		7410EB53AEF5033774F2E0F3 /* UpdateCheckerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckerTests.swift; sourceTree = "<group>"; };
 		7D31064D54183A1230D1918D /* Codex Tweaks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Codex Tweaks.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		84A6E8317D1401E4D66BE07F /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		97CA9852144C10DAED3BF792 /* CDPTargetSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CDPTargetSelectorTests.swift; sourceTree = "<group>"; };
 		A2955590779C022FAB0B06E9 /* TweakResourceStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakResourceStoreTests.swift; sourceTree = "<group>"; };
 		C054F18E9178A1188A15F944 /* CodexTweaksApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTweaksApp.swift; sourceTree = "<group>"; };
+		C6C4B014C4282346EC90203A /* UpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateView.swift; sourceTree = "<group>"; };
 		E4132D354FF25B2E4BD946FE /* InjectionScriptBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InjectionScriptBuilderTests.swift; sourceTree = "<group>"; };
 		E612786CC94D3486AC386077 /* AppLoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLoggerTests.swift; sourceTree = "<group>"; };
 		E6EDF3247E154B189319CA49 /* CDPModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CDPModels.swift; sourceTree = "<group>"; };
@@ -67,6 +73,7 @@
 				F009F1629BDF7EAAECA9CE54 /* CodexLauncherTests.swift */,
 				E4132D354FF25B2E4BD946FE /* InjectionScriptBuilderTests.swift */,
 				A2955590779C022FAB0B06E9 /* TweakResourceStoreTests.swift */,
+				7410EB53AEF5033774F2E0F3 /* UpdateCheckerTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -84,6 +91,8 @@
 				F53421B72A4751C046846C60 /* MainWindowView.swift */,
 				66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */,
 				40197E46D7C66D568ADC4F16 /* TweakResourceStore.swift */,
+				710989624754350B9549F3B1 /* UpdateChecker.swift */,
+				C6C4B014C4282346EC90203A /* UpdateView.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -222,6 +231,7 @@
 				0E09371136BF758B5CE8EBF6 /* CodexLauncherTests.swift in Sources */,
 				09AE8B0020303164FEA244C9 /* InjectionScriptBuilderTests.swift in Sources */,
 				AAAF623CB357736B59648B5B /* TweakResourceStoreTests.swift in Sources */,
+				FE9F87315CFFB24632464D85 /* UpdateCheckerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -239,6 +249,8 @@
 				444F810FBED64BEF61A48D3D /* MainWindowView.swift in Sources */,
 				9BD95832142FCA6E642F6E68 /* MenuBarContent.swift in Sources */,
 				BEF57B2143B4B2D80A1C5771 /* TweakResourceStore.swift in Sources */,
+				7824CE3D453FE429FB9B83A2 /* UpdateChecker.swift in Sources */,
+				0C1AA02F95574A89518B4FFF /* UpdateView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -322,6 +334,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODEX_TWEAKS_RELEASE_VERSION = "$(MARKETING_VERSION)";
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
@@ -402,6 +415,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODEX_TWEAKS_RELEASE_VERSION = "$(MARKETING_VERSION)";
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;

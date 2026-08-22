@@ -4,6 +4,7 @@ import SwiftUI
 struct MenuBarContent: View {
     @Environment(\.openWindow) private var openWindow
     @ObservedObject var model: AppModel
+    @ObservedObject var updateChecker: UpdateChecker
 
     var body: some View {
         Label(model.status.title, systemImage: model.status.symbol)
@@ -55,6 +56,27 @@ struct MenuBarContent: View {
         Button("查看日志") {
             model.openLog()
         }
+
+        Divider()
+
+        if updateChecker.updateAvailable {
+            Button("下载 Codex Tweaks \(updateChecker.latestVersionString)") {
+                if let url = updateChecker.downloadURL {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+        }
+
+        Button(updateChecker.checking ? "正在检查更新…" : "检查更新…") {
+            Task {
+                await updateChecker.check(prompt: true)
+                if updateChecker.pendingUpdate != nil {
+                    NSApplication.shared.activate(ignoringOtherApps: true)
+                    openWindow(id: "main")
+                }
+            }
+        }
+        .disabled(updateChecker.checking)
 
         Divider()
 

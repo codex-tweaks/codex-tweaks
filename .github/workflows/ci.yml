@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4
+
+      - name: Verify
+        run: mise run verify
+
+      - name: Archive app
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            "dist/Codex Tweaks.app" \
+            "dist/Codex-Tweaks-${GITHUB_SHA}-arm64.zip"
+
+      - name: Upload app
+        uses: actions/upload-artifact@v7
+        with:
+          name: Codex-Tweaks-${{ github.sha }}-arm64
+          path: dist/Codex-Tweaks-${{ github.sha }}-arm64.zip
+          if-no-files-found: error
+          retention-days: 14

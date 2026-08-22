@@ -90,6 +90,7 @@ final class AppModel: ObservableObject {
 
     @Published private(set) var status: Status = .starting
     @Published private(set) var logText = ""
+    @Published private(set) var isAuthoringPromptCopied = false
     @Published var isEnabled: Bool {
         didSet {
             guard oldValue != isEnabled else { return }
@@ -125,6 +126,7 @@ final class AppModel: ObservableObject {
     private let resourceStore = TweakResourceStore()
     private let cdpService = CDPService()
     private var monitorTask: Task<Void, Never>?
+    private var promptCopyResetTask: Task<Void, Never>?
     private var isRefreshing = false
     private var disabledCleanupCompleted = false
     private var hasAttemptedInitialLaunch = false
@@ -167,6 +169,8 @@ final class AppModel: ObservableObject {
     func stop() {
         monitorTask?.cancel()
         monitorTask = nil
+        promptCopyResetTask?.cancel()
+        promptCopyResetTask = nil
         AppLogger.shared.info("Codex Tweaks 已退出")
     }
 
@@ -244,6 +248,8 @@ final class AppModel: ObservableObject {
     func quit() {
         monitorTask?.cancel()
         monitorTask = nil
+        promptCopyResetTask?.cancel()
+        promptCopyResetTask = nil
         Task { @MainActor [weak self] in
             guard let self else {
                 NSApplication.shared.terminate(nil)
@@ -264,6 +270,27 @@ final class AppModel: ObservableObject {
 
     func openTweaksDirectory() {
         open(resourceStore.tweaksDirectoryURL)
+    }
+
+    func copyAuthoringPrompt() {
+        guard TweakAuthoringPromptBuilder.copyPrompt(
+            tweaksDirectoryURL: resourceStore.tweaksDirectoryURL
+        ) else {
+            AppLogger.shared.error("复制 AI 编写提示词失败")
+            return
+        }
+
+        promptCopyResetTask?.cancel()
+        isAuthoringPromptCopied = true
+        AppLogger.shared.info("已复制 AI 编写提示词")
+        promptCopyResetTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: 2_000_000_000)
+            } catch {
+                return
+            }
+            self?.isAuthoringPromptCopied = false
+        }
     }
 
     func openLog() {

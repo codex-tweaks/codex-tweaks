@@ -1,0 +1,104 @@
+/* 输入框模型菜单：一级分类，悬浮后从侧边展开原生模型项。 */
+[data-codex-tweaks-model-menu] {
+  position: relative !important;
+  /* 首帧回退值；增强脚本随后用 Pretext 写入实际文本宽度。 */
+  inline-size: min(220px, calc(100vw - 16px));
+  min-inline-size: min(180px, calc(100vw - 16px));
+  max-inline-size: calc(100vw - 16px);
+  overflow: visible !important;
+  overscroll-behavior: contain;
+}
+
+[data-codex-tweaks-model-menu] > [dir] {
+  max-block-size: calc(100vh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+[data-codex-tweaks-model-menu]
+  [data-codex-tweaks-model-kind="model"] {
+  display: none !important;
+}
+
+[data-codex-tweaks-model-menu]
+  [data-codex-tweaks-model-submenu]
+  [data-codex-tweaks-model-kind="model"][data-codex-tweaks-model-active] {
+  display: flex !important;
+}
+
+[data-codex-tweaks-model-submenu]
+  [data-codex-tweaks-model-active]
+  [data-codex-tweaks-model-label] {
+  max-inline-size: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
+
+[data-codex-tweaks-model-submenu][data-codex-tweaks-model-constrained]
+  [data-codex-tweaks-model-active]
+  [data-codex-tweaks-model-label] {
+  min-inline-size: 0 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+[data-codex-tweaks-model-submenu][hidden] {
+  display: none !important;
+}
+
+[data-codex-tweaks-model-submenu] {
+  position: absolute !important;
+  z-index: 2;
+  box-sizing: border-box !important;
+  min-inline-size: min(180px, calc(100vw - 16px));
+  max-inline-size: calc(100vw - 16px);
+  max-block-size: calc(100vh - 16px);
+  margin: 0 !important;
+  padding: 4px !important;
+  background: var(--color-surface-elevated-secondary) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+[data-codex-tweaks-model-category] {
+  min-inline-size: 0;
+}
+
+[data-codex-tweaks-model-category][aria-expanded="true"] {
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+
+[data-codex-tweaks-model-category]:focus-visible {
+  outline: 2px solid
+    color-mix(in srgb, var(--codex-tweaks-accent) 72%, white) !important;
+  outline-offset: -2px !important;
+}
+
+[data-codex-tweaks-model-folder],
+[data-codex-tweaks-model-chevron] {
+  inline-size: 16px;
+  block-size: 16px;
+  flex: 0 0 auto;
+  color: currentColor;
+  opacity: 0.68;
+}
+
+[data-codex-tweaks-model-count] {
+  min-inline-size: 1.5em;
+  flex: 0 0 auto;
+  color: currentColor;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: end;
+  opacity: 0.58;
+}
+
+[data-codex-tweaks-model-category-label] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

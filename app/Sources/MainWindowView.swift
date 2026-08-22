@@ -103,6 +103,7 @@ private struct OverviewView: View {
                 header
                 statusSurface
                 controls
+                aiAuthoring
                 workflow
             }
             .frame(maxWidth: 760, alignment: .leading)
@@ -183,11 +184,11 @@ private struct OverviewView: View {
                 }
                 .disabled(!model.isEnabled || !model.status.isCDPAvailable)
 
-                Button("编辑 CSS", systemImage: "paintbrush") {
+                Button("编辑入口 CSS", systemImage: "paintbrush") {
                     model.openCustomCSS()
                 }
 
-                Button("编辑 JavaScript", systemImage: "curlybraces") {
+                Button("编辑入口 JS", systemImage: "curlybraces") {
                     model.openCustomJavaScript()
                 }
 
@@ -198,6 +199,46 @@ private struct OverviewView: View {
                 }
             }
             .buttonStyle(.bordered)
+        }
+    }
+
+    private var aiAuthoring: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("交给 AI 编写")
+                .font(.title2.weight(.semibold))
+
+            HStack(alignment: .center, spacing: 20) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("复制 Codex Tweaks 开发提示词")
+                        .font(.body.weight(.medium))
+                    Text("包含当前资源路径、模块规则、第三方库约束、清理要求和验证标准。粘贴给 Codex 或其他智能体后，再补充你的具体需求。")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 16)
+
+                Button {
+                    model.copyAuthoringPrompt()
+                } label: {
+                    Label(
+                        model.isAuthoringPromptCopied ? "已复制" : "复制提示词",
+                        systemImage: model.isAuthoringPromptCopied
+                            ? "checkmark"
+                            : "doc.on.doc"
+                    )
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityHint("复制后可粘贴给 Codex 或其他智能体")
+            }
+            .padding(20)
+            .background(Color(nsColor: .controlBackgroundColor))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color(nsColor: .separatorColor).opacity(0.7), lineWidth: 1)
+            }
         }
     }
 
@@ -222,6 +263,11 @@ private struct OverviewView: View {
                     Text("每 2 秒检查文件与窗口")
                 }
                 GridRow {
+                    Text("模块顺序").foregroundStyle(.secondary)
+                    Text("vendor → ui → scripts / styles")
+                        .font(.system(.callout, design: .monospaced))
+                }
+                GridRow {
                     Text("资源目录").foregroundStyle(.secondary)
                     Text(model.tweaksDirectoryPath)
                         .font(.system(.callout, design: .monospaced))
@@ -230,7 +276,7 @@ private struct OverviewView: View {
                 }
             }
 
-            Button("在 Finder 中显示 Tweaks 文件夹") {
+            Button("在 Finder 中管理模块与第三方库") {
                 model.openTweaksDirectory()
             }
         }

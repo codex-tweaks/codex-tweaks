@@ -99,7 +99,7 @@ panel.className = "panel";
 panel.hidden = true;
 panel.setAttribute("role", "status");
 panel.setAttribute("aria-live", "polite");
-panel.textContent = "CSS 与 JS 加载完成";
+panel.textContent = "模块化 Tweaks 已加载";
 
 launcher.addEventListener("click", () => {
   const isOpen = panel.hidden;

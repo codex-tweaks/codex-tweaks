@@ -15,6 +15,11 @@ final class InjectionScriptBuilderTests: XCTestCase {
         XCTAssertTrue(script.contains("\\n"))
         XCTAssertTrue(script.contains("root.textContent = `ok`;"))
         XCTAssertTrue(script.contains("__CODEX_TWEAKS__"))
+        XCTAssertTrue(script.contains("registerLibrary(name, value)"))
+        XCTAssertTrue(script.contains("getLibrary(name)"))
+        XCTAssertTrue(script.contains("listLibraries()"))
+        XCTAssertTrue(script.contains("runModule(name, initializer)"))
+        XCTAssertTrue(script.contains("CodexTweaksModuleError"))
     }
 
     func testForceGenerationChangesEffectiveVersion() {

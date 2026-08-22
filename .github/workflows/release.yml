@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 已存在的 v* Git 标签，例如 v0.1.0 或 v0.1.0-beta.1
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+      BUILD_NUMBER: ${{ github.run_number }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Validate release tag
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]
+          if ! git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            echo "标签 $RELEASE_TAG 不存在" >&2
+            exit 1
+          fi
+          TAG_COMMIT="$(git rev-list -n 1 "refs/tags/$RELEASE_TAG")"
+          HEAD_COMMIT="$(git rev-parse HEAD)"
+          if [[ "$TAG_COMMIT" != "$HEAD_COMMIT" ]]; then
+            echo "标签 $RELEASE_TAG 未指向当前检出的提交" >&2
+            exit 1
+          fi
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4
+
+      - name: Test
+        run: mise run test
+
+      - name: Build and verify release artifacts
+        run: mise run release
+
+      - name: Check existing release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ERROR_FILE="$RUNNER_TEMP/release-check-error"
+
+          if gh api \
+            "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" \
+            >/dev/null 2>"$ERROR_FILE"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          elif grep -q "HTTP 404" "$ERROR_FILE"; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            cat "$ERROR_FILE" >&2
+            exit 1
+          fi
+
+      - name: Create release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_TAG }}
+          files: |
+            dist/Codex-Tweaks-${{ env.RELEASE_TAG }}.dmg
+            dist/Codex-Tweaks-${{ env.RELEASE_TAG }}-arm64.dmg
+            dist/Codex-Tweaks-${{ env.RELEASE_TAG }}-x86_64.dmg
+            dist/SHA256SUMS
+          fail_on_unmatched_files: true
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
+          generate_release_notes: ${{ steps.release.outputs.exists != 'true' }}

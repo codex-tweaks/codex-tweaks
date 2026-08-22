@@ -5,6 +5,7 @@ struct MainWindowView: View {
     enum Section: String, CaseIterable, Identifiable {
         case overview
         case logs
+        case updates
 
         var id: Self { self }
 
@@ -14,6 +15,8 @@ struct MainWindowView: View {
                 return "概览"
             case .logs:
                 return "运行日志"
+            case .updates:
+                return "关于与更新"
             }
         }
 
@@ -23,11 +26,14 @@ struct MainWindowView: View {
                 return "rectangle.3.group"
             case .logs:
                 return "doc.text.magnifyingglass"
+            case .updates:
+                return "arrow.triangle.2.circlepath"
             }
         }
     }
 
     @ObservedObject var model: AppModel
+    @ObservedObject var updateChecker: UpdateChecker
     @State private var selection: Section? = .overview
 
     var body: some View {
@@ -49,9 +55,41 @@ struct MainWindowView: View {
                 )
             case .logs:
                 LogView(model: model)
+            case .updates:
+                UpdateView(updateChecker: updateChecker)
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .alert(
+            "发现新版本",
+            isPresented: Binding(
+                get: { updateChecker.pendingUpdate != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        updateChecker.dismissUpdate()
+                    }
+                }
+            ),
+            presenting: updateChecker.pendingUpdate
+        ) { release in
+            Button("下载更新") {
+                if let url = updateChecker.downloadURL(for: release) {
+                    NSWorkspace.shared.open(url)
+                }
+                updateChecker.dismissUpdate()
+            }
+            Button("稍后", role: .cancel) {
+                updateChecker.dismissUpdate()
+            }
+            Button("跳过此版本", role: .destructive) {
+                updateChecker.skipUpdate(release)
+            }
+        } message: { release in
+            Text(
+                "当前版本为 \(updateChecker.currentVersion)，"
+                    + "新版本 \(SemanticVersion.normalizedString(release.tagName)) 已可下载。"
+            )
+        }
     }
 }
 

@@ -1,4 +1,6 @@
 [tools]
+actionlint = "1.7.12"
+shellcheck = "0.11.0"
 xcodegen = "2.46.0"
 
 [tasks.generate]
@@ -21,11 +23,36 @@ depends = ["generate"]
 run = "xcodebuild -project CodexTweaks.xcodeproj -scheme CodexTweaks -configuration Debug -destination \"platform=macOS,arch=$(uname -m)\" -derivedDataPath build/DerivedData test"
 
 [tasks.verify]
-description = "执行测试、Release 构建和差异检查"
+description = "执行工作流检查、测试、Release 构建和差异检查"
 run = [
+  "mise run workflows:lint",
   "mise run test",
   "mise run build",
   "git diff --check",
+  "git diff --exit-code -- CodexTweaks.xcodeproj",
+]
+
+[tasks."workflows:lint"]
+description = "检查 GitHub Actions 工作流与 Release 脚本"
+run = [
+  "actionlint .github/workflows/*.yml",
+  "shellcheck scripts/*.sh",
+]
+
+[tasks."release:package"]
+description = "构建 universal、arm64、x86_64 三套 Release DMG"
+depends = ["generate"]
+run = "./scripts/package-release.sh"
+
+[tasks."release:verify"]
+description = "校验 Release App、DMG、架构、版本和最低系统版本"
+run = "./scripts/verify-release.sh"
+
+[tasks.release]
+description = "构建并校验完整 Release 产物"
+run = [
+  "mise run release:package",
+  "mise run release:verify",
 ]
 
 [tasks.launch]

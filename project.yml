@@ -1,0 +1,54 @@
+name: CodexTweaks
+options:
+  bundleIdPrefix: com.zgccrui
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "13.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    ENABLE_APP_SANDBOX: NO
+    ENABLE_HARDENED_RUNTIME: NO
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  CodexTweaks:
+    type: application
+    platform: macOS
+    productName: Codex Tweaks
+    sources:
+      - path: app/Sources
+      - path: app/Resources/Assets.xcassets
+      - path: app/Resources/Tweaks
+        type: folder
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zgccrui.CodexTweaks
+        PRODUCT_NAME: Codex Tweaks
+        PRODUCT_MODULE_NAME: CodexTweaks
+        INFOPLIST_FILE: app/Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        COMBINE_HIDPI_IMAGES: YES
+    scheme:
+      testTargets:
+        - CodexTweaksTests
+      gatherCoverageData: true
+
+  CodexTweaksTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: app/Tests
+    dependencies:
+      - target: CodexTweaks
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zgccrui.CodexTweaksTests
+        GENERATE_INFOPLIST_FILE: YES
+        MACOSX_DEPLOYMENT_TARGET: "14.0"

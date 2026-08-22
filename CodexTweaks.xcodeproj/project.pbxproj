@@ -1,0 +1,492 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		09AE8B0020303164FEA244C9 /* InjectionScriptBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4132D354FF25B2E4BD946FE /* InjectionScriptBuilderTests.swift */; };
+		0E09371136BF758B5CE8EBF6 /* CodexLauncherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F009F1629BDF7EAAECA9CE54 /* CodexLauncherTests.swift */; };
+		17B179AE9EB7BA3D313C8745 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A6E8317D1401E4D66BE07F /* AppLogger.swift */; };
+		20E842FFBE6F22751C5C61E9 /* CodexTweaksApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C054F18E9178A1188A15F944 /* CodexTweaksApp.swift */; };
+		2DAF6336FC078325C573311E /* AppLoggerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E612786CC94D3486AC386077 /* AppLoggerTests.swift */; };
+		2F02C1394FDE9FDB5A3BC708 /* CodexLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B1BB0714B37CAF50F3732D /* CodexLauncher.swift */; };
+		444F810FBED64BEF61A48D3D /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F53421B72A4751C046846C60 /* MainWindowView.swift */; };
+		5DDE42750711BDE523AA30EC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0B0DED2144F0CDD788DF8C77 /* Assets.xcassets */; };
+		6087A559D3E3BA2A74451813 /* CDPTargetSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97CA9852144C10DAED3BF792 /* CDPTargetSelectorTests.swift */; };
+		6B8D9368C4F6D59C4D871A04 /* CDPService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42394A29ABE26BEAD319D3C5 /* CDPService.swift */; };
+		6EE55D663F4BA7C8C133418A /* Tweaks in Resources */ = {isa = PBXBuildFile; fileRef = ED5BA7E20B31B6B736EF5A33 /* Tweaks */; };
+		94C33449DBA02945C7D244B0 /* InjectionScriptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6099D5DCAC584B867D1AE4DB /* InjectionScriptBuilder.swift */; };
+		9BD95832142FCA6E642F6E68 /* MenuBarContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */; };
+		AAAF623CB357736B59648B5B /* TweakResourceStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2955590779C022FAB0B06E9 /* TweakResourceStoreTests.swift */; };
+		BEF57B2143B4B2D80A1C5771 /* TweakResourceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40197E46D7C66D568ADC4F16 /* TweakResourceStore.swift */; };
+		D7A55C21FE48E9384D3029A5 /* CDPModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6EDF3247E154B189319CA49 /* CDPModels.swift */; };
+		F7A1ECDD4A02A3A692A8694D /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12AEDA74C8286F095B2A4E60 /* AppModel.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		CCF2009507300B1BDF514911 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 539903F72BB21F2140A0136F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9BFD67925F8886E0CFE2428A;
+			remoteInfo = CodexTweaks;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		06B1BB0714B37CAF50F3732D /* CodexLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLauncher.swift; sourceTree = "<group>"; };
+		0B0DED2144F0CDD788DF8C77 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		12AEDA74C8286F095B2A4E60 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		3F957412A0DB83396B755B2E /* CodexTweaksTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexTweaksTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		40197E46D7C66D568ADC4F16 /* TweakResourceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakResourceStore.swift; sourceTree = "<group>"; };
+		42394A29ABE26BEAD319D3C5 /* CDPService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CDPService.swift; sourceTree = "<group>"; };
+		6099D5DCAC584B867D1AE4DB /* InjectionScriptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InjectionScriptBuilder.swift; sourceTree = "<group>"; };
+		66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContent.swift; sourceTree = "<group>"; };
+		7D31064D54183A1230D1918D /* Codex Tweaks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Codex Tweaks.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		84A6E8317D1401E4D66BE07F /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+		97CA9852144C10DAED3BF792 /* CDPTargetSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CDPTargetSelectorTests.swift; sourceTree = "<group>"; };
+		A2955590779C022FAB0B06E9 /* TweakResourceStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakResourceStoreTests.swift; sourceTree = "<group>"; };
+		C054F18E9178A1188A15F944 /* CodexTweaksApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTweaksApp.swift; sourceTree = "<group>"; };
+		E4132D354FF25B2E4BD946FE /* InjectionScriptBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InjectionScriptBuilderTests.swift; sourceTree = "<group>"; };
+		E612786CC94D3486AC386077 /* AppLoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLoggerTests.swift; sourceTree = "<group>"; };
+		E6EDF3247E154B189319CA49 /* CDPModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CDPModels.swift; sourceTree = "<group>"; };
+		ED5BA7E20B31B6B736EF5A33 /* Tweaks */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Tweaks; path = app/Resources/Tweaks; sourceTree = SOURCE_ROOT; };
+		F009F1629BDF7EAAECA9CE54 /* CodexLauncherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLauncherTests.swift; sourceTree = "<group>"; };
+		F53421B72A4751C046846C60 /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		02ADE82B8312F3296E7A29D6 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				E612786CC94D3486AC386077 /* AppLoggerTests.swift */,
+				97CA9852144C10DAED3BF792 /* CDPTargetSelectorTests.swift */,
+				F009F1629BDF7EAAECA9CE54 /* CodexLauncherTests.swift */,
+				E4132D354FF25B2E4BD946FE /* InjectionScriptBuilderTests.swift */,
+				A2955590779C022FAB0B06E9 /* TweakResourceStoreTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		3C055A6968F80D849ABC79F5 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				84A6E8317D1401E4D66BE07F /* AppLogger.swift */,
+				12AEDA74C8286F095B2A4E60 /* AppModel.swift */,
+				E6EDF3247E154B189319CA49 /* CDPModels.swift */,
+				42394A29ABE26BEAD319D3C5 /* CDPService.swift */,
+				06B1BB0714B37CAF50F3732D /* CodexLauncher.swift */,
+				C054F18E9178A1188A15F944 /* CodexTweaksApp.swift */,
+				6099D5DCAC584B867D1AE4DB /* InjectionScriptBuilder.swift */,
+				F53421B72A4751C046846C60 /* MainWindowView.swift */,
+				66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */,
+				40197E46D7C66D568ADC4F16 /* TweakResourceStore.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		532C8F4528F64B3A519B1F81 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				0B0DED2144F0CDD788DF8C77 /* Assets.xcassets */,
+				ED5BA7E20B31B6B736EF5A33 /* Tweaks */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		97D480478F1DC70304266CB9 /* app */ = {
+			isa = PBXGroup;
+			children = (
+				532C8F4528F64B3A519B1F81 /* Resources */,
+				3C055A6968F80D849ABC79F5 /* Sources */,
+				02ADE82B8312F3296E7A29D6 /* Tests */,
+			);
+			path = app;
+			sourceTree = "<group>";
+		};
+		A68F526B0C92689E44E5868C = {
+			isa = PBXGroup;
+			children = (
+				97D480478F1DC70304266CB9 /* app */,
+				DC9550B98A120B5A32C477F0 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DC9550B98A120B5A32C477F0 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7D31064D54183A1230D1918D /* Codex Tweaks.app */,
+				3F957412A0DB83396B755B2E /* CodexTweaksTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9A54BFFCB68651876758D339 /* CodexTweaksTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A465C6DA8DAE9D0ECDD6637F /* Build configuration list for PBXNativeTarget "CodexTweaksTests" */;
+			buildPhases = (
+				25FF7CF9C67AE4895E84EFF9 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B739263E962750C6AE29B483 /* PBXTargetDependency */,
+			);
+			name = CodexTweaksTests;
+			packageProductDependencies = (
+			);
+			productName = CodexTweaksTests;
+			productReference = 3F957412A0DB83396B755B2E /* CodexTweaksTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		9BFD67925F8886E0CFE2428A /* CodexTweaks */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1EE2D158CB4ACC8D039D2690 /* Build configuration list for PBXNativeTarget "CodexTweaks" */;
+			buildPhases = (
+				BD6EEA0DAB81DCF950C15342 /* Sources */,
+				000FD96B375BBDB30D5ADB35 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CodexTweaks;
+			packageProductDependencies = (
+			);
+			productName = CodexTweaks;
+			productReference = 7D31064D54183A1230D1918D /* Codex Tweaks.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		539903F72BB21F2140A0136F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					9A54BFFCB68651876758D339 = {
+						ProvisioningStyle = Manual;
+					};
+					9BFD67925F8886E0CFE2428A = {
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = B82C042986D23E35D9F39D27 /* Build configuration list for PBXProject "CodexTweaks" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = A68F526B0C92689E44E5868C;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = DC9550B98A120B5A32C477F0 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9BFD67925F8886E0CFE2428A /* CodexTweaks */,
+				9A54BFFCB68651876758D339 /* CodexTweaksTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		000FD96B375BBDB30D5ADB35 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5DDE42750711BDE523AA30EC /* Assets.xcassets in Resources */,
+				6EE55D663F4BA7C8C133418A /* Tweaks in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		25FF7CF9C67AE4895E84EFF9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2DAF6336FC078325C573311E /* AppLoggerTests.swift in Sources */,
+				6087A559D3E3BA2A74451813 /* CDPTargetSelectorTests.swift in Sources */,
+				0E09371136BF758B5CE8EBF6 /* CodexLauncherTests.swift in Sources */,
+				09AE8B0020303164FEA244C9 /* InjectionScriptBuilderTests.swift in Sources */,
+				AAAF623CB357736B59648B5B /* TweakResourceStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BD6EEA0DAB81DCF950C15342 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				17B179AE9EB7BA3D313C8745 /* AppLogger.swift in Sources */,
+				F7A1ECDD4A02A3A692A8694D /* AppModel.swift in Sources */,
+				D7A55C21FE48E9384D3029A5 /* CDPModels.swift in Sources */,
+				6B8D9368C4F6D59C4D871A04 /* CDPService.swift in Sources */,
+				2F02C1394FDE9FDB5A3BC708 /* CodexLauncher.swift in Sources */,
+				20E842FFBE6F22751C5C61E9 /* CodexTweaksApp.swift in Sources */,
+				94C33449DBA02945C7D244B0 /* InjectionScriptBuilder.swift in Sources */,
+				444F810FBED64BEF61A48D3D /* MainWindowView.swift in Sources */,
+				9BD95832142FCA6E642F6E68 /* MenuBarContent.swift in Sources */,
+				BEF57B2143B4B2D80A1C5771 /* TweakResourceStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B739263E962750C6AE29B483 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9BFD67925F8886E0CFE2428A /* CodexTweaks */;
+			targetProxy = CCF2009507300B1BDF514911 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		59F438FD57718B7118E81369 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zgccrui.CodexTweaksTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Codex Tweaks.app/Contents/MacOS/Codex Tweaks";
+			};
+			name = Debug;
+		};
+		995F7AFFA8C14230E8FBF986 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = app/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.zgccrui.CodexTweaks;
+				PRODUCT_MODULE_NAME = CodexTweaks;
+				PRODUCT_NAME = "Codex Tweaks";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		AD8FE06C69DBF98263422172 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		B4493D277FCFA73A17C54F4E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = app/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.zgccrui.CodexTweaks;
+				PRODUCT_MODULE_NAME = CodexTweaks;
+				PRODUCT_NAME = "Codex Tweaks";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		D839CDB97DF8F574AF48E1C1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		EE7902E66BFD397711FC428C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zgccrui.CodexTweaksTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Codex Tweaks.app/Contents/MacOS/Codex Tweaks";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1EE2D158CB4ACC8D039D2690 /* Build configuration list for PBXNativeTarget "CodexTweaks" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				995F7AFFA8C14230E8FBF986 /* Debug */,
+				B4493D277FCFA73A17C54F4E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A465C6DA8DAE9D0ECDD6637F /* Build configuration list for PBXNativeTarget "CodexTweaksTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				59F438FD57718B7118E81369 /* Debug */,
+				EE7902E66BFD397711FC428C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B82C042986D23E35D9F39D27 /* Build configuration list for PBXProject "CodexTweaks" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D839CDB97DF8F574AF48E1C1 /* Debug */,
+				AD8FE06C69DBF98263422172 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 539903F72BB21F2140A0136F /* Project object */;
+}

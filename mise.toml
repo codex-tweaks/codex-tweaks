@@ -1,0 +1,42 @@
+[tools]
+xcodegen = "2.46.0"
+
+[tasks.generate]
+description = "使用固定版本的 XcodeGen 生成 Xcode 工程"
+run = "xcodegen generate"
+
+[tasks.build]
+description = "构建 Codex Tweaks.app 并输出到 dist/"
+depends = ["generate"]
+run = [
+  "xcodebuild -project CodexTweaks.xcodeproj -scheme CodexTweaks -configuration Release -destination \"platform=macOS,arch=$(uname -m)\" -derivedDataPath build/DerivedData ARCHS=$(uname -m) build",
+  "mkdir -p dist",
+  "rm -rf 'dist/Codex Tweaks.app'",
+  "ditto 'build/DerivedData/Build/Products/Release/Codex Tweaks.app' 'dist/Codex Tweaks.app'",
+]
+
+[tasks.test]
+description = "运行单元测试"
+depends = ["generate"]
+run = "xcodebuild -project CodexTweaks.xcodeproj -scheme CodexTweaks -configuration Debug -destination \"platform=macOS,arch=$(uname -m)\" -derivedDataPath build/DerivedData test"
+
+[tasks.verify]
+description = "执行测试、Release 构建和差异检查"
+run = [
+  "mise run test",
+  "mise run build",
+  "git diff --check",
+]
+
+[tasks.launch]
+description = "启动 dist/ 中的 Codex Tweaks.app"
+depends = ["build"]
+run = "open 'dist/Codex Tweaks.app'"
+
+[tasks.kill]
+description = "停止正在运行的 Codex Tweaks"
+run = "pkill -x 'Codex Tweaks' 2>/dev/null || true"
+
+[tasks.clean]
+description = "清理构建产物"
+run = "rm -rf build dist"

@@ -5,7 +5,7 @@
 <h1 align="center">Codex Tweaks</h1>
 
 <p align="center">
-  用一个原生 macOS App，管理 Codex 桌面客户端的本地 CSS 与 JavaScript 增强。
+  用一个原生 macOS App，管理 Codex 桌面客户端的本地 CSS、JavaScript 模块与第三方浏览器库。
 </p>
 
 <p align="center">
@@ -32,12 +32,15 @@ Codex Tweaks 是一个带主窗口与菜单栏入口的原生 macOS 工具。它
 | --- | --- |
 | Codex 连接 | Codex 未运行时使用本机 CDP 参数启动；已运行但未开启 CDP 时提示确认重启；用户主动退出后不会反复拉起 |
 | 自动注入 | 发现全部 `app://` 页面并幂等注入 CSS/JavaScript；每 2 秒检查窗口与资源变化 |
-| 本地定制 | 从概览页直接用系统关联编辑器打开 CSS 或 JavaScript；保存后自动重新注入 |
+| 模块化定制 | 按固定顺序递归加载 `vendor`、入口文件与功能模块；每个 JavaScript 文件使用独立作用域 |
+| 第三方库 | 支持本地固定版本的 IIFE/UMD 浏览器 bundle，并通过库注册表在功能模块间显式共享 |
+| AI 编写提示词 | 一键复制包含当前路径、模块契约、第三方库规则、生命周期和验证要求的提示词，交给 Codex 或其他智能体执行 |
+| 本地编辑 | 从概览页直接编辑入口 CSS/JavaScript，或在 Finder 中管理全部模块；保存后自动重新注入 |
 | 原生界面 | SwiftUI 主窗口集中显示连接状态、注入控制、资源入口、运行日志和软件更新；菜单栏保留常用快捷操作 |
 | 日志 | 最新记录优先显示，支持刷新、打开日志文件，以及确认后清除现有日志 |
 | 软件更新 | 启动或手动检查 GitHub Releases；支持正式版/测试版通道、跳过版本，以及自动选择 arm64、x86_64 或 universal DMG |
 | 生命周期 | 停用增强或正常退出时清理样式、Shadow DOM 和已注册的事件监听器 |
-| 默认示例 | Codex 页面右下角显示隔离在 Shadow DOM 中的 `CT` 按钮，点击后提示“CSS 与 JS 加载完成” |
+| 默认示例 | Codex 页面右下角显示隔离在 Shadow DOM 中的 `CT` 按钮；模型选择器作为独立模块使用 Pretext 计算菜单宽度 |
 
 ## 界面预览
 
@@ -53,7 +56,7 @@ Codex Tweaks.app
   ├─ GET 127.0.0.1:9335/json/list
   ├─ 筛选 type=page 且 URL 为 app:// 的目标
   ├─ WebSocket → Runtime.evaluate
-  └─ 注入 ui.css + ui.js
+  └─ 按顺序注入 vendor + ui 入口 + scripts/styles 模块
 ```
 
 注入脚本使用内容指纹判断资源是否变化，并在独立的 Shadow DOM 中承载默认组件。重复检查不会重复创建节点；重新注入前会先执行上一版本注册的清理回调。
@@ -95,27 +98,68 @@ open "dist/Codex Tweaks.app"
 
 ## 自定义 CSS 与 JavaScript
 
-首次启动会创建：
+首次启动会创建下面的资源结构，旧版的 `ui.css` 与 `ui.js` 入口仍然兼容：
 
 ```text
-~/Library/Application Support/Codex Tweaks/Tweaks/ui.css
-~/Library/Application Support/Codex Tweaks/Tweaks/ui.js
+~/Library/Application Support/Codex Tweaks/Tweaks/
+├── vendor/   # 第三方浏览器 bundle，最先加载
+├── ui.css    # CSS 入口
+├── styles/   # 功能样式
+├── ui.js     # JavaScript 入口
+└── scripts/  # 功能脚本
 ```
 
-在“概览”中点击“编辑 CSS”或“编辑 JavaScript”即可用系统关联的外部编辑器打开文件。保存后无需重启应用，下一轮检查会自动重新注入。
+在“概览”中点击“编辑入口 CSS”或“编辑入口 JS”可用系统关联的外部编辑器打开入口文件；点击“在 Finder 中管理模块与第三方库”可以管理完整目录。保存、增加、删除或重命名任意 `.css` / `.js` 文件后无需重启应用，下一轮检查会根据文件路径与内容指纹自动重新注入。
 
-`ui.js` 在函数作用域中执行，并获得：
+加载顺序固定为：
+
+1. CSS：`vendor/**/*.css` → `ui.css` → `styles/**/*.css`
+2. JavaScript：`vendor/**/*.js` → `ui.js` → `scripts/**/*.js`
+
+每个目录内部按相对路径升序递归加载，因此推荐用 `10-`、`20-` 这样的文件名前缀表达依赖顺序。隐藏文件和扩展名不匹配的文件不会加载。每个 JavaScript 文件都在自己的函数作用域中运行，一个模块里的 `const`、`let`、`var` 或函数声明不会污染其他模块；模块异常会带上对应的相对文件名。
+
+每个 JavaScript 模块都会获得：
 
 - `root`：隔离的 `ShadowRoot`
 - `api.version`：当前资源版本
+- `api.registerLibrary(name, value)`：注册一个跨模块共享的库；同名重复注册会报错
+- `api.hasLibrary(name)`：判断库是否已经注册
+- `api.getLibrary(name)`：取得已注册的库；缺失时会报错
+- `api.listLibraries()`：列出当前注册的库名
 - `api.registerCleanup(callback)`：注册重新注入或停用时的清理逻辑
+
+### 引入第三方库
+
+Codex 页面的内容安全策略会阻止常见的远程或 `data:` 动态模块导入，因此 Codex Tweaks 不绕过 CSP，也不直接执行 CDN URL。稳定的方式是把依赖固定为经过审阅的浏览器 bundle：
+
+1. 将库打包为单文件 IIFE/UMD，并保留版本与许可证，例如 `vendor/10-some-lib.js`。
+2. 如果库暴露为 `globalThis.SomeLib`，在随后加载的 `vendor/11-some-lib-adapter.js` 中注册并移除临时全局变量：
+
+   ```js
+   api.registerLibrary("some-lib", globalThis.SomeLib);
+   delete globalThis.SomeLib;
+   ```
+
+3. 在功能模块（例如 `scripts/20-my-feature.js`）中显式取得：
+
+   ```js
+   const SomeLib = api.getLibrary("some-lib");
+   ```
+
+第三方样式可以直接放入 `vendor` 下的 `.css` 文件。如果 npm 包只提供 ESM/CJS，需要先用 bundler 转成面向浏览器的单文件 IIFE/UMD；模块文件本身不支持静态 `import` / `export`。默认资源中的 `@chenglou/pretext` 就使用这套注册表提供给模型选择器。
+
+### 交给 AI 编写
+
+概览页和菜单栏都提供“复制 AI 编写提示词”。复制内容会自动带上当前 Tweaks 目录，并明确模块加载顺序、JavaScript 生命周期、第三方库、样式与验证规则。
+
+粘贴给 Codex 或其他智能体后，只需把末尾“我的具体需求”占位内容替换为实际需求。
 
 ## 安全边界
 
 - CDP 固定监听 `127.0.0.1:9335`，不会主动暴露到局域网。
 - 调试端口开启期间，本机其他进程仍可能连接；不要把该端口转发或代理到外部网络。
 - 退出 Codex Tweaks 会清理当前注入内容，但不会关闭 Codex 已开启的调试端口；完全退出并正常重开 Codex 后才会关闭。
-- 自定义 JavaScript 与 Codex 页面拥有相同的渲染上下文权限，只运行自己审阅过的本地脚本。
+- 自定义 JavaScript 与 Codex 页面拥有相同的渲染上下文权限，只运行自己审阅过的本地脚本和第三方 bundle，并固定依赖版本、保留许可证。
 - 目标筛选刻意排除普通 `https://` 页面，不会向 Codex 的应用内浏览器网页注入。
 
 ## 开发
@@ -174,7 +218,7 @@ app/
 ├── Sources/                    # SwiftUI、启动器、CDP 与注入实现
 ├── Resources/Assets.xcassets/  # macOS AppIcon 资产目录
 ├── Resources/Branding/         # B1 原始图标母版
-├── Resources/Tweaks/           # 首次启动时复制的默认 CSS/JS
+├── Resources/Tweaks/           # 默认入口、第三方 vendor 与功能模块
 └── Tests/                      # 目标筛选、脚本生成与内容指纹测试
 docs/                           # README 界面截图
 .github/workflows/              # CI 与标签发布工作流

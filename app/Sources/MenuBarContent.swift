@@ -41,16 +41,20 @@ struct MenuBarContent: View {
 
         Divider()
 
-        Button("打开自定义 CSS") {
+        Button("打开入口 CSS") {
             model.openCustomCSS()
         }
 
-        Button("打开自定义 JS") {
+        Button("打开入口 JS") {
             model.openCustomJavaScript()
         }
 
-        Button("打开 Tweaks 文件夹") {
+        Button("管理模块与第三方库") {
             model.openTweaksDirectory()
+        }
+
+        Button(model.isAuthoringPromptCopied ? "AI 编写提示词已复制" : "复制 AI 编写提示词") {
+            model.copyAuthoringPrompt()
         }
 
         Button("查看日志") {

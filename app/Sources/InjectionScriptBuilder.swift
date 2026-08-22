@@ -33,9 +33,54 @@ enum InjectionScriptBuilder {
           (document.body || document.documentElement).appendChild(host);
           const root = host.attachShadow({ mode: "open" });
           const cleanupCallbacks = [];
+          const libraries = new Map();
+          const normalizeLibraryName = (name) => {
+            if (typeof name !== "string" || !name.trim()) {
+              throw new TypeError("Library name must be a non-empty string");
+            }
+            return name.trim();
+          };
 
           const api = {
             version,
+            registerLibrary(name, value) {
+              const normalizedName = normalizeLibraryName(name);
+              if (libraries.has(normalizedName)) {
+                throw new Error(`Codex Tweaks library already registered: ${normalizedName}`);
+              }
+              libraries.set(normalizedName, value);
+              return value;
+            },
+            hasLibrary(name) {
+              return libraries.has(normalizeLibraryName(name));
+            },
+            getLibrary(name) {
+              const normalizedName = normalizeLibraryName(name);
+              if (!libraries.has(normalizedName)) {
+                throw new Error(`Codex Tweaks library not found: ${normalizedName}`);
+              }
+              return libraries.get(normalizedName);
+            },
+            listLibraries() {
+              return [...libraries.keys()];
+            },
+            runModule(name, initializer) {
+              if (typeof initializer !== "function") {
+                throw new TypeError("Module initializer must be a function");
+              }
+              try {
+                return initializer.call(globalThis, api, root);
+              } catch (error) {
+                const detail = error instanceof Error ? error.message : String(error);
+                const moduleError = new Error(
+                  `Codex Tweaks module failed (${name}): ${detail}`
+                );
+                moduleError.name = "CodexTweaksModuleError";
+                moduleError.moduleName = name;
+                moduleError.cause = error;
+                throw moduleError;
+              }
+            },
             registerCleanup(callback) {
               if (typeof callback === "function") cleanupCallbacks.push(callback);
             },
@@ -43,6 +88,7 @@ enum InjectionScriptBuilder {
               for (const callback of cleanupCallbacks.reverse()) {
                 try { callback(); } catch (_) {}
               }
+              libraries.clear();
               style.remove();
               host.remove();
               if (globalThis[key] === api) delete globalThis[key];

@@ -147,9 +147,13 @@ foreach ($rid in $RuntimeIdentifiers) {
     $publish = Join-Path $artifactRoot "$rid/publish"
     $frontend = Join-Path $publish 'CodexTweaks.Windows.exe'
     $backend = Join-Path $publish 'codex-tweaks-backend.exe'
+    $xamlResources = Join-Path $publish 'CodexTweaks.Windows.pri'
 
     Assert-PeMachine $frontend $expectedMachine
     Assert-PeMachine $backend $expectedMachine
+    if (-not (Test-Path $xamlResources -PathType Leaf)) {
+        throw "WinUI XAML resource index is missing: $rid"
+    }
     if (-not (Test-Path (Join-Path $publish 'Tweaks/packages') -PathType Container)) {
         throw "Bundled tweak packages are missing: $rid"
     }

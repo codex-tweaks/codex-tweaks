@@ -142,14 +142,27 @@ private struct TweakPackagesView: View {
     @State private var priorityHintPackageID: String?
 
     var body: some View {
-        List {
+        let separatorInset = CGFloat(model.tokens.pagePadding)
+        return List {
             header
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
+                .alignmentGuide(.listRowSeparatorLeading) { _ in
+                    separatorInset
+                }
+                .alignmentGuide(.listRowSeparatorTrailing) { dimensions in
+                    dimensions.width - separatorInset
+                }
 
             packageListToolbar
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
+                .alignmentGuide(.listRowSeparatorLeading) { _ in
+                    separatorInset
+                }
+                .alignmentGuide(.listRowSeparatorTrailing) { dimensions in
+                    dimensions.width - separatorInset
+                }
 
             if model.tweakPackages.isEmpty {
                 emptyState
@@ -165,6 +178,10 @@ private struct TweakPackagesView: View {
                         .listRowInsets(
                             EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28)
                         )
+                        .alignmentGuide(.listRowSeparatorLeading) { _ in 28 }
+                        .alignmentGuide(.listRowSeparatorTrailing) { dimensions in
+                            dimensions.width - 28
+                        }
                 }
             }
         }
@@ -211,9 +228,14 @@ private struct TweakPackagesView: View {
 
                 Spacer()
 
-                Toggle(model.text(.packagesDeveloperMode), isOn: $model.isDeveloperMode)
-                    .toggleStyle(.switch)
-                    .disabled(!model.actions.setDeveloperMode)
+                HStack(spacing: CGFloat(model.tokens.compactSpacing)) {
+                    Text(model.text(.packagesDeveloperMode))
+
+                    Toggle("", isOn: $model.isDeveloperMode)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
+                .disabled(!model.actions.setDeveloperMode)
 
                 Button(model.text(.packagesRescan), systemImage: "arrow.clockwise") {
                     model.reloadTweakPackages()
@@ -267,9 +289,10 @@ private struct TweakPackagesView: View {
                     Text(model.text(.packagesGitMissing))
                         .foregroundStyle(.secondary)
                 }
+            }
+            .font(.callout)
 
-                Spacer(minLength: 12)
-
+            HStack(spacing: 8) {
                 Button(
                     model.text(
                         model.isInstallingLocalPackage

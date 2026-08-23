@@ -107,6 +107,9 @@ func ResolveDependencies(packages []Package, disabledPackageIDs map[string]bool)
 	}
 	cycleIDs := cyclePackageIDs(edges)
 	statuses := map[string][]DependencyStatus{}
+	for _, pkg := range validPackages {
+		statuses[pkg.ID] = []DependencyStatus{}
+	}
 
 	for _, pkg := range validPackages {
 		requirements := pkg.RuntimePackageDependencies()

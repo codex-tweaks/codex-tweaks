@@ -62,3 +62,17 @@ func TestPresentationContractCanBeGeneratedForAnExplicitPlatform(t *testing.T) {
 		t.Fatalf("Windows update presentation is incomplete: %#v %#v", contract.Platform, contract.Actions)
 	}
 }
+
+func TestPresentationContractKeepsPlatformWindowMetricsIndependent(t *testing.T) {
+	macOS := NewPresentationContractForPlatform(PresentationState{}, "darwin", "universal")
+	windows := NewPresentationContractForPlatform(PresentationState{}, "windows", "x64")
+
+	if macOS.Tokens.WindowMinWidth != 820 || macOS.Tokens.WindowMinHeight != 560 ||
+		macOS.Tokens.WindowDefaultWidth != 920 || macOS.Tokens.WindowDefaultHeight != 640 {
+		t.Fatalf("macOS window metrics changed unexpectedly: %#v", macOS.Tokens)
+	}
+	if windows.Tokens.WindowMinWidth != 1120 || windows.Tokens.WindowMinHeight != 800 ||
+		windows.Tokens.WindowDefaultWidth != 1320 || windows.Tokens.WindowDefaultHeight != 920 {
+		t.Fatalf("Windows window metrics changed unexpectedly: %#v", windows.Tokens)
+	}
+}

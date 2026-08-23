@@ -265,6 +265,12 @@ internal sealed class PresentationTokens
     [JsonPropertyName("windowMinHeight")]
     public int WindowMinHeight { get; init; }
 
+    [JsonPropertyName("windowDefaultWidth")]
+    public int WindowDefaultWidth { get; init; }
+
+    [JsonPropertyName("windowDefaultHeight")]
+    public int WindowDefaultHeight { get; init; }
+
     [JsonPropertyName("navigationWidth")]
     public int NavigationWidth { get; init; }
 
@@ -573,7 +579,7 @@ internal static class PresentationDefaults
         [PresentationTextKey.PackagesInstalling] = "正在安装…",
         [PresentationTextKey.PackagesInstallingLocal] = "正在安全检查并安装本地功能包…",
         [PresentationTextKey.PackagesLoadOrder] = "加载顺序",
-        [PresentationTextKey.PackagesLoadOrderDetail] = "依赖拓扑优先，其余按有效优先级",
+        [PresentationTextKey.PackagesLoadOrderDetail] = "依赖拓扑优先；其余优先级数值越低越先加载",
         [PresentationTextKey.PackagesNoDescription] = "没有提供包说明。",
         [PresentationTextKey.PackagesNoMatchDetail] = "尝试更换关键词或筛选条件。",
         [PresentationTextKey.PackagesNoMatchTitle] = "没有匹配的功能包",
@@ -690,17 +696,19 @@ internal static class PresentationDefaults
 
     internal static PresentationTokens Tokens { get; } = new()
     {
-        WindowMinWidth = 980,
-        WindowMinHeight = 680,
+        WindowMinWidth = 1120,
+        WindowMinHeight = 800,
+        WindowDefaultWidth = 1320,
+        WindowDefaultHeight = 920,
         NavigationWidth = 220,
-        ContentMaxWidth = 1120,
-        PagePadding = 32,
-        SectionSpacing = 28,
-        CardPadding = 20,
-        CardCornerRadius = 14,
-        ControlSpacing = 12,
-        CompactSpacing = 7,
-        StatusIconSize = 36,
+        ContentMaxWidth = 1080,
+        PagePadding = 28,
+        SectionSpacing = 20,
+        CardPadding = 18,
+        CardCornerRadius = 12,
+        ControlSpacing = 10,
+        CompactSpacing = 6,
+        StatusIconSize = 20,
         AnimationFastMS = 120,
         AnimationStandardMS = 220,
         AccentColor = "#0A84FF",

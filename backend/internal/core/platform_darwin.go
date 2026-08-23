@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -19,11 +20,17 @@ func NewPlatform(runner CommandRunner) Platform {
 }
 
 func (p *darwinPlatform) IsCodexRunning(ctx context.Context) (bool, error) {
-	result, err := p.runner.Run(ctx, "/usr/bin/pgrep", []string{"-x", "ChatGPT"}, "", environmentSlice(environmentMap()))
+	result, err := p.runner.Run(
+		ctx,
+		"/usr/bin/lsappinfo",
+		[]string{"find", "bundleID=" + CodexBundleIdentifier},
+		"",
+		environmentSlice(environmentMap()),
+	)
 	if err != nil {
 		return false, err
 	}
-	return result.Status == 0, nil
+	return result.Status == 0 && strings.TrimSpace(result.Output) != "", nil
 }
 
 func (p *darwinPlatform) ActivateCodex(ctx context.Context) error {
@@ -58,7 +65,7 @@ func (p *darwinPlatform) LaunchCodex(ctx context.Context) error {
 }
 
 func (p *darwinPlatform) RestartCodex(ctx context.Context) error {
-	_, _ = p.runner.Run(ctx, "/usr/bin/pkill", []string{"-TERM", "-x", "ChatGPT"}, "", environmentSlice(environmentMap()))
+	_, _ = p.runner.Run(ctx, "/usr/bin/killall", []string{"-TERM", "ChatGPT"}, "", environmentSlice(environmentMap()))
 	for range 25 {
 		running, _ := p.IsCodexRunning(ctx)
 		if !running {
@@ -68,7 +75,7 @@ func (p *darwinPlatform) RestartCodex(ctx context.Context) error {
 			return err
 		}
 	}
-	_, _ = p.runner.Run(ctx, "/usr/bin/pkill", []string{"-KILL", "-x", "ChatGPT"}, "", environmentSlice(environmentMap()))
+	_, _ = p.runner.Run(ctx, "/usr/bin/killall", []string{"-KILL", "ChatGPT"}, "", environmentSlice(environmentMap()))
 	for range 15 {
 		running, _ := p.IsCodexRunning(ctx)
 		if !running {

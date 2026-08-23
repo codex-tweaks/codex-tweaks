@@ -1,0 +1,109 @@
+<Window
+    x:Class="CodexTweaks.Windows.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid
+        x:Name="RootGrid"
+        MinWidth="{StaticResource CodexWindowMinWidth}"
+        MinHeight="{StaticResource CodexWindowMinHeight}"
+        Background="Transparent">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid
+            x:Name="AppTitleBar"
+            Grid.Row="0"
+            Padding="16,0"
+            Background="Transparent">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <FontIcon
+                Width="16"
+                Height="16"
+                FontSize="14"
+                Glyph="&#xE943;"
+                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+            <TextBlock
+                x:Name="AppTitleText"
+                Grid.Column="1"
+                Margin="10,0,0,0"
+                VerticalAlignment="Center"
+                FontFamily="{StaticResource CodexDisplayFontFamily}"
+                FontSize="13"
+                FontWeight="SemiBold" />
+        </Grid>
+
+        <NavigationView
+            x:Name="ShellNavigation"
+            Grid.Row="1"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            IsPaneToggleButtonVisible="True"
+            IsPaneOpen="True"
+            OpenPaneLength="{StaticResource CodexNavigationWidth}"
+            PaneDisplayMode="Auto"
+            SelectionChanged="ShellNavigation_SelectionChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem x:Name="OverviewNavigationItem" Tag="overview">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Home" Style="{StaticResource CodexSmallIconStyle}" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="PackagesNavigationItem" Tag="packages">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Library" Style="{StaticResource CodexSmallIconStyle}" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="LogsNavigationItem" Tag="logs">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Document" Style="{StaticResource CodexSmallIconStyle}" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="UpdatesNavigationItem" Tag="updates">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Sync" Style="{StaticResource CodexSmallIconStyle}" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <Grid Background="Transparent">
+                <Frame
+                    x:Name="PageFrame"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch" />
+
+                <InfoBar
+                    x:Name="GlobalInfoBar"
+                    Margin="24,16,24,0"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Top"
+                    IsClosable="True"
+                    IsOpen="False" />
+
+                <Grid
+                    x:Name="LoadingPanel"
+                    Background="Transparent">
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12">
+                        <ProgressRing
+                            Width="32"
+                            Height="32"
+                            HorizontalAlignment="Center"
+                            IsActive="True" />
+                        <TextBlock
+                            x:Name="LoadingText"
+                            HorizontalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </NavigationView>
+    </Grid>
+</Window>

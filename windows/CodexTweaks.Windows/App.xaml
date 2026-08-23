@@ -6,6 +6,10 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+                <ResourceDictionary Source="Generated/PresentationResources.xaml" />
+                <ResourceDictionary Source="Styles/Foundation.xaml" />
+                <ResourceDictionary Source="Styles/Layout.xaml" />
+                <ResourceDictionary Source="Styles/Components.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

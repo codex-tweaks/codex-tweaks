@@ -256,6 +256,8 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
 struct BackendPresentationTokens: Codable, Equatable, Sendable {
     let windowMinWidth: Int
     let windowMinHeight: Int
+    let windowDefaultWidth: Int
+    let windowDefaultHeight: Int
     let navigationWidth: Int
     let contentMaxWidth: Int
     let pagePadding: Int
@@ -458,7 +460,7 @@ enum GeneratedPresentationDefaults {
         .packagesInstalling: "正在安装…",
         .packagesInstallingLocal: "正在安全检查并安装本地功能包…",
         .packagesLoadOrder: "加载顺序",
-        .packagesLoadOrderDetail: "依赖拓扑优先，其余按有效优先级",
+        .packagesLoadOrderDetail: "依赖拓扑优先；其余优先级数值越低越先加载",
         .packagesNoDescription: "没有提供包说明。",
         .packagesNoMatchDetail: "尝试更换关键词或筛选条件。",
         .packagesNoMatchTitle: "没有匹配的功能包",
@@ -572,5 +574,5 @@ enum GeneratedPresentationDefaults {
         .updateVersionBuild: "版本 {version}（构建 {build}）",
         .updateViewRelease: "查看 Release",
     ]
-    static let contract = BackendPresentationContract(version: 1, locale: "zh-CN", text: Dictionary(uniqueKeysWithValues: text.map { ($0.key.rawValue, $0.value) }), tokens: BackendPresentationTokens(windowMinWidth: 980, windowMinHeight: 680, navigationWidth: 220, contentMaxWidth: 1120, pagePadding: 32, sectionSpacing: 28, cardPadding: 20, cardCornerRadius: 14, controlSpacing: 12, compactSpacing: 7, statusIconSize: 36, animationFastMS: 120, animationStandardMS: 220, accentColor: "#0A84FF", successColor: "#30D158", warningColor: "#FF9F0A", dangerColor: "#FF453A"), actions: BackendAvailableActions(openCodex: true, restartCodex: false, reinject: false, openPackagesDirectory: true, openLogFile: true, openRepository: true, setEnabled: true, setDeveloperMode: true, reloadPackages: true, installLocalPackage: true, installRemotePackage: false, checkNodeEnvironment: true, checkGitEnvironment: true, checkManagedPackageUpdates: false, refreshLog: true, clearLog: false, readAuthoringPrompt: false, checkAppUpdate: true, setUpdatePreferences: true, installAppUpdate: false), status: BackendStatusPresentation(title: "正在启动", detail: "Codex Tweaks 正在建立本地连接。", tone: "accent"), platform: BackendPlatformPresentation(operatingSystem: "darwin", architecture: "universal", cdpEndpoint: "127.0.0.1:9335", repositoryURL: "https://github.com/cr-zhichen/codex-tweaks", updateInstallStrategy: "openDownload"))
+    static let contract = BackendPresentationContract(version: 1, locale: "zh-CN", text: Dictionary(uniqueKeysWithValues: text.map { ($0.key.rawValue, $0.value) }), tokens: BackendPresentationTokens(windowMinWidth: 820, windowMinHeight: 560, windowDefaultWidth: 920, windowDefaultHeight: 640, navigationWidth: 220, contentMaxWidth: 1120, pagePadding: 32, sectionSpacing: 28, cardPadding: 20, cardCornerRadius: 14, controlSpacing: 12, compactSpacing: 7, statusIconSize: 36, animationFastMS: 120, animationStandardMS: 220, accentColor: "#0A84FF", successColor: "#30D158", warningColor: "#FF9F0A", dangerColor: "#FF453A"), actions: BackendAvailableActions(openCodex: true, restartCodex: false, reinject: false, openPackagesDirectory: true, openLogFile: true, openRepository: true, setEnabled: true, setDeveloperMode: true, reloadPackages: true, installLocalPackage: true, installRemotePackage: false, checkNodeEnvironment: true, checkGitEnvironment: true, checkManagedPackageUpdates: false, refreshLog: true, clearLog: false, readAuthoringPrompt: false, checkAppUpdate: true, setUpdatePreferences: true, installAppUpdate: false), status: BackendStatusPresentation(title: "正在启动", detail: "Codex Tweaks 正在建立本地连接。", tone: "accent"), platform: BackendPlatformPresentation(operatingSystem: "darwin", architecture: "universal", cdpEndpoint: "127.0.0.1:9335", repositoryURL: "https://github.com/cr-zhichen/codex-tweaks", updateInstallStrategy: "openDownload"))
 }

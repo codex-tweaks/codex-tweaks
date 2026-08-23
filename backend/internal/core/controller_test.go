@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"os"
@@ -60,6 +61,41 @@ func TestControllerUsesGoDefaultsReadsSkillAndDisablesNewPackages(t *testing.T) 
 	}
 	if _, err := os.Stat(controller.configPath); err != nil {
 		t.Fatalf("Go state was not persisted: %v", err)
+	}
+}
+
+func TestControllerSnapshotSerializesEmptyDependencyStatusesAsArrays(t *testing.T) {
+	root := t.TempDir()
+	controller, err := NewController(
+		InitializeParams{
+			ApplicationSupportDirectory: filepath.Join(root, "support"),
+			CacheDirectory:              filepath.Join(root, "cache"),
+			CurrentVersion:              "0.1.0",
+			BuildNumber:                 "1",
+		},
+		nil,
+		ControllerDependencies{DisableBackground: true},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer controller.cancel()
+
+	makeStorePackage(t, controller.store, "no-dependencies", "no-dependencies", "1.0.0", 10, nil, "")
+	if err := controller.ReloadPackages(); err != nil {
+		t.Fatal(err)
+	}
+	snapshot := controller.Snapshot()
+	statuses, exists := snapshot.PackageDependencyStatuses["no-dependencies"]
+	if !exists || statuses == nil {
+		t.Fatalf("empty dependency statuses must be a non-nil array: %#v", snapshot.PackageDependencyStatuses)
+	}
+	encoded, err := json.Marshal(snapshot.PackageDependencyStatuses)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "null") {
+		t.Fatalf("dependency status arrays must not serialize as null: %s", encoded)
 	}
 }
 

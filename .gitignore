@@ -6,5 +6,6 @@ bin/
 obj/
 *.xcuserstate
 xcuserdata/
+*.profraw
 .DS_Store
 *.log

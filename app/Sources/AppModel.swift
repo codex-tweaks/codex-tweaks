@@ -116,17 +116,26 @@ final class AppModel: ObservableObject {
     }
 
     var statusTitle: String {
+        if case .error = status {
+            return text(.statusErrorTitle)
+        }
         let title = presentation?.status.title ?? GeneratedPresentationDefaults.contract.status.title
         return title.isEmpty ? text(.statusStartingTitle) : title
     }
 
     var statusDetail: String? {
+        if case let .error(message) = status {
+            return message
+        }
         let detail = presentation?.status.detail ?? GeneratedPresentationDefaults.contract.status.detail
         return detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : detail
     }
 
     var statusTone: String {
-        presentation?.status.tone ?? GeneratedPresentationDefaults.contract.status.tone
+        if case .error = status {
+            return "danger"
+        }
+        return presentation?.status.tone ?? GeneratedPresentationDefaults.contract.status.tone
     }
 
     func start() {

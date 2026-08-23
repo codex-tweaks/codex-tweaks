@@ -16,8 +16,8 @@ struct CodexTweaksApp: App {
                 )
         }
         .defaultSize(
-            width: CGFloat(model.tokens.windowMinWidth),
-            height: CGFloat(model.tokens.windowMinHeight)
+            width: CGFloat(model.tokens.windowDefaultWidth),
+            height: CGFloat(model.tokens.windowDefaultHeight)
         )
 
         MenuBarExtra {

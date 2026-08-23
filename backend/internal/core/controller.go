@@ -557,7 +557,7 @@ func cloneRelease(value *GitHubRelease) *GitHubRelease {
 		return nil
 	}
 	copy := *value
-	copy.Assets = append([]GitHubAsset(nil), value.Assets...)
+	copy.Assets = append([]GitHubAsset{}, value.Assets...)
 	return &copy
 }
 
@@ -572,7 +572,7 @@ func cloneTimePointer(value *CodableTime) *CodableTime {
 func cloneDependencyStatuses(source map[string][]DependencyStatus) map[string][]DependencyStatus {
 	result := make(map[string][]DependencyStatus, len(source))
 	for key, value := range source {
-		result[key] = append([]DependencyStatus(nil), value...)
+		result[key] = append([]DependencyStatus{}, value...)
 	}
 	return result
 }
@@ -580,7 +580,7 @@ func cloneDependencyStatuses(source map[string][]DependencyStatus) map[string][]
 func cloneStringSlices(source map[string][]string) map[string][]string {
 	result := make(map[string][]string, len(source))
 	for key, value := range source {
-		result[key] = append([]string(nil), value...)
+		result[key] = append([]string{}, value...)
 	}
 	return result
 }
@@ -588,8 +588,8 @@ func cloneStringSlices(source map[string][]string) map[string][]string {
 func clonePriorityConstraints(source map[string]PriorityConstraint) map[string]PriorityConstraint {
 	result := make(map[string]PriorityConstraint, len(source))
 	for key, value := range source {
-		value.MustLoadAfterPackageIDs = append([]string(nil), value.MustLoadAfterPackageIDs...)
-		value.MustLoadBeforePackageIDs = append([]string(nil), value.MustLoadBeforePackageIDs...)
+		value.MustLoadAfterPackageIDs = append([]string{}, value.MustLoadAfterPackageIDs...)
+		value.MustLoadBeforePackageIDs = append([]string{}, value.MustLoadBeforePackageIDs...)
 		result[key] = value
 	}
 	return result

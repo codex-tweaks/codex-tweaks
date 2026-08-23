@@ -13,7 +13,7 @@ run = [
 ]
 
 [tasks."contract:check"]
-description = "确认 Swift 与 C# Presentation Contract 生成文件无漂移"
+description = "确认 Swift、C# 与 XAML Presentation Contract 生成文件无漂移"
 run = "cd backend && go run ./cmd/contractgen -root .. -check"
 
 [tasks.build]
@@ -45,7 +45,7 @@ run = [
   "mise run test",
   "mise run build",
   "git diff --check",
-  "git diff --exit-code -- CodexTweaks.xcodeproj contract/presentation-contract.json app/Sources/GeneratedPresentationContract.swift windows/CodexTweaks.Windows/Generated/PresentationContract.g.cs",
+  "git diff --exit-code -- CodexTweaks.xcodeproj contract/presentation-contract.json app/Sources/GeneratedPresentationContract.swift windows/CodexTweaks.Windows/Generated/PresentationContract.g.cs windows/CodexTweaks.Windows/Generated/PresentationResources.xaml",
 ]
 
 [tasks."workflows:lint"]

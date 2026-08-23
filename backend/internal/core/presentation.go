@@ -11,6 +11,8 @@ const PresentationContractVersion = 1
 type PresentationTokens struct {
 	WindowMinWidth      int    `json:"windowMinWidth"`
 	WindowMinHeight     int    `json:"windowMinHeight"`
+	WindowDefaultWidth  int    `json:"windowDefaultWidth"`
+	WindowDefaultHeight int    `json:"windowDefaultHeight"`
 	NavigationWidth     int    `json:"navigationWidth"`
 	ContentMaxWidth     int    `json:"contentMaxWidth"`
 	PagePadding         int    `json:"pagePadding"`
@@ -105,7 +107,7 @@ func NewPresentationContractForPlatform(state PresentationState, operatingSystem
 		Version: PresentationContractVersion,
 		Locale:  "zh-CN",
 		Text:    text,
-		Tokens:  DefaultPresentationTokens(),
+		Tokens:  PresentationTokensForPlatform(operatingSystem),
 		Actions: AvailableActions{
 			OpenCodex:                  true,
 			RestartCodex:               state.Status.Kind == StatusRestartRequired,
@@ -194,9 +196,21 @@ func resolvePresentationText(text map[string]string, key string, replacements ma
 	return value
 }
 
-func DefaultPresentationTokens() PresentationTokens {
+func PresentationTokensForPlatform(operatingSystem string) PresentationTokens {
+	if strings.EqualFold(operatingSystem, "windows") {
+		return PresentationTokens{
+			WindowMinWidth: 1120, WindowMinHeight: 800, WindowDefaultWidth: 1320, WindowDefaultHeight: 920,
+			NavigationWidth: 220, ContentMaxWidth: 1080,
+			PagePadding: 28, SectionSpacing: 20, CardPadding: 18, CardCornerRadius: 12,
+			ControlSpacing: 10, CompactSpacing: 6, StatusIconSize: 20,
+			AnimationFastMS: 120, AnimationStandardMS: 220,
+			AccentColor: "#0A84FF", SuccessColor: "#30D158", WarningColor: "#FF9F0A", DangerColor: "#FF453A",
+		}
+	}
+
 	return PresentationTokens{
-		WindowMinWidth: 980, WindowMinHeight: 680, NavigationWidth: 220, ContentMaxWidth: 1120,
+		WindowMinWidth: 820, WindowMinHeight: 560, WindowDefaultWidth: 920, WindowDefaultHeight: 640,
+		NavigationWidth: 220, ContentMaxWidth: 1120,
 		PagePadding: 32, SectionSpacing: 28, CardPadding: 20, CardCornerRadius: 14,
 		ControlSpacing: 12, CompactSpacing: 7, StatusIconSize: 36,
 		AnimationFastMS: 120, AnimationStandardMS: 220,
@@ -291,7 +305,7 @@ func PresentationText() map[string]string {
 		"packages.expanded":                           "已展开",
 		"packages.collapsed":                          "已折叠",
 		"packages.loadOrder":                          "加载顺序",
-		"packages.loadOrderDetail":                    "依赖拓扑优先，其余按有效优先级",
+		"packages.loadOrderDetail":                    "依赖拓扑优先；其余优先级数值越低越先加载",
 		"packages.searchPlaceholder":                  "搜索功能包",
 		"packages.filter":                             "筛选功能包",
 		"packages.filter.all":                         "全部",

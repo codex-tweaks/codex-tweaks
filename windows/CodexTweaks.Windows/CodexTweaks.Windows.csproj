@@ -40,4 +40,17 @@
   <ItemGroup>
     <AssemblyMetadata Include="CodexTweaksBuildNumber" Value="$(CodexTweaksBuildNumber)" />
   </ItemGroup>
+
+  <Target Name="CopyXamlPriToPublishDirectory" AfterTargets="Publish">
+    <PropertyGroup>
+      <XamlPriFile>$(TargetDir)$(AssemblyName).pri</XamlPriFile>
+    </PropertyGroup>
+    <Error
+      Condition="!Exists('$(XamlPriFile)')"
+      Text="WinUI XAML resource index was not generated: $(XamlPriFile)" />
+    <Copy
+      SourceFiles="$(XamlPriFile)"
+      DestinationFiles="$(PublishDir)$(AssemblyName).pri"
+      SkipUnchangedFiles="true" />
+  </Target>
 </Project>

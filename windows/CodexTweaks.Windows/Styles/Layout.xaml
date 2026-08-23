@@ -1,0 +1,31 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Style x:Key="CodexPageHeaderStyle" TargetType="StackPanel">
+        <Setter Property="Spacing" Value="4" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
+    <Style x:Key="CodexPageContentStyle" TargetType="StackPanel">
+        <Setter Property="MaxWidth" Value="{StaticResource CodexContentMaxWidth}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="Spacing" Value="{StaticResource CodexSectionSpacing}" />
+    </Style>
+
+    <Style x:Key="CodexPageGridStyle" TargetType="Grid">
+        <Setter Property="MaxWidth" Value="{StaticResource CodexContentMaxWidth}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
+    <Style x:Key="CodexSectionStackStyle" TargetType="StackPanel">
+        <Setter Property="Spacing" Value="{StaticResource CodexControlSpacing}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
+    <Style x:Key="CodexCommandRowStyle" TargetType="StackPanel">
+        <Setter Property="Orientation" Value="Horizontal" />
+        <Setter Property="Spacing" Value="8" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+</ResourceDictionary>

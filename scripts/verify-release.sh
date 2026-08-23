@@ -6,7 +6,9 @@ cd "$ROOT_DIR"
 
 RELEASE_TAG="${RELEASE_TAG:-${1:-}}"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
+DIST_DIR="${DIST_DIR:-dist}"
 EXPECTED_MINOS="13.0"
+EXPECTED_BACKEND_MINOS="12.0"
 
 if [[ ! "$RELEASE_TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
   echo "RELEASE_TAG 必须是 v1.2.3 或 v1.2.3-beta.1 形式" >&2
@@ -25,14 +27,20 @@ verify_app() {
   local app_path="$1"
   local expected_archs="$2"
   local binary="$app_path/Contents/MacOS/Codex Tweaks"
+  local backend="$app_path/Contents/Resources/codex-tweaks-backend"
   local actual_archs
   local actual_version
   local actual_release_version
   local actual_build
+  local backend_minos_values
   local minos_values
 
   if [[ ! -f "$binary" ]]; then
     echo "缺少可执行文件：$binary" >&2
+    return 1
+  fi
+  if [[ ! -x "$backend" ]]; then
+    echo "缺少 Go 后端可执行文件：$backend" >&2
     return 1
   fi
 
@@ -40,6 +48,22 @@ verify_app() {
   expected_archs="$(tr ' ' '\n' <<< "$expected_archs" | sort | xargs)"
   if [[ "$actual_archs" != "$expected_archs" ]]; then
     echo "${binary} 架构错误：期望 ${expected_archs}，实际 ${actual_archs}" >&2
+    return 1
+  fi
+
+  actual_archs="$(lipo -archs "$backend" | tr ' ' '\n' | sort | xargs)"
+  if [[ "$actual_archs" != "$expected_archs" ]]; then
+    echo "${backend} 架构错误：期望 ${expected_archs}，实际 ${actual_archs}" >&2
+    return 1
+  fi
+  if [[ "$("$backend" --version)" != "$RELEASE_VERSION" ]]; then
+    echo "${backend} 版本错误：期望 ${RELEASE_VERSION}" >&2
+    return 1
+  fi
+
+  backend_minos_values="$(vtool -show-build "$backend" | awk '$1 == "minos" { print $2 }' | sort -u)"
+  if [[ -z "$backend_minos_values" ]] || [[ "$backend_minos_values" != "$EXPECTED_BACKEND_MINOS" ]]; then
+    echo "${backend} 最低系统版本错误：期望 ${EXPECTED_BACKEND_MINOS}，实际 ${backend_minos_values:-未知}" >&2
     return 1
   fi
 
@@ -59,18 +83,19 @@ verify_app() {
     return 1
   fi
 
+  codesign --verify --strict --verbose=2 "$backend"
   codesign --verify --deep --strict --verbose=2 "$app_path"
   echo "已校验 ${app_path}：${actual_archs}，macOS ${EXPECTED_MINOS}+"
 }
 
-verify_app "dist/Codex Tweaks.app" "arm64 x86_64"
-verify_app "dist/Codex Tweaks-arm64.app" arm64
-verify_app "dist/Codex Tweaks-x86_64.app" x86_64
+verify_app "${DIST_DIR}/Codex Tweaks.app" "arm64 x86_64"
+verify_app "${DIST_DIR}/Codex Tweaks-arm64.app" arm64
+verify_app "${DIST_DIR}/Codex Tweaks-x86_64.app" x86_64
 
 for dmg in \
-  "dist/Codex-Tweaks-${RELEASE_TAG}.dmg" \
-  "dist/Codex-Tweaks-${RELEASE_TAG}-arm64.dmg" \
-  "dist/Codex-Tweaks-${RELEASE_TAG}-x86_64.dmg"; do
+  "${DIST_DIR}/Codex-Tweaks-${RELEASE_TAG}.dmg" \
+  "${DIST_DIR}/Codex-Tweaks-${RELEASE_TAG}-arm64.dmg" \
+  "${DIST_DIR}/Codex-Tweaks-${RELEASE_TAG}-x86_64.dmg"; do
   if [[ ! -f "$dmg" ]]; then
     echo "缺少 DMG：$dmg" >&2
     exit 1
@@ -79,7 +104,7 @@ for dmg in \
 done
 
 (
-  cd dist
+  cd "$DIST_DIR"
   shasum -a 256 -c SHA256SUMS
 )
 

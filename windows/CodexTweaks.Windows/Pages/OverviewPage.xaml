@@ -1,0 +1,198 @@
+<Page
+    x:Class="CodexTweaks.Windows.Pages.OverviewPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
+
+    <ScrollViewer
+        HorizontalScrollBarVisibility="Disabled"
+        HorizontalScrollMode="Disabled"
+        VerticalScrollBarVisibility="Visible"
+        VerticalScrollMode="Enabled">
+        <Grid Padding="{StaticResource CodexPagePaddingThickness}">
+            <StackPanel Style="{StaticResource CodexPageContentStyle}">
+                <StackPanel Style="{StaticResource CodexPageHeaderStyle}">
+                    <TextBlock x:Name="PageTitle" Style="{StaticResource CodexPageTitleTextStyle}" />
+                    <TextBlock x:Name="PageSubtitle" Style="{StaticResource CodexPageSubtitleTextStyle}" />
+                </StackPanel>
+
+                <Border Style="{StaticResource CodexCardStyle}">
+                    <Grid ColumnSpacing="14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border
+                            x:Name="StatusIconContainer"
+                            CornerRadius="20"
+                            Style="{StaticResource CodexStatusIconContainerStyle}">
+                            <SymbolIcon
+                                x:Name="StatusIcon"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource CodexStatusIconStyle}" />
+                        </Border>
+                        <StackPanel
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Spacing="3">
+                            <TextBlock
+                                x:Name="StatusTitle"
+                                FontFamily="{StaticResource CodexDisplayFontFamily}"
+                                FontSize="18"
+                                FontWeight="SemiBold"
+                                TextWrapping="Wrap" />
+                            <TextBlock x:Name="StatusDetail" Style="{StaticResource CodexBodyTextStyle}" />
+                            <TextBlock x:Name="PackageSummary" Style="{StaticResource CodexCaptionTextStyle}" />
+                        </StackPanel>
+                        <StackPanel
+                            Grid.Column="2"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="8">
+                            <Button
+                                x:Name="OpenCodexButton"
+                                Click="OpenCodexButton_Click">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <SymbolIcon Symbol="Play" Style="{StaticResource CodexSmallIconStyle}" />
+                                    <TextBlock x:Name="OpenCodexButtonText" />
+                                </StackPanel>
+                            </Button>
+                            <Button
+                                x:Name="RestartButton"
+                                Click="RestartButton_Click"
+                                Style="{StaticResource AccentButtonStyle}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <SymbolIcon Symbol="Refresh" Style="{StaticResource CodexSmallIconStyle}" />
+                                    <TextBlock x:Name="RestartButtonText" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <StackPanel Style="{StaticResource CodexSectionStackStyle}">
+                    <TextBlock x:Name="ControlTitle" Style="{StaticResource CodexSectionTitleTextStyle}" />
+                    <Grid ColumnSpacing="20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="3">
+                            <TextBlock x:Name="EnableTitle" Style="{StaticResource CodexBodyTextStyle}" FontWeight="SemiBold" />
+                            <TextBlock x:Name="EnableDetail" Style="{StaticResource CodexCaptionTextStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch
+                            x:Name="EnableToggle"
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Toggled="EnableToggle_Toggled" />
+                    </Grid>
+                    <Border Style="{StaticResource CodexDividerStyle}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Style="{StaticResource CodexCommandRowStyle}">
+                            <Button x:Name="ReinjectButton" Click="ReinjectButton_Click">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <SymbolIcon Symbol="Sync" Style="{StaticResource CodexSmallIconStyle}" />
+                                    <TextBlock x:Name="ReinjectButtonText" />
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="ManagePackagesButton" Click="ManagePackagesButton_Click">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <SymbolIcon Symbol="Library" Style="{StaticResource CodexSmallIconStyle}" />
+                                    <TextBlock x:Name="ManagePackagesButtonText" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                        <Button
+                            x:Name="ViewLogsButton"
+                            Grid.Column="2"
+                            Click="ViewLogsButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <SymbolIcon Symbol="Document" Style="{StaticResource CodexSmallIconStyle}" />
+                                <TextBlock x:Name="ViewLogsButtonText" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+
+                <StackPanel Style="{StaticResource CodexSectionStackStyle}">
+                    <TextBlock x:Name="AuthoringTitle" Style="{StaticResource CodexSectionTitleTextStyle}" />
+                    <Border Style="{StaticResource CodexCardStyle}">
+                        <Grid ColumnSpacing="20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="4">
+                                <TextBlock
+                                    x:Name="AuthoringActionTitle"
+                                    Style="{StaticResource CodexBodyTextStyle}"
+                                    FontWeight="SemiBold" />
+                                <TextBlock x:Name="AuthoringDetail" Style="{StaticResource CodexCaptionTextStyle}" />
+                            </StackPanel>
+                            <Button
+                                x:Name="CopySkillButton"
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Click="CopySkillButton_Click"
+                                Style="{StaticResource AccentButtonStyle}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <SymbolIcon Symbol="Copy" Style="{StaticResource CodexSmallIconStyle}" />
+                                    <TextBlock x:Name="CopySkillButtonText" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Style="{StaticResource CodexSectionStackStyle}">
+                    <TextBlock x:Name="ResourcesTitle" Style="{StaticResource CodexSectionTitleTextStyle}" />
+                    <Grid RowSpacing="10" ColumnSpacing="28">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBlock x:Name="CdpEndpointLabel" Style="{StaticResource CodexCaptionTextStyle}" />
+                        <TextBlock x:Name="CdpEndpointValue" Grid.Column="1" Style="{StaticResource CodexMonospaceTextStyle}" />
+                        <TextBlock x:Name="InjectionScopeLabel" Grid.Row="1" Style="{StaticResource CodexCaptionTextStyle}" />
+                        <TextBlock x:Name="InjectionScopeValue" Grid.Row="1" Grid.Column="1" Style="{StaticResource CodexBodyTextStyle}" />
+                        <TextBlock x:Name="RefreshPolicyLabel" Grid.Row="2" Style="{StaticResource CodexCaptionTextStyle}" />
+                        <TextBlock x:Name="RefreshPolicyValue" Grid.Row="2" Grid.Column="1" Style="{StaticResource CodexBodyTextStyle}" />
+                        <TextBlock x:Name="LoadOrderLabel" Grid.Row="3" Style="{StaticResource CodexCaptionTextStyle}" />
+                        <TextBlock x:Name="LoadOrderValue" Grid.Row="3" Grid.Column="1" Style="{StaticResource CodexMonospaceTextStyle}" TextWrapping="Wrap" />
+                        <TextBlock x:Name="PackagesPathLabel" Grid.Row="4" Style="{StaticResource CodexCaptionTextStyle}" />
+                        <TextBlock
+                            x:Name="PackagesPath"
+                            Grid.Row="4"
+                            Grid.Column="1"
+                            Style="{StaticResource CodexMonospaceTextStyle}"
+                            TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                    <Button
+                        x:Name="OpenPackagesDirectoryButton"
+                        HorizontalAlignment="Left"
+                        Click="OpenPackagesDirectoryButton_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <SymbolIcon Symbol="OpenFile" Style="{StaticResource CodexSmallIconStyle}" />
+                            <TextBlock x:Name="OpenPackagesDirectoryButtonText" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Page>

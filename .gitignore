@@ -1,7 +1,11 @@
 build/
 dist/
+artifacts/
 DerivedData/
+bin/
+obj/
 *.xcuserstate
 xcuserdata/
+*.profraw
 .DS_Store
 *.log

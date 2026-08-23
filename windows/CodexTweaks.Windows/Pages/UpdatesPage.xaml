@@ -1,0 +1,146 @@
+<Page
+    x:Class="CodexTweaks.Windows.Pages.UpdatesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
+
+    <ScrollViewer
+        HorizontalScrollBarVisibility="Disabled"
+        HorizontalScrollMode="Disabled"
+        VerticalScrollBarVisibility="Visible"
+        VerticalScrollMode="Enabled">
+        <Grid Padding="{StaticResource CodexPagePaddingThickness}">
+            <StackPanel Style="{StaticResource CodexPageContentStyle}">
+
+                <StackPanel Style="{StaticResource CodexPageHeaderStyle}">
+                    <TextBlock x:Name="PageTitle" Style="{StaticResource CodexPageTitleTextStyle}" />
+                    <TextBlock x:Name="PageSubtitle" Style="{StaticResource CodexPageSubtitleTextStyle}" />
+                </StackPanel>
+
+                <Border Style="{StaticResource CodexCardStyle}">
+                    <Grid ColumnSpacing="20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Style="{StaticResource CodexStatusIconContainerStyle}">
+                            <SymbolIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                Symbol="Setting"
+                                Style="{StaticResource CodexSmallIconStyle}" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="5">
+                            <TextBlock x:Name="ApplicationTitle" Style="{StaticResource CodexSectionTitleTextStyle}" />
+                            <TextBlock x:Name="ApplicationVersion" Style="{StaticResource CodexBodyTextStyle}" />
+                        </StackPanel>
+                        <Button
+                            x:Name="RepositoryButton"
+                            Grid.Column="2"
+                            VerticalAlignment="Center"
+                            Click="RepositoryButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <SymbolIcon Symbol="Link" Style="{StaticResource CodexSmallIconStyle}" />
+                                <TextBlock x:Name="RepositoryButtonText" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource CodexCardStyle}">
+                    <StackPanel Style="{StaticResource CodexSectionStackStyle}">
+                        <TextBlock x:Name="SoftwareUpdateTitle" Style="{StaticResource CodexSectionTitleTextStyle}" />
+
+                        <Grid ColumnSpacing="24">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="240" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="4">
+                                <TextBlock x:Name="ChannelTitle" Style="{StaticResource CodexBodyTextStyle}" FontWeight="SemiBold" />
+                                <TextBlock x:Name="ChannelDetail" Style="{StaticResource CodexCaptionTextStyle}" />
+                            </StackPanel>
+                            <ComboBox
+                                x:Name="ChannelComboBox"
+                                Grid.Column="1"
+                                HorizontalAlignment="Stretch"
+                                SelectionChanged="ChannelComboBox_SelectionChanged" />
+                        </Grid>
+
+                        <Border Style="{StaticResource CodexDividerStyle}" />
+
+                        <Grid ColumnSpacing="24">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                x:Name="AutoCheckTitle"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource CodexBodyTextStyle}"
+                                FontWeight="SemiBold" />
+                            <ToggleSwitch
+                                x:Name="AutoCheckToggle"
+                                Grid.Column="1"
+                                Toggled="AutoCheckToggle_Toggled" />
+                        </Grid>
+
+                        <Border Style="{StaticResource CodexInsetCardStyle}">
+                            <Grid RowSpacing="12" ColumnSpacing="24">
+                                <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock x:Name="CurrentVersionLabel" Style="{StaticResource CodexCaptionTextStyle}" />
+                                <TextBlock x:Name="CurrentVersionValue" Grid.Column="1" Style="{StaticResource CodexBodyTextStyle}" />
+                                <TextBlock x:Name="LatestVersionLabel" Grid.Row="1" Style="{StaticResource CodexCaptionTextStyle}" />
+                                <TextBlock x:Name="LatestVersionValue" Grid.Row="1" Grid.Column="1" Style="{StaticResource CodexBodyTextStyle}" />
+                                <TextBlock x:Name="LastCheckLabel" Grid.Row="2" Style="{StaticResource CodexCaptionTextStyle}" />
+                                <TextBlock x:Name="LastCheckValue" Grid.Row="2" Grid.Column="1" Style="{StaticResource CodexBodyTextStyle}" />
+                            </Grid>
+                        </Border>
+
+                        <InfoBar
+                            x:Name="UpdateStatusInfo"
+                            IsClosable="False"
+                            IsOpen="False" />
+
+                        <StackPanel Style="{StaticResource CodexCommandRowStyle}">
+                            <Button
+                                x:Name="CheckButton"
+                                Click="CheckButton_Click"
+                                Style="{StaticResource AccentButtonStyle}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <SymbolIcon Symbol="Refresh" Style="{StaticResource CodexSmallIconStyle}" />
+                                    <TextBlock x:Name="CheckButtonText" />
+                                </StackPanel>
+                            </Button>
+                            <Button
+                                x:Name="InstallButton"
+                                Click="InstallButton_Click"
+                                Style="{StaticResource AccentButtonStyle}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <SymbolIcon Symbol="Download" Style="{StaticResource CodexSmallIconStyle}" />
+                                    <TextBlock x:Name="InstallButtonText" />
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="ReleaseButton" Click="ReleaseButton_Click">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <SymbolIcon Symbol="Link" Style="{StaticResource CodexSmallIconStyle}" />
+                                    <TextBlock x:Name="ReleaseButtonText" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Page>

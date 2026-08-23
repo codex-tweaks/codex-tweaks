@@ -87,7 +87,9 @@ try {
         $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
         "$hash  $($_.Name)"
     }
-    Set-Content -Path (Join-Path $stagedRelease 'SHA256SUMS-Windows') -Value $checksums -Encoding utf8NoBOM
+    $checksumPath = Join-Path $stagedRelease 'SHA256SUMS-Windows'
+    $utf8NoBOM = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllLines($checksumPath, [string[]]$checksums, $utf8NoBOM)
     Write-Host "Staged Windows release assets -> $stagedRelease"
 }
 finally {

@@ -76,16 +76,36 @@ function Invoke-BackendSmoke([string]$Backend, [string]$Publish, [string]$Expect
             } | ConvertTo-Json -Compress -Depth 8),
             (@{ id = 3; method = 'shutdown' } | ConvertTo-Json -Compress)
         )
-        $output = $requests | & $Backend
-        if ($LASTEXITCODE -ne 0) {
-            throw "Backend RPC smoke exited with status $LASTEXITCODE"
+        $utf8NoBOM = New-Object System.Text.UTF8Encoding($false)
+        $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $startInfo.FileName = $Backend
+        $startInfo.UseShellExecute = $false
+        $startInfo.CreateNoWindow = $true
+        $startInfo.RedirectStandardInput = $true
+        $startInfo.RedirectStandardOutput = $true
+        $startInfo.RedirectStandardError = $true
+        $startInfo.StandardOutputEncoding = $utf8NoBOM
+        $startInfo.StandardErrorEncoding = $utf8NoBOM
+        $process = New-Object System.Diagnostics.Process
+        $process.StartInfo = $startInfo
+        [void]$process.Start()
+        foreach ($request in $requests) {
+            $process.StandardInput.WriteLine($request)
         }
-        $responses = @($output | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object {
+        $process.StandardInput.Close()
+        $output = $process.StandardOutput.ReadToEnd()
+        $errorOutput = $process.StandardError.ReadToEnd()
+        $process.WaitForExit()
+        if ($process.ExitCode -ne 0) {
+            throw "Backend RPC smoke exited with status $($process.ExitCode): $errorOutput"
+        }
+        $responses = @($output -split '\r?\n' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object {
             $_ | ConvertFrom-Json
         })
-        $ping = $responses | Where-Object { $_.id -eq 1 } | Select-Object -First 1
-        $initialize = $responses | Where-Object { $_.id -eq 2 } | Select-Object -First 1
-        $shutdown = $responses | Where-Object { $_.id -eq 3 } | Select-Object -First 1
+        $rpcResponses = @($responses | Where-Object { $null -ne $_.PSObject.Properties['id'] })
+        $ping = $rpcResponses | Where-Object { $_.id -eq 1 } | Select-Object -First 1
+        $initialize = $rpcResponses | Where-Object { $_.id -eq 2 } | Select-Object -First 1
+        $shutdown = $rpcResponses | Where-Object { $_.id -eq 3 } | Select-Object -First 1
         if ($null -eq $ping -or $ping.result.backend -ne 'go' -or $ping.result.protocolVersion -ne 2) {
             throw 'Backend ping response did not satisfy protocol v2.'
         }

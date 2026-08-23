@@ -15,6 +15,7 @@
   <img alt="CDP" src="https://img.shields.io/badge/CDP-127.0.0.1%3A9335-4A5568">
   <a href="https://github.com/cr-zhichen/codex-tweaks/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/cr-zhichen/codex-tweaks/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/cr-zhichen/codex-tweaks/releases"><img alt="Release" src="https://img.shields.io/github/v/release/cr-zhichen/codex-tweaks"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </p>
 
 ## 简介
@@ -302,3 +303,7 @@ scripts/                         # Release 打包与产物校验脚本
 mise.toml                        # 固定工具与统一任务
 project.yml                      # XcodeGen 工程定义
 ```
+
+## 许可证
+
+本项目基于 [MIT 许可证](LICENSE) 开源。

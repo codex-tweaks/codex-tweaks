@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -86,14 +87,19 @@ func TestLocalInstallerRejectsInvalidDuplicateAndSymlink(t *testing.T) {
 		t.Fatalf("expected duplicate error, got %v", err)
 	}
 
-	linked := filepath.Join(root, "linked")
-	writeInstallerPackage(t, linked, "linked", "1.0.0", nil)
-	if err := os.Symlink(filepath.Join(linked, "src", "index.js"), filepath.Join(linked, "linked.js")); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := installer.Install(linked); err == nil || !strings.Contains(err.Error(), "符号链接") {
-		t.Fatalf("expected symlink rejection, got %v", err)
-	}
+	t.Run("symlink", func(t *testing.T) {
+		linked := filepath.Join(root, "linked")
+		writeInstallerPackage(t, linked, "linked", "1.0.0", nil)
+		if err := os.Symlink(filepath.Join(linked, "src", "index.js"), filepath.Join(linked, "linked.js")); err != nil {
+			if runtime.GOOS == "windows" {
+				t.Skipf("current Windows user cannot create the symlink fixture: %v", err)
+			}
+			t.Fatal(err)
+		}
+		if _, err := installer.Install(linked); err == nil || !strings.Contains(err.Error(), "符号链接") {
+			t.Fatalf("expected symlink rejection, got %v", err)
+		}
+	})
 }
 
 func writeInstallerPackage(t *testing.T, directory, name, version string, dependencies map[string]string) {

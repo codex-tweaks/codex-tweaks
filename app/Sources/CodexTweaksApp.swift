@@ -8,17 +8,23 @@ struct CodexTweaksApp: App {
     @StateObject private var updateChecker = UpdateChecker.shared
 
     var body: some Scene {
-        Window("Codex Tweaks", id: "main") {
+        Window(model.text(.appName), id: "main") {
             MainWindowView(model: model, updateChecker: updateChecker)
-                .frame(minWidth: 820, minHeight: 560)
+                .frame(
+                    minWidth: CGFloat(model.tokens.windowMinWidth),
+                    minHeight: CGFloat(model.tokens.windowMinHeight)
+                )
         }
-        .defaultSize(width: 920, height: 640)
+        .defaultSize(
+            width: CGFloat(model.tokens.windowMinWidth),
+            height: CGFloat(model.tokens.windowMinHeight)
+        )
 
         MenuBarExtra {
             MenuBarContent(model: model, updateChecker: updateChecker)
         } label: {
             Image(systemName: model.menuBarSymbol)
-                .accessibilityLabel(model.status.title)
+                .accessibilityLabel(model.statusTitle)
         }
         .menuBarExtraStyle(.menu)
     }
@@ -37,7 +43,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         Task { @MainActor in
             AppModel.shared.start()
-            await UpdateChecker.shared.autoCheckIfNeeded()
         }
     }
 

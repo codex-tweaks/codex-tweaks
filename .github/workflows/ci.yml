@@ -15,19 +15,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
+  macos:
+    name: macOS / SwiftUI + Go
     runs-on: macos-26
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Setup mise
         uses: jdx/mise-action@v4
 
-      - name: Verify
+      - name: Verify macOS
         run: mise run verify
 
       - name: Archive app
@@ -36,10 +37,66 @@ jobs:
             "dist/Codex Tweaks.app" \
             "dist/Codex-Tweaks-${GITHUB_SHA}-arm64.zip"
 
-      - name: Upload app
+      - name: Upload macOS app
         uses: actions/upload-artifact@v7
         with:
-          name: Codex-Tweaks-${{ github.sha }}-arm64
+          name: Codex-Tweaks-${{ github.sha }}-macOS-arm64
           path: dist/Codex-Tweaks-${{ github.sha }}-arm64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  windows:
+    name: Windows / WinUI 3 + Go + Velopack
+    runs-on: windows-2025
+    timeout-minutes: 35
+    env:
+      CI_VERSION: 0.0.0-ci.${{ github.run_number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Verify Go backend on Windows
+        shell: pwsh
+        run: |
+          Push-Location backend
+          try {
+            go run ./cmd/contractgen -root .. -check
+            go vet ./...
+            go test ./...
+          }
+          finally {
+            Pop-Location
+          }
+
+      - name: Build self-contained WinUI applications
+        shell: pwsh
+        run: ./scripts/build-windows.ps1 -Version $env:CI_VERSION -BuildNumber $env:GITHUB_RUN_NUMBER
+
+      - name: Package unsigned per-user installers
+        shell: pwsh
+        run: ./scripts/package-windows.ps1 -Version $env:CI_VERSION -Channel beta
+
+      - name: Verify Windows artifacts
+        shell: pwsh
+        run: ./scripts/verify-windows.ps1 -Version $env:CI_VERSION -Channel beta -RequirePackages
+
+      - name: Upload Windows installers and update feeds
+        uses: actions/upload-artifact@v7
+        with:
+          name: Codex-Tweaks-${{ github.sha }}-Windows
+          path: artifacts/windows/release/*
           if-no-files-found: error
           retention-days: 14

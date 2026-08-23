@@ -5,12 +5,15 @@
 <h1 align="center">Codex Tweaks</h1>
 
 <p align="center">
-  用原生 macOS App 按包管理、编译与加载 Codex 桌面客户端的本地界面增强。
+  用双原生薄前端与单一 Go 后端，按包管理、编译与加载 Codex 桌面客户端的本地界面增强。
 </p>
 
 <p align="center">
   <img alt="macOS" src="https://img.shields.io/badge/macOS-13.0%2B-black?logo=apple&logoColor=white">
-  <img alt="Swift" src="https://img.shields.io/badge/Swift-5-F05138?logo=swift&logoColor=white">
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-10%202004%2B-0078D4?logo=windows&logoColor=white">
+  <img alt="Go" src="https://img.shields.io/badge/backend-Go-00ADD8?logo=go&logoColor=white">
+  <img alt="SwiftUI" src="https://img.shields.io/badge/frontend-SwiftUI-F05138?logo=swift&logoColor=white">
+  <img alt="WinUI 3" src="https://img.shields.io/badge/frontend-WinUI%203-0078D4?logo=windows&logoColor=white">
   <img alt="Node.js" src="https://img.shields.io/badge/package_build-Node.js-5FA04E?logo=nodedotjs&logoColor=white">
   <img alt="CDP" src="https://img.shields.io/badge/CDP-127.0.0.1%3A9335-4A5568">
   <a href="https://github.com/cr-zhichen/codex-tweaks/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/cr-zhichen/codex-tweaks/actions/workflows/ci.yml/badge.svg"></a>
@@ -20,7 +23,11 @@
 
 ## 简介
 
-Codex Tweaks 是一个带主窗口和菜单栏入口的原生 macOS 工具。它通过仅监听本机的 Chrome DevTools Protocol（CDP），将已启用功能包的 CSS 和 JavaScript 加载到 Codex `app://` 页面。
+Codex Tweaks 同时提供 macOS SwiftUI 与 Windows WinUI 3 原生界面。两个前端都只负责原生控件布局、窗口、系统对话框、剪贴板和打开本机路径；包管理、验证、依赖解析、编译、Git、更新状态、日志、Codex 进程控制、CDP 和注入全部由随应用打包的 Go sidecar 负责。前后端通过标准输入输出上的逐行 JSON RPC 通信，不额外监听本地服务端口。
+
+Go 同时拥有单一 Presentation Contract：业务状态、DTO、可用操作、界面文案、设计令牌、CDP 地址和更新仓库只在 Go 中定义。生成器据此输出 Swift 与 C# 类型；SwiftUI 和 WinUI 3 仅维护各自平台的原生布局与交互，不复制业务判断。
+
+Windows 版本是 self-contained、unpackaged 的 WinUI 3 应用，Go sidecar、.NET 运行时和 Windows App SDK 运行时一起进入同一个 Velopack 版本包。安装、更新和回滚替换的是整个版本目录，因此前端与后端不会被拆开升级。
 
 一个目录就是一个包。包可使用常见的 Node.js 模块写法、TypeScript、CSS import 和锁定的 npm 依赖；用户在 UI 中明确点击后，应用才会下载依赖并用固定版本 esbuild 编译成浏览器可执行产物。
 
@@ -45,12 +52,20 @@ Codex Tweaks 是一个带主窗口和菜单栏入口的原生 macOS 工具。它
 | 开发者模式 | 自动编译已启用包的源码变化，但不自动下载新依赖或切换包版本 |
 | 故障隔离 | 一个包编译或运行失败时，其他包继续加载；错误回显在对应包上 |
 | 开发 Skill | 项目内置功能包开发 Skill；“复制给 AI”直接读取同一份 `SKILL.md`，避免两套说明漂移 |
-| 软件更新 | 检查 GitHub Releases，支持正式版/测试版通道、跳过版本和架构匹配 DMG |
+| 软件更新 | macOS 按架构选择 GitHub Release DMG；Windows 使用 Velopack 正式版/测试版通道原子替换前端与 Go sidecar |
 | 内置示例 | 只提供 `ct-sample`：在右下角显示 `codex_tweaks 已注入` 状态 |
 
 ## 工作方式
 
 ```text
+macOS SwiftUI 薄前端          Windows WinUI 3 薄前端
+          \                     /
+           \  Presentation v1  /
+            + stdio JSON-lines RPC
+                      |
+                      v
+            codex-tweaks-backend (Go)
+                |
 本地包：Tweaks/packages/<package>/
 远程包：ManagedPackages/sources/<package-hash>/<commit>/
   package.json + src + package-lock.json
@@ -75,26 +90,41 @@ Codex Tweaks 每 2 秒重新发现页面与包状态。注入使用产物指纹�
 
 ### 运行环境
 
-- macOS 13 或更新版本
-- 已安装包含 Codex 桌面客户端的 `ChatGPT.app`
+- macOS 13 或更新版本，或 Windows 10 2004（build 19041）及更新版本
+- 已安装 Codex 桌面客户端（macOS 的 `ChatGPT.app` 或 Windows 的 `ChatGPT.exe`）
 - Node.js（需同时提供 `node`、`npm` 和 `npx`），用于功能包的依赖下载与编译
 - Git，用于安装和更新远程功能包；私有仓库可使用本机已有的 SSH 凭据，应用不会弹出交互式凭据提示
 
-应用会从常见位置检测 Node.js 和 Git，并在功能包页面显示实际结果。没有 Node.js 时，已编译的包仍可加载，但不能更新产物；没有 Git 时，本地包仍可使用，但不能安装或更新远程包。
+应用会从两个平台的常见位置检测 Codex、Node.js 和 Git，并在功能包页面显示实际结果。没有 Node.js 时，已编译的包仍可加载，但不能更新产物；没有 Git 时，本地包仍可使用，但不能安装或更新远程包。Windows 安装包已经包含应用所需的 .NET 与 Windows App SDK 运行时，不要求用户另外安装开发环境。
 
 ### 安装发行版
 
-从 [GitHub Releases](https://github.com/cr-zhichen/codex-tweaks/releases) 下载适合当前 Mac 的 DMG，打开后将 Codex Tweaks 拖移到“应用程序”。发行版使用 ad-hoc 签名且未经 Apple 公证；如果 macOS 阻止首次打开，请在“系统设置 → 隐私与安全性”中确认打开。
+从 [GitHub Releases](https://github.com/cr-zhichen/codex-tweaks/releases) 下载对应平台与架构的文件：
+
+- macOS：打开 universal、arm64 或 x86_64 DMG，将 Codex Tweaks 拖移到“应用程序”。当前使用 ad-hoc 签名且未经 Apple 公证；如果系统阻止首次打开，请在“系统设置 → 隐私与安全性”中确认。
+- Windows：运行名称中包含 `win-x64` 或 `win-arm64` 的 `Setup.exe`。Velopack 默认安装到当前用户目录，不弹出管理员权限；可从“设置 → 应用 → 已安装的应用”卸载。测试版允许未签名发布，因此 Windows SmartScreen 可能要求用户确认运行。
+
+Windows 应用会根据用户选择的正式版或测试版通道读取同一 GitHub Release 中的 Velopack feed，下载后整体替换 WinUI 前端、Go sidecar 和全部随包资源并重启。打包脚本预留 `VPK_AZURE_TRUSTED_SIGN_FILE` 与 `VPK_SIGN_TEMPLATE`：接入 Azure Trusted Signing 或其他托管签名命令后，无需修改应用或更新协议。
 
 ### 从源码构建
 
-开发需要 Xcode 和 [mise](https://mise.jdx.dev/)：
+macOS 开发需要 Xcode 和 [mise](https://mise.jdx.dev/)；`mise install` 会安装固定版本的 Go、XcodeGen 和校验工具：
 
 ```sh
 mise install
 mise run build
 open "dist/Codex Tweaks.app"
 ```
+
+Windows 开发需要 Go 与 .NET 8 SDK。以下命令生成 x64、ARM64 两套 self-contained 目录、Velopack 安装器和更新 feed，并执行 PE 架构及 Go RPC 冒烟测试：
+
+```powershell
+./scripts/build-windows.ps1 -Version 3.0.0-beta.1 -BuildNumber 1
+./scripts/package-windows.ps1 -Version 3.0.0-beta.1 -Channel beta
+./scripts/verify-windows.ps1 -Version 3.0.0-beta.1 -Channel beta -RequirePackages
+```
+
+构建输出位于 `artifacts/windows/win-x64`、`artifacts/windows/win-arm64`，待发布文件统一暂存到 `artifacts/windows/release`。
 
 ## 功能包格式
 
@@ -267,11 +297,12 @@ export function activate({ root, onCleanup, api, dependencies }) {
 
 ## 开发
 
-项目使用 XcodeGen 生成工程，工具版本与任务由 `mise.toml` 统一管理。
+项目使用 Go 生成 Presentation Contract，再由 XcodeGen 生成 macOS 工程；固定工具与任务由 `mise.toml` 统一管理。
 
 ```sh
-mise run generate        # 生成 CodexTweaks.xcodeproj
-mise run test            # 运行 macOS 单元测试
+mise run generate        # 生成 Swift/C# Contract 与 CodexTweaks.xcodeproj
+mise run contract:check  # 确认生成文件无漂移
+mise run test            # 运行 Go 后端与 Swift 前端测试
 mise run build           # 构建 Release App 到 dist/
 mise run launch          # 启动已构建的 App
 mise run workflows:lint  # 检查 GitHub Actions 与 Release 脚本
@@ -279,11 +310,13 @@ mise run verify          # 工作流检查、测试、Release 构建与工程差
 mise run clean           # 清理 build/ 与 dist/
 ```
 
-CI 在 `main`、Pull Request 和手动触发时运行 `mise run verify`。推送 `v*` 标签后，Release 工作流会构建 universal、arm64 和 x86_64 DMG 并发布到 GitHub Releases。
+CI 在 `main`、Pull Request 和手动触发时并行验证两套原生应用：macOS 运行 Go race tests、Swift tests 和 Release App 构建；Windows 在 Windows runner 上运行 Go 原生测试、x64/ARM64 self-contained WinUI 发布、Velopack 打包、PE 架构校验和本机架构 sidecar RPC 冒烟测试。
+
+推送 `v*` 标签后，Release 工作流会并行构建三套 macOS DMG 与两套 Windows Velopack 发行包，全部通过后才创建或更新同一个 GitHub Release。带预发布后缀的标签进入 `beta` feed，普通 SemVer 标签进入 `stable` feed。
 
 ## 验证范围
 
-自动测试覆盖 CDP 目标筛选、包验证与排序、用户优先级独立持久化、依赖拓扑与故障隔离、Git Tag 安装和更新检查、源码/依赖/版本更新识别、产物选择加载、固定编译参数、Skill 同源复制、SemVer 和软件更新策略。
+自动测试覆盖 Go RPC、Presentation Contract、平台发现、配置读写、CDP 目标筛选、包验证与排序、用户优先级独立持久化、依赖拓扑与故障隔离、本地目录/ZIP 安装、Git Tag 安装和更新检查、源码/依赖/版本更新识别、产物选择加载、固定编译参数、Skill 同源读取、SemVer 和软件更新策略。Swift 测试覆盖 Go 协议解码、原生状态展示，以及 App 包内 sidecar 的可执行性和真实 `ping` 往返；Windows 验证脚本检查双架构 PE、随包资源、原生 sidecar 初始化与 Velopack 安装/更新 feed。
 
 单元测试与本地构建成功不等于所有未来 Codex 版本都保持相同 DOM。真实视觉效果仍需在对应 Codex 版本中确认。
 
@@ -291,15 +324,23 @@ CI 在 `main`、Pull Request 和手动触发时运行 `mise run verify`。推送
 
 ```text
 app/
-├── Sources/                     # SwiftUI、包存储/编译、启动器、CDP 与注入实现
+├── Sources/                     # SwiftUI 薄前端、Go RPC 客户端与协议 DTO
 ├── Resources/Assets.xcassets/   # macOS AppIcon
 ├── Resources/Branding/          # 图标母版
 ├── Resources/Tweaks/packages/   # 内置 ct-sample 源码包
-└── Tests/                       # 包、编译、注入、连接与更新测试
+└── Tests/                       # 前后端协议与 App 内 sidecar 测试
+backend/
+├── cmd/codex-tweaks-backend/    # stdio RPC sidecar 入口
+├── cmd/contractgen/             # Swift/C# Presentation Contract 生成器
+└── internal/                    # Go 业务核心、系统适配、Presentation、RPC 与测试
+contract/
+└── presentation-contract.json  # 可审阅的统一协议清单
+windows/
+└── CodexTweaks.Windows/         # WinUI 3 原生薄前端与 Velopack 接入
 Skills/
 └── develop-codex-tweaks-package/ # 功能包开发 Skill，也是 UI 复制内容的唯一来源
 .github/workflows/               # CI 与标签发布工作流
-scripts/                         # Release 打包与产物校验脚本
+scripts/                         # macOS/Windows 构建、打包与产物校验脚本
 mise.toml                        # 固定工具与统一任务
 project.yml                      # XcodeGen 工程定义
 ```

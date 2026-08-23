@@ -1,6 +1,9 @@
 build/
 dist/
+artifacts/
 DerivedData/
+bin/
+obj/
 *.xcuserstate
 xcuserdata/
 .DS_Store

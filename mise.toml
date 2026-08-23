@@ -1,12 +1,20 @@
 [tools]
 actionlint = "1.7.12"
 "pipx:dmgbuild" = "1.6.7"
+go = "1.26.4"
 shellcheck = "0.11.0"
 xcodegen = "2.46.0"
 
 [tasks.generate]
-description = "使用固定版本的 XcodeGen 生成 Xcode 工程"
-run = "xcodegen generate"
+description = "生成统一 Presentation Contract 与 Xcode 工程"
+run = [
+  "cd backend && go run ./cmd/contractgen -root ..",
+  "xcodegen generate",
+]
+
+[tasks."contract:check"]
+description = "确认 Swift 与 C# Presentation Contract 生成文件无漂移"
+run = "cd backend && go run ./cmd/contractgen -root .. -check"
 
 [tasks.build]
 description = "构建 Codex Tweaks.app 并输出到 dist/"
@@ -19,9 +27,16 @@ run = [
 ]
 
 [tasks.test]
-description = "运行单元测试"
+description = "运行 Go 后端和 Swift 前端单元测试"
 depends = ["generate"]
-run = "xcodebuild -project CodexTweaks.xcodeproj -scheme CodexTweaks -configuration Debug -destination \"platform=macOS,arch=$(uname -m)\" -derivedDataPath build/DerivedData test"
+run = [
+  "cd backend && go vet ./...",
+  "cd backend && go test -race ./...",
+  "cd backend && GOOS=windows GOARCH=amd64 go build ./...",
+  "cd backend && GOOS=windows GOARCH=arm64 go build ./...",
+  "mise run contract:check",
+  "xcodebuild -project CodexTweaks.xcodeproj -scheme CodexTweaks -configuration Debug -destination \"platform=macOS,arch=$(uname -m)\" -derivedDataPath build/DerivedData test",
+]
 
 [tasks.verify]
 description = "执行工作流检查、测试、Release 构建和差异检查"
@@ -30,7 +45,7 @@ run = [
   "mise run test",
   "mise run build",
   "git diff --check",
-  "git diff --exit-code -- CodexTweaks.xcodeproj",
+  "git diff --exit-code -- CodexTweaks.xcodeproj contract/presentation-contract.json app/Sources/GeneratedPresentationContract.swift windows/CodexTweaks.Windows/Generated/PresentationContract.g.cs",
 ]
 
 [tasks."workflows:lint"]

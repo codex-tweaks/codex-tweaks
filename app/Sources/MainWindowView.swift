@@ -11,16 +11,16 @@ struct MainWindowView: View {
 
         var id: Self { self }
 
-        var title: String {
+        var titleKey: PresentationTextKey {
             switch self {
             case .overview:
-                return "概览"
+                return .navOverview
             case .packages:
-                return "功能包"
+                return .navPackages
             case .logs:
-                return "运行日志"
+                return .navLogs
             case .updates:
-                return "关于与更新"
+                return .navUpdates
             }
         }
 
@@ -46,12 +46,16 @@ struct MainWindowView: View {
         NavigationSplitView {
             List(selection: $selection) {
                 ForEach(Section.allCases) { section in
-                    Label(section.title, systemImage: section.symbol)
+                    Label(model.text(section.titleKey), systemImage: section.symbol)
                         .tag(section)
                 }
             }
-            .navigationTitle("Codex Tweaks")
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 230)
+            .navigationTitle(model.text(.appName))
+            .navigationSplitViewColumnWidth(
+                min: CGFloat(model.tokens.navigationWidth - 24),
+                ideal: CGFloat(model.tokens.navigationWidth),
+                max: CGFloat(model.tokens.navigationWidth + 24)
+            )
         } detail: {
             switch selection ?? .overview {
             case .overview:
@@ -65,12 +69,12 @@ struct MainWindowView: View {
             case .logs:
                 LogView(model: model)
             case .updates:
-                UpdateView(updateChecker: updateChecker)
+                UpdateView(model: model, updateChecker: updateChecker)
             }
         }
         .navigationSplitViewStyle(.balanced)
         .alert(
-            "发现新版本",
+            model.text(.updateAvailable),
             isPresented: Binding(
                 get: { updateChecker.pendingUpdate != nil },
                 set: { isPresented in
@@ -81,23 +85,29 @@ struct MainWindowView: View {
             ),
             presenting: updateChecker.pendingUpdate
         ) { release in
-            Button("下载更新") {
+            Button(model.text(
+                .updateDownload,
+                ["version": updateChecker.latestVersionString]
+            )) {
                 if let url = updateChecker.downloadURL(for: release) {
                     NSWorkspace.shared.open(url)
                 }
                 updateChecker.dismissUpdate()
             }
-            Button("稍后", role: .cancel) {
+            Button(model.text(.updateLater), role: .cancel) {
                 updateChecker.dismissUpdate()
             }
-            Button("跳过此版本", role: .destructive) {
+            Button(model.text(.updateSkip), role: .destructive) {
                 updateChecker.skipUpdate(release)
             }
         } message: { release in
-            Text(
-                "当前版本为 \(updateChecker.currentVersion)，"
-                    + "新版本 \(SemanticVersion.normalizedString(release.tagName)) 已可下载。"
-            )
+            Text(model.text(
+                .updatePromptMessage,
+                [
+                    "current": updateChecker.currentVersion,
+                    "latest": updateChecker.latestVersionString,
+                ]
+            ))
         }
     }
 }
@@ -112,13 +122,13 @@ private struct TweakPackagesView: View {
 
         var id: Self { self }
 
-        var title: String {
+        var titleKey: PresentationTextKey {
             switch self {
-            case .all: return "全部"
-            case .enabled: return "已启用"
-            case .disabled: return "已停用"
-            case .pending: return "待处理"
-            case .error: return "异常"
+            case .all: return .packagesFilterAll
+            case .enabled: return .packagesFilterEnabled
+            case .disabled: return .packagesFilterDisabled
+            case .pending: return .packagesFilterPending
+            case .error: return .packagesFilterError
             }
         }
     }
@@ -161,7 +171,7 @@ private struct TweakPackagesView: View {
         .listStyle(.inset)
         .scrollContentBackground(.hidden)
         .background(Color(nsColor: .windowBackgroundColor))
-        .navigationTitle("功能包")
+        .navigationTitle(model.text(.navPackages))
         .task {
             model.reloadTweakPackages()
         }
@@ -177,48 +187,61 @@ private struct TweakPackagesView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("按包管理页面增强")
+        VStack(alignment: .leading, spacing: CGFloat(model.tokens.controlSpacing)) {
+            VStack(alignment: .leading, spacing: CGFloat(model.tokens.compactSpacing)) {
+                Text(model.text(.packagesTitle))
                     .font(.largeTitle.weight(.semibold))
-                Text("每个目录是一个独立包。源码更新不会直接生效，手动编译成功后才会原子切换。")
+                Text(model.text(.packagesSubtitle))
                     .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 14) {
                 Label(
-                    "已启用 \(model.enabledTweakPackageCount) / \(model.tweakPackages.count)，已激活 \(model.activeTweakPackageCount)",
+                    model.text(
+                        .packagesEnabledSummary,
+                        [
+                            "enabled": String(model.enabledTweakPackageCount),
+                            "total": String(model.tweakPackages.count),
+                            "active": String(model.activeTweakPackageCount),
+                        ]
+                    ),
                     systemImage: "shippingbox"
                 )
                 .font(.callout.weight(.medium))
 
                 Spacer()
 
-                Toggle("开发者模式", isOn: $model.isDeveloperMode)
+                Toggle(model.text(.packagesDeveloperMode), isOn: $model.isDeveloperMode)
                     .toggleStyle(.switch)
+                    .disabled(!model.actions.setDeveloperMode)
 
-                Button("重新扫描", systemImage: "arrow.clockwise") {
+                Button(model.text(.packagesRescan), systemImage: "arrow.clockwise") {
                     model.reloadTweakPackages()
                     model.checkNodeEnvironment()
                     model.checkGitEnvironment()
                 }
                 .buttonStyle(.bordered)
+                .disabled(!model.actions.reloadPackages)
             }
 
             HStack(spacing: 8) {
                 Image(systemName: model.nodeEnvironment == nil ? "exclamationmark.triangle" : "checkmark.circle")
-                    .foregroundStyle(model.nodeEnvironment == nil ? .orange : .green)
+                    .foregroundStyle(
+                        model.nodeEnvironment == nil
+                            ? model.tokens.warningColorValue
+                            : model.tokens.successColorValue
+                    )
                 if model.isCheckingNode {
-                    Text("正在检测 Node.js…")
+                    Text(model.text(.packagesNodeChecking))
                 } else if let node = model.nodeEnvironment {
-                    Text("Node.js \(node.version) 可用")
+                    Text(model.text(.packagesNodeAvailable, ["version": node.version]))
                     Text(node.nodeURL.path)
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 } else {
-                    Text("未找到 Node.js、npm 和 npx；安装 Node.js 后重新扫描。")
+                    Text(model.text(.packagesNodeMissing))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -226,68 +249,74 @@ private struct TweakPackagesView: View {
 
             HStack(spacing: 8) {
                 Image(systemName: model.gitEnvironment == nil ? "exclamationmark.triangle" : "checkmark.circle")
-                    .foregroundStyle(model.gitEnvironment == nil ? .orange : .green)
+                    .foregroundStyle(
+                        model.gitEnvironment == nil
+                            ? model.tokens.warningColorValue
+                            : model.tokens.successColorValue
+                    )
                 if model.isCheckingGit {
-                    Text("正在检测 Git…")
+                    Text(model.text(.packagesGitChecking))
                 } else if let git = model.gitEnvironment {
-                    Text("\(git.version) 可用")
+                    Text(model.text(.packagesGitAvailable, ["version": git.version]))
                     Text(git.gitURL.path)
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 } else {
-                    Text("未找到 Git；本地功能包仍可使用，但不能安装或检查远程包。")
+                    Text(model.text(.packagesGitMissing))
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer(minLength: 12)
 
                 Button(
-                    model.isInstallingLocalPackage ? "正在安装…" : "从本地安装",
+                    model.text(
+                        model.isInstallingLocalPackage
+                            ? .packagesInstalling
+                            : .packagesInstallLocal
+                    ),
                     systemImage: "folder.badge.plus"
                 ) {
                     model.clearLocalOperationFeedback()
                     isShowingLocalPackageImporter = true
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(
-                    model.isInstallingLocalPackage || model.isInstallingRemotePackage
-                )
-                .help("选择功能包目录或 ZIP；校验通过后复制到本地 packages 目录")
+                .disabled(!model.actions.installLocalPackage)
+                .help(model.text(.packagesInstallLocalHelp))
 
-                Button("从 Git 安装", systemImage: "square.and.arrow.down") {
+                Button(model.text(.packagesInstallRemote), systemImage: "square.and.arrow.down") {
                     isShowingGitInstall = true
                 }
                 .buttonStyle(.bordered)
-                .disabled(
-                    model.gitEnvironment == nil
-                        || model.isInstallingLocalPackage
-                        || model.isInstallingRemotePackage
-                )
+                .disabled(!model.actions.installRemotePackage)
 
                 Button(
-                    model.isCheckingRemoteUpdates ? "检查中…" : "检查包更新",
+                    model.text(
+                        model.isCheckingRemoteUpdates
+                            ? .packagesCheckingRemote
+                            : .packagesCheckRemoteUpdates
+                    ),
                     systemImage: "arrow.triangle.2.circlepath"
                 ) {
                     model.checkManagedPackageUpdates()
                 }
                 .buttonStyle(.bordered)
-                .disabled(model.gitEnvironment == nil || model.isCheckingRemoteUpdates)
+                .disabled(!model.actions.checkManagedPackageUpdates)
             }
             .font(.callout)
 
             localInstallFeedback
 
             if model.isDeveloperMode {
-                Text("开发者模式会自动编译已启用包的源码变化，仅使用本地已有的依赖和编译器缓存；依赖或版本更新仍需手动确认。")
+                Text(model.text(.packagesDeveloperModeDetail))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
 
         }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 24)
+        .padding(.horizontal, CGFloat(model.tokens.pagePadding))
+        .padding(.vertical, CGFloat(model.tokens.cardPadding))
     }
 
     @ViewBuilder
@@ -296,14 +325,14 @@ private struct TweakPackagesView: View {
             HStack(spacing: 8) {
                 ProgressView()
                     .controlSize(.small)
-                Text("正在安全检查并安装本地功能包…")
+                Text(model.text(.packagesInstallingLocal))
             }
             .font(.callout)
             .foregroundStyle(.secondary)
         } else if let message = model.localOperationMessage {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Label(message, systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(model.tokens.successColorValue)
                     .textSelection(.enabled)
                 Spacer(minLength: 8)
                 Button {
@@ -313,13 +342,13 @@ private struct TweakPackagesView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                .accessibilityLabel("清除本地安装提示")
+                .accessibilityLabel(model.text(.packagesClearMessage))
             }
             .font(.callout)
         } else if let error = model.localOperationError {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(model.tokens.dangerColorValue)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
                 Spacer(minLength: 8)
@@ -330,7 +359,7 @@ private struct TweakPackagesView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                .accessibilityLabel("清除本地安装错误")
+                .accessibilityLabel(model.text(.packagesClearError))
             }
             .font(.callout)
         }
@@ -348,9 +377,9 @@ private struct TweakPackagesView: View {
 
     private var packageListToolbar: some View {
         HStack(spacing: 12) {
-            Label("加载顺序", systemImage: "list.number")
+            Label(model.text(.packagesLoadOrder), systemImage: "list.number")
 
-            Text("依赖拓扑优先，其余按有效优先级")
+            Text(model.text(.packagesLoadOrderDetail))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -362,27 +391,27 @@ private struct TweakPackagesView: View {
                     .foregroundStyle(.secondary)
             }
 
-            TextField("搜索功能包", text: $searchText)
+            TextField(model.text(.packagesSearchPlaceholder), text: $searchText)
                 .textFieldStyle(.roundedBorder)
                 .frame(minWidth: 160, idealWidth: 210, maxWidth: 240)
 
-            Picker("筛选功能包", selection: $selectedFilter) {
+            Picker(model.text(.packagesFilter), selection: $selectedFilter) {
                 ForEach(PackageFilter.allCases) { filter in
-                    Text(filter.title).tag(filter)
+                    Text(model.text(filter.titleKey)).tag(filter)
                 }
             }
             .labelsHidden()
             .pickerStyle(.menu)
             .frame(width: 108)
         }
-        .padding(.horizontal, 28)
+        .padding(.horizontal, CGFloat(model.tokens.pagePadding))
         .padding(.vertical, 10)
     }
 
     private func packageRow(_ package: TweakPackage) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Toggle(
-                "启用 \(package.displayName)",
+                model.text(.packagesEnablePackage, ["name": package.displayName]),
                 isOn: Binding(
                     get: { model.isTweakPackageEnabled(package) },
                     set: { model.setTweakPackage(package, isEnabled: $0) }
@@ -391,16 +420,20 @@ private struct TweakPackagesView: View {
             .labelsHidden()
             .toggleStyle(.switch)
             .padding(.top, 3)
+            .disabled(!package.availableActions.setEnabled)
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     Text(package.displayName)
                         .font(.body.weight(.semibold))
-                    Text("源 v\(package.version)")
+                    Text(model.text(.packagesSourceVersion, ["version": package.version]))
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.secondary)
                     if let active = package.activeBuild {
-                        Text("已激活 v\(active.record.packageVersion)")
+                        Text(model.text(
+                            .packagesActiveVersion,
+                            ["version": active.record.packageVersion]
+                        ))
                             .font(.system(.caption, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
@@ -444,27 +477,25 @@ private struct TweakPackagesView: View {
 
                 HStack(spacing: 8) {
                     if model.canInstallMissingDependencies(for: package) {
-                        Button("安装缺失依赖") {
+                        Button(model.text(.packagesInstallDependencies)) {
                             model.installMissingDependencies(for: package)
                         }
-                        .disabled(
-                            model.gitEnvironment == nil
-                                || model.installingPackageIDs.contains(package.id)
-                        )
+                        .disabled(!package.availableActions.installMissingDependencies)
                     }
 
                     if model.canEnableDependencies(for: package) {
-                        Button("启用依赖") {
+                        Button(model.text(.packagesEnableDependencies)) {
                             model.enableDependencies(for: package)
                         }
+                        .disabled(!package.availableActions.enableDependencies)
                     }
 
                     if model.remotePackageUpdates[package.id]?.isInstallable == true {
-                        Button("更新并编译") {
+                        Button(model.text(.packagesUpdateAndBuild)) {
                             model.updateManagedPackage(package)
                         }
                         .buttonStyle(.borderedProminent)
-                        .disabled(model.installingPackageIDs.contains(package.id))
+                        .disabled(!package.availableActions.updateManagedPackage)
                     }
 
                     Button {
@@ -472,21 +503,20 @@ private struct TweakPackagesView: View {
                     } label: {
                         Image(systemName: "folder")
                     }
-                    .help("在 Finder 中打开功能包")
+                    .help(model.text(.packagesOpenDirectory))
+                    .disabled(!package.availableActions.openDirectory)
 
                     Button(buildButtonTitle(package)) {
                         model.buildPackage(package)
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(
-                        package.validationError != nil
-                            || model.nodeEnvironment == nil
-                            || model.buildingPackageIDs.contains(package.id)
+                        !package.availableActions.build
                     )
                 }
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, CGFloat(model.tokens.compactSpacing))
         .accessibilityElement(children: .contain)
     }
 
@@ -523,7 +553,11 @@ private struct TweakPackagesView: View {
                 .font(.caption.weight(.medium))
                 .accessibilityLabel(dependencySummaryTitle(statuses))
                 .accessibilityValue(
-                    expandedDependencyPackageIDs.contains(package.id) ? "已展开" : "已折叠"
+                    model.text(
+                        expandedDependencyPackageIDs.contains(package.id)
+                            ? .packagesExpanded
+                            : .packagesCollapsed
+                    )
                 )
 
                 if expandedDependencyPackageIDs.contains(package.id) {
@@ -572,15 +606,18 @@ private struct TweakPackagesView: View {
                     .foregroundStyle(.tertiary)
                     .textSelection(.enabled)
                 } else {
-                    Text("未声明 Git 来源，仅在本地查找")
+                    Text(model.text(.packagesDependencyNoGitSource))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
 
                 if case let .sourceConflict(installedURL) = status.state {
-                    Text("本机已安装来源：\(installedURL)")
+                    Text(model.text(
+                        .packagesDependencyInstalledSource,
+                        ["url": installedURL]
+                    ))
                         .font(.caption2)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(model.tokens.dangerColorValue)
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .textSelection(.enabled)
@@ -601,17 +638,28 @@ private struct TweakPackagesView: View {
     private func dependencySummaryTitle(_ statuses: [TweakPackageDependencyStatus]) -> String {
         let pendingCount = statuses.filter { !$0.state.isSatisfied }.count
         if pendingCount == 0 {
-            return "依赖 \(statuses.count)/\(statuses.count) 正常"
+            return model.text(
+                .packagesDependencySummaryOK,
+                ["total": String(statuses.count)]
+            )
         }
         if statuses.contains(where: { dependencyStateIsCritical($0.state) }) {
-            return "依赖 \(statuses.count) · \(pendingCount) 个异常"
+            return model.text(
+                .packagesDependencySummaryCritical,
+                ["total": String(statuses.count), "pending": String(pendingCount)]
+            )
         }
-        return "依赖 \(statuses.count) · \(pendingCount) 个需处理"
+        return model.text(
+            .packagesDependencySummaryPending,
+            ["total": String(statuses.count), "pending": String(pendingCount)]
+        )
     }
 
     private func dependencySummaryColor(_ statuses: [TweakPackageDependencyStatus]) -> Color {
-        if statuses.allSatisfy(\.state.isSatisfied) { return .green }
-        return statuses.contains(where: { dependencyStateIsCritical($0.state) }) ? .red : .orange
+        if statuses.allSatisfy(\.state.isSatisfied) { return model.tokens.successColorValue }
+        return statuses.contains(where: { dependencyStateIsCritical($0.state) })
+            ? model.tokens.dangerColorValue
+            : model.tokens.warningColorValue
     }
 
     private func dependencySummarySymbol(_ statuses: [TweakPackageDependencyStatus]) -> String {
@@ -633,33 +681,44 @@ private struct TweakPackagesView: View {
     private func dependencyStateTitle(_ status: TweakPackageDependencyStatus) -> String {
         switch status.state {
         case .satisfied:
-            return status.activeVersion.map { "正常 · v\($0)" } ?? "正常"
+            return status.activeVersion.map {
+                model.text(.packagesDependencyStateSatisfiedVersion, ["version": $0])
+            } ?? model.text(.packagesDependencyStateSatisfied)
         case .missingLocal:
-            return "本地缺失"
+            return model.text(.packagesDependencyStateMissingLocal)
         case .missingInstallable:
-            return "可从 Git 安装"
+            return model.text(.packagesDependencyStateMissingInstallable)
         case .disabled:
-            return status.activeVersion.map { "已停用 · v\($0)" } ?? "已停用"
+            return status.activeVersion.map {
+                model.text(.packagesDependencyStateDisabledVersion, ["version": $0])
+            } ?? model.text(.packagesDependencyStateDisabled)
         case .notBuilt:
-            return status.installedVersion.map { "尚未编译 · v\($0)" } ?? "尚未编译"
+            return status.installedVersion.map {
+                model.text(.packagesDependencyStateNotBuiltVersion, ["version": $0])
+            } ?? model.text(.packagesDependencyStateNotBuilt)
         case let .versionMismatch(activeVersion):
-            return "v\(activeVersion) 不匹配"
+            return model.text(
+                .packagesDependencyStateVersionMismatch,
+                ["version": activeVersion]
+            )
         case .sourceConflict:
-            return "来源冲突"
+            return model.text(.packagesDependencyStateSourceConflict)
         case .cycle:
-            return "循环依赖"
+            return model.text(.packagesDependencyStateCycle)
         case .blocked:
-            return "依赖链阻塞"
+            return model.text(.packagesDependencyStateBlocked)
         case .invalidRequirement:
-            return "版本范围无效"
+            return model.text(.packagesDependencyStateInvalidRequirement)
         case .selfReference:
-            return "依赖自身"
+            return model.text(.packagesDependencyStateSelfReference)
         }
     }
 
     private func dependencyStateColor(_ state: TweakPackageDependencyState) -> Color {
-        if state.isSatisfied { return .green }
-        return dependencyStateIsCritical(state) ? .red : .orange
+        if state.isSatisfied { return model.tokens.successColorValue }
+        return dependencyStateIsCritical(state)
+            ? model.tokens.dangerColorValue
+            : model.tokens.warningColorValue
     }
 
     private func dependencyStateSymbol(_ state: TweakPackageDependencyState) -> String {
@@ -673,12 +732,16 @@ private struct TweakPackagesView: View {
         if let origin = status.resolvedOrigin {
             switch origin {
             case .local:
-                return "本地提供"
+                return model.text(.packagesDependencyOriginLocal)
             case .managed:
-                return "Git 管理"
+                return model.text(.packagesDependencyOriginManaged)
             }
         }
-        return status.declaredSource == nil ? "仅本地" : "Git 可安装"
+        return model.text(
+            status.declaredSource == nil
+                ? .packagesDependencyOriginLocalOnly
+                : .packagesDependencyOriginInstallable
+        )
     }
 
     private func dependencySourceForDisplay(
@@ -692,16 +755,22 @@ private struct TweakPackagesView: View {
     }
 
     private func dependencySelectorTitle(_ selector: TweakPackageRemoteSelector) -> String {
-        if let value = selector.value { return "\(selector.type.title)：\(value)" }
-        return selector.type.title
+        let title = selector.type.title(contract: model.presentation)
+        if let value = selector.value {
+            return model.text(
+                .packagesDependencySelector,
+                ["type": title, "value": value]
+            )
+        }
+        return title
     }
 
     private func priorityEditor(_ package: TweakPackage) -> some View {
         HStack(spacing: 4) {
-            Text("优先级")
+            Text(model.text(.packagesPriority))
                 .foregroundStyle(.tertiary)
             TextField(
-                "优先级",
+                model.text(.packagesPriority),
                 value: Binding(
                     get: { package.priority },
                     set: { model.setTweakPackagePriority(package, priority: $0) }
@@ -711,7 +780,11 @@ private struct TweakPackagesView: View {
             .labelsHidden()
             .textFieldStyle(.roundedBorder)
             .frame(width: 58)
-            .accessibilityLabel("\(package.displayName) 用户优先级")
+            .accessibilityLabel(model.text(
+                .packagesUserPriority,
+                ["name": package.displayName]
+            ))
+            .disabled(!package.availableActions.setPriority)
             if package.priorityOverride != nil {
                 Button {
                     model.resetTweakPackagePriority(package)
@@ -720,16 +793,20 @@ private struct TweakPackagesView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                .help("恢复包默认优先级 \(package.declaredPriority)")
+                .help(model.text(
+                    .packagesResetPriority,
+                    ["priority": String(package.declaredPriority)]
+                ))
+                .disabled(!package.availableActions.setPriority)
             }
             if let constraint = model.priorityConstraint(for: package) {
                 Button {
                     priorityHintPackageID = package.id
                 } label: {
-                    Label("依赖约束", systemImage: "info.circle.fill")
+                    Label(model.text(.packagesDependencyConstraint), systemImage: "info.circle.fill")
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.blue)
+                .foregroundStyle(model.tokens.accentColorValue)
                 .help(priorityConstraintDescription(package, constraint: constraint))
                 .popover(
                     isPresented: priorityHintBinding(for: package.id),
@@ -761,14 +838,20 @@ private struct TweakPackagesView: View {
         constraint: TweakPackagePriorityConstraint
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("依赖顺序优先", systemImage: "point.3.connected.trianglepath.dotted")
+            Label(
+                model.text(.packagesDependencyOrderFirst),
+                systemImage: "point.3.connected.trianglepath.dotted"
+            )
                 .font(.headline)
             Text(priorityConstraintDescription(package, constraint: constraint))
                 .fixedSize(horizontal: false, vertical: true)
-            Text(
-                "实际加载顺序 #\(constraint.actualLoadPosition)。用户优先级 \(package.priority) "
-                    + "仍用于和没有依赖路径的功能包排序。"
-            )
+            Text(model.text(
+                .packagesPriorityActual,
+                [
+                    "position": String(constraint.actualLoadPosition),
+                    "priority": String(package.priority),
+                ]
+            ))
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -783,17 +866,22 @@ private struct TweakPackagesView: View {
     ) -> String {
         var messages: [String] = []
         if !constraint.mustLoadAfterPackageIDs.isEmpty {
-            messages.append(
-                "\(package.displayName) 依赖于 "
-                    + packageNames(constraint.mustLoadAfterPackageIDs)
-                    + "，因此必须在这些包之后加载。"
-            )
+            messages.append(model.text(
+                .packagesPriorityAfter,
+                [
+                    "name": package.displayName,
+                    "dependencies": packageNames(constraint.mustLoadAfterPackageIDs),
+                ]
+            ))
         }
         if !constraint.mustLoadBeforePackageIDs.isEmpty {
-            messages.append(
-                packageNames(constraint.mustLoadBeforePackageIDs)
-                    + " 依赖于 \(package.displayName)，因此当前包必须先于这些包加载。"
-            )
+            messages.append(model.text(
+                .packagesPriorityBefore,
+                [
+                    "name": package.displayName,
+                    "dependencies": packageNames(constraint.mustLoadBeforePackageIDs),
+                ]
+            ))
         }
         return messages.joined(separator: " ")
     }
@@ -802,7 +890,9 @@ private struct TweakPackagesView: View {
         let names = packageIDs.prefix(3).map { packageID in
             model.tweakPackages.first(where: { $0.id == packageID })?.displayName ?? packageID
         }
-        let suffix = packageIDs.count > names.count ? " 等 \(packageIDs.count) 个包" : ""
+        let suffix = packageIDs.count > names.count
+            ? model.text(.packagesPackageCountSuffix, ["count": String(packageIDs.count)])
+            : ""
         return names.joined(separator: "、") + suffix
     }
 
@@ -811,13 +901,14 @@ private struct TweakPackagesView: View {
             Image(systemName: "shippingbox")
                 .font(.system(size: 36, weight: .light))
                 .foregroundStyle(.secondary)
-            Text("没有找到功能包")
+            Text(model.text(.packagesEmptyTitle))
                 .font(.title3.weight(.medium))
-            Text("在 packages 目录中创建包目录和 package.json 后重新扫描。")
+            Text(model.text(.packagesEmptyDetail))
                 .foregroundStyle(.secondary)
-            Button("打开 packages 目录") {
+            Button(model.text(.overviewOpenPackagesDirectory)) {
                 model.openTweaksDirectory()
             }
+            .disabled(!model.actions.openPackagesDirectory)
         }
         .frame(maxWidth: .infinity, minHeight: 260)
         .padding(.horizontal, 32)
@@ -829,11 +920,11 @@ private struct TweakPackagesView: View {
             Image(systemName: "line.3.horizontal.decrease.circle")
                 .font(.system(size: 32, weight: .light))
                 .foregroundStyle(.secondary)
-            Text("没有匹配的功能包")
+            Text(model.text(.packagesNoMatchTitle))
                 .font(.title3.weight(.medium))
-            Text("尝试更换关键词或筛选条件。")
+            Text(model.text(.packagesNoMatchDetail))
                 .foregroundStyle(.secondary)
-            Button("清除搜索与筛选") {
+            Button(model.text(.packagesClearSearch)) {
                 searchText = ""
                 selectedFilter = .all
             }
@@ -881,113 +972,33 @@ private struct TweakPackagesView: View {
         case .disabled:
             return !model.isTweakPackageEnabled(package)
         case .pending:
-            if let status = model.remotePackageUpdates[package.id]?.status,
-               status != .current {
-                return true
-            }
-            if !model.dependencyIssues(for: package).isEmpty {
-                return true
-            }
-            switch package.buildDisposition(compilerVersion: TweakPackageStore.compilerVersion) {
-            case .notBuilt, .versionUpdate, .dependencyUpdate, .sourceChanged, .compilerUpdate:
-                return true
-            case .invalid, .current:
-                return false
-            }
+            return package.presentation.isPending
         case .error:
-            return package.validationError != nil
-                || model.packageBuildErrors[package.id] != nil
-                || model.packagePayloadErrors[package.id] != nil
-                || model.packageRuntimeErrors[package.id] != nil
-                || model.remotePackageErrors[package.id] != nil
-                || hasCriticalDependencyIssue(package)
+            return package.presentation.isError
         }
     }
 
     private func packageStatusTitle(_ package: TweakPackage) -> String {
-        if model.installingPackageIDs.contains(package.id) { return "正在处理远程包" }
-        if model.buildingPackageIDs.contains(package.id) { return "正在编译" }
-        if package.validationError != nil { return "包配置无效" }
-        if model.remotePackageErrors[package.id] != nil { return "远程操作失败" }
-        if model.remotePackageUpdates[package.id]?.status == .pinnedReferenceChanged {
-            return "固定引用已变化"
-        }
-        if model.remotePackageUpdates[package.id]?.status == .available {
-            return "远程有更新"
-        }
-        if !model.dependencyIssues(for: package).isEmpty { return "依赖阻塞" }
-        if model.packageBuildErrors[package.id] != nil { return "编译失败" }
-        if model.packagePayloadErrors[package.id] != nil { return "产物读取失败" }
-        if model.packageRuntimeErrors[package.id] != nil { return "运行失败" }
-        switch package.buildDisposition(compilerVersion: TweakPackageStore.compilerVersion) {
-        case .invalid: return "不可用"
-        case .notBuilt: return "尚未编译"
-        case .current: return "已激活"
-        case .versionUpdate: return "发现新版本"
-        case .dependencyUpdate: return "依赖或配置更新"
-        case .sourceChanged: return "源码有更新"
-        case .compilerUpdate: return "编译器有更新"
-        }
+        package.presentation.statusTitle
     }
 
     private func packageStatusDetail(_ package: TweakPackage) -> String? {
-        if let error = package.validationError { return error }
-        if let error = model.remotePackageErrors[package.id] { return error }
-        if let update = model.remotePackageUpdates[package.id] {
-            switch update.status {
-            case .available:
-                return "\(update.candidateReference) 已更新到 \(update.candidateCommit.prefix(12))，点击后下载并编译。"
-            case .pinnedReferenceChanged:
-                return "远端固定 Tag/Release 指向了新的 commit；为避免静默替换，已阻止普通更新。"
-            case .current:
-                break
-            }
-        }
-        let dependencyIssues = model.dependencyIssues(for: package)
-        if !dependencyIssues.isEmpty {
-            return "有 \(dependencyIssues.count) 个依赖问题，展开依赖详情可查看具体状态。"
-        }
-        if let error = model.packageBuildErrors[package.id] {
-            if let active = package.activeBuild {
-                return "当前仍运行 v\(active.record.packageVersion)。\(error)"
-            }
-            return error
-        }
-        if let error = model.packagePayloadErrors[package.id] { return error }
-        if let error = model.packageRuntimeErrors[package.id] { return error }
-        guard let active = package.activeBuild else { return "点击编译后才会加载到页面。" }
-        switch package.buildDisposition(compilerVersion: TweakPackageStore.compilerVersion) {
-        case .versionUpdate:
-            return "当前仍运行 v\(active.record.packageVersion)，点击后更新到 v\(package.version)。"
-        case .dependencyUpdate:
-            return "当前编译产物仍在运行；需手动同步依赖或构建配置。"
-        case .sourceChanged:
-            return "当前编译产物仍在运行，新源码尚未激活。"
-        case .compilerUpdate:
-            return "当前产物由 esbuild \(active.record.compilerVersion) 生成。"
-        default:
-            return "上次编译：\(active.record.builtAt.formatted(date: .abbreviated, time: .shortened))"
-        }
+        let detail = package.presentation.statusDetail
+        return detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : detail
     }
 
     private func packageStatusColor(_ package: TweakPackage) -> Color {
-        if package.validationError != nil
-            || model.packageBuildErrors[package.id] != nil
-            || model.packagePayloadErrors[package.id] != nil
-            || model.packageRuntimeErrors[package.id] != nil {
-            return .red
+        switch package.presentation.statusTone {
+        case "success": return model.tokens.successColorValue
+        case "danger": return model.tokens.dangerColorValue
+        case "accent": return model.tokens.accentColorValue
+        case "neutral": return .secondary
+        default: return model.tokens.warningColorValue
         }
-        if model.remotePackageErrors[package.id] != nil { return .red }
-        if model.remotePackageUpdates[package.id]?.status == .pinnedReferenceChanged {
-            return .orange
-        }
-        if hasCriticalDependencyIssue(package) { return .red }
-        if !model.dependencyIssues(for: package).isEmpty { return .orange }
-        if model.installingPackageIDs.contains(package.id) { return .blue }
-        if model.buildingPackageIDs.contains(package.id) { return .blue }
-        return package.buildDisposition(compilerVersion: TweakPackageStore.compilerVersion) == .current
-            ? .green
-            : .orange
+    }
+
+    private func packageHasError(_ package: TweakPackage) -> Bool {
+        package.presentation.isError
     }
 
     private func hasCriticalDependencyIssue(_ package: TweakPackage) -> Bool {
@@ -999,27 +1010,31 @@ private struct TweakPackagesView: View {
     private func packageStatusSymbol(_ package: TweakPackage) -> String {
         if model.installingPackageIDs.contains(package.id) { return "arrow.down.circle" }
         if model.buildingPackageIDs.contains(package.id) { return "arrow.triangle.2.circlepath" }
-        if packageStatusColor(package) == .red { return "exclamationmark.triangle.fill" }
-        return package.buildDisposition(compilerVersion: TweakPackageStore.compilerVersion) == .current
-            ? "checkmark.circle.fill"
-            : "clock.badge.exclamationmark"
+        if packageHasError(package) { return "exclamationmark.triangle.fill" }
+        return package.presentation.isPending
+            ? "clock.badge.exclamationmark"
+            : "checkmark.circle.fill"
     }
 
     private func buildButtonTitle(_ package: TweakPackage) -> String {
-        if model.buildingPackageIDs.contains(package.id) { return "编译中…" }
-        switch package.buildDisposition(compilerVersion: TweakPackageStore.compilerVersion) {
+        if model.buildingPackageIDs.contains(package.id) {
+            return model.text(.packagesBuilding)
+        }
+        switch package.buildDisposition {
         case .notBuilt:
-            return package.hasDependencies ? "安装并编译" : "编译"
+            return model.text(
+                package.hasDependencies ? .packagesInstallAndBuild : .packagesBuild
+            )
         case .versionUpdate:
-            return "更新到 v\(package.version)"
+            return model.text(.packagesUpdateToVersion, ["version": package.version])
         case .dependencyUpdate:
-            return "同步并编译"
+            return model.text(.packagesSyncAndBuild)
         case .sourceChanged, .compilerUpdate:
-            return "更新编译"
+            return model.text(.packagesUpdateBuild)
         case .current:
-            return "重新编译"
+            return model.text(.packagesRebuild)
         case .invalid:
-            return "无法编译"
+            return model.text(.packagesCannotBuild)
         }
     }
 }
@@ -1029,53 +1044,61 @@ private struct GitPackageInstallView: View {
     @ObservedObject var model: AppModel
     @State private var repositoryURL = ""
     @State private var selectorType: TweakPackageRemoteSelectorType = .branch
-    @State private var selectorValue = TweakPackageRemoteSelectorType.branch.defaultValue
+    @State private var selectorValue = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("从 Git 安装功能包")
+        VStack(alignment: .leading, spacing: CGFloat(model.tokens.cardPadding)) {
+            VStack(alignment: .leading, spacing: CGFloat(model.tokens.compactSpacing)) {
+                Text(model.text(.remoteTitle))
                     .font(.title2.weight(.semibold))
-                Text("程序会解析远程引用、锁定精确 commit，并在临时目录校验包格式后保存不可变源码。")
+                Text(model.text(.remoteSubtitle))
                     .foregroundStyle(.secondary)
             }
 
             Form {
-                TextField("仓库地址", text: $repositoryURL, prompt: Text("https://github.com/owner/package.git"))
+                TextField(
+                    model.text(.remoteRepository),
+                    text: $repositoryURL,
+                    prompt: Text(model.text(.remoteRepositoryPlaceholder))
+                )
 
-                Picker("版本选择", selection: $selectorType) {
+                Picker(model.text(.remoteSelector), selection: $selectorType) {
                     ForEach(TweakPackageRemoteSelectorType.allCases) { type in
-                        Text(type.title).tag(type)
+                        Text(type.title(contract: model.presentation)).tag(type)
                     }
                 }
 
-                if let valueLabel = selectorType.valueLabel {
+                if let valueLabel = selectorType.valueLabel(contract: model.presentation) {
                     TextField(valueLabel, text: $selectorValue)
                 }
             }
             .formStyle(.grouped)
 
-            Text("安装会校验 package.json、API 版本、SemVer、入口、包依赖与 npm 锁文件。通过后新包默认保持停用；有 Node.js 时会继续下载锁定依赖并编译，但不会自动启用。")
+            Text(model.text(.remoteValidationDetail))
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let message = model.remoteOperationMessage {
                 Label(message, systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(model.tokens.successColorValue)
                     .textSelection(.enabled)
             }
             if let error = model.remoteOperationError {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(model.tokens.dangerColorValue)
                     .textSelection(.enabled)
             }
 
             HStack {
                 Spacer()
-                Button("关闭") { dismiss() }
+                Button(model.text(.remoteClose)) { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button(model.isInstallingRemotePackage ? "正在安装…" : "安装") {
+                Button(model.text(
+                    model.isInstallingRemotePackage
+                        ? .packagesInstalling
+                        : .remoteInstall
+                )) {
                     model.installRemotePackage(
                         repositoryURL: repositoryURL,
                         selectorType: selectorType,
@@ -1084,21 +1107,26 @@ private struct GitPackageInstallView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
-                .disabled(!canInstall || model.isInstallingRemotePackage)
+                .disabled(!canInstall || !model.actions.installRemotePackage)
             }
         }
-        .padding(24)
+        .padding(CGFloat(model.tokens.pagePadding))
         .frame(width: 620)
         .frame(minHeight: 420)
-        .onAppear { model.clearRemoteOperationFeedback() }
+        .onAppear {
+            model.clearRemoteOperationFeedback()
+            if selectorValue.isEmpty {
+                selectorValue = model.text(.selectorBranchDefault)
+            }
+        }
         .onChange(of: selectorType) { type in
-            selectorValue = type.defaultValue
+            selectorValue = type == .branch ? model.text(.selectorBranchDefault) : ""
         }
     }
 
     private var canInstall: Bool {
         !repositoryURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && (selectorType.valueLabel == nil
+            && (selectorType.valueLabelKey == nil
                 || !selectorValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             && model.gitEnvironment != nil
     }
@@ -1111,32 +1139,32 @@ private struct OverviewView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: CGFloat(model.tokens.sectionSpacing)) {
                 header
                 statusSurface
                 controls
                 aiAuthoring
                 workflow
             }
-            .frame(maxWidth: 760, alignment: .leading)
-            .padding(32)
+            .frame(maxWidth: CGFloat(model.tokens.contentMaxWidth), alignment: .leading)
+            .padding(CGFloat(model.tokens.pagePadding))
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .navigationTitle("概览")
+        .navigationTitle(model.text(.navOverview))
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text("管理 Codex 的本地界面增强")
+        VStack(alignment: .leading, spacing: CGFloat(model.tokens.compactSpacing)) {
+            Text(model.text(.overviewTitle))
                 .font(.largeTitle.weight(.semibold))
-            Text("连接状态、注入控制与常用入口集中在一个窗口中。")
+            Text(model.text(.overviewSubtitle))
                 .font(.body)
                 .foregroundStyle(.secondary)
         }
     }
 
     private var statusSurface: some View {
-        HStack(spacing: 18) {
+        HStack(spacing: CGFloat(model.tokens.controlSpacing)) {
             ZStack {
                 Circle()
                     .fill(statusTint.opacity(0.14))
@@ -1144,13 +1172,16 @@ private struct OverviewView: View {
                     .font(.system(size: 23, weight: .semibold))
                     .foregroundStyle(statusTint)
             }
-            .frame(width: 52, height: 52)
+            .frame(
+                width: CGFloat(model.tokens.statusIconSize + 16),
+                height: CGFloat(model.tokens.statusIconSize + 16)
+            )
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(model.status.title)
+                Text(model.statusTitle)
                     .font(.title3.weight(.semibold))
-                Text(model.status.detail ?? statusSummary)
+                Text(model.statusDetail ?? model.text(.overviewConnectingDetail))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1158,51 +1189,58 @@ private struct OverviewView: View {
             Spacer(minLength: 16)
             primaryStatusAction
         }
-        .padding(20)
+        .padding(CGFloat(model.tokens.cardPadding))
         .background(Color(nsColor: .controlBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(
+            cornerRadius: CGFloat(model.tokens.cardCornerRadius),
+            style: .continuous
+        ))
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(
+                cornerRadius: CGFloat(model.tokens.cardCornerRadius),
+                style: .continuous
+            )
                 .stroke(Color(nsColor: .separatorColor).opacity(0.7), lineWidth: 1)
         }
     }
 
     private var controls: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("控制")
+        VStack(alignment: .leading, spacing: CGFloat(model.tokens.controlSpacing)) {
+            Text(model.text(.overviewControl))
                 .font(.title2.weight(.semibold))
 
             HStack(alignment: .center, spacing: 20) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("启用界面增强")
+                    Text(model.text(.overviewEnable))
                         .font(.body.weight(.medium))
-                    Text("停用后会清理已注入的样式、组件和事件监听器。")
+                    Text(model.text(.overviewEnableDetail))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Toggle("启用界面增强", isOn: $model.isEnabled)
+                Toggle(model.text(.overviewEnable), isOn: $model.isEnabled)
                     .labelsHidden()
                     .toggleStyle(.switch)
-                    .accessibilityLabel("启用界面增强")
-                    .accessibilityHint("停用后会清理已注入的样式、组件和事件监听器")
+                    .accessibilityLabel(model.text(.overviewEnable))
+                    .accessibilityHint(model.text(.overviewEnableDetail))
+                    .disabled(!model.actions.setEnabled)
             }
 
             Divider()
 
             HStack(spacing: 10) {
-                Button("重新注入", systemImage: "arrow.clockwise") {
+                Button(model.text(.overviewReinject), systemImage: "arrow.clockwise") {
                     model.reinject()
                 }
-                .disabled(!model.isEnabled || !model.status.isCDPAvailable)
+                .disabled(!model.actions.reinject)
 
-                Button("管理功能包", systemImage: "shippingbox") {
+                Button(model.text(.overviewManagePackages), systemImage: "shippingbox") {
                     showPackages()
                 }
 
                 Spacer()
 
-                Button("查看日志", systemImage: "doc.text") {
+                Button(model.text(.overviewViewLogs), systemImage: "doc.text") {
                     showLogs()
                 }
             }
@@ -1211,15 +1249,15 @@ private struct OverviewView: View {
     }
 
     private var aiAuthoring: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("交给 AI 编写")
+        VStack(alignment: .leading, spacing: CGFloat(model.tokens.controlSpacing)) {
+            Text(model.text(.overviewAiAuthoring))
                 .font(.title2.weight(.semibold))
 
             HStack(alignment: .center, spacing: 20) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("复制 Codex Tweaks 功能包开发 Skill")
+                    Text(model.text(.overviewCopySkill))
                         .font(.body.weight(.medium))
-                    Text("复制内容直接来自项目内的 SKILL.md，与功能包协议、依赖和验证约束始终使用同一份来源。粘贴后再追加你的具体需求。")
+                    Text(model.text(.overviewCopySkillDetail))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1231,52 +1269,61 @@ private struct OverviewView: View {
                     model.copyAuthoringPrompt()
                 } label: {
                     Label(
-                        model.isAuthoringPromptCopied ? "已复制" : "复制 Skill",
+                        model.text(
+                            model.isAuthoringPromptCopied ? .overviewCopied : .overviewCopy
+                        ),
                         systemImage: model.isAuthoringPromptCopied
                             ? "checkmark"
                             : "doc.on.doc"
                     )
                 }
                 .buttonStyle(.borderedProminent)
-                .accessibilityHint("复制后可粘贴给 Codex 或其他智能体")
+                .accessibilityHint(model.text(.overviewCopyHint))
+                .disabled(!model.actions.readAuthoringPrompt)
             }
-            .padding(20)
+            .padding(CGFloat(model.tokens.cardPadding))
             .background(Color(nsColor: .controlBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(
+                cornerRadius: CGFloat(model.tokens.cardCornerRadius),
+                style: .continuous
+            ))
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: CGFloat(model.tokens.cardCornerRadius),
+                    style: .continuous
+                )
                     .stroke(Color(nsColor: .separatorColor).opacity(0.7), lineWidth: 1)
             }
         }
     }
 
     private var workflow: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("连接方式")
+        VStack(alignment: .leading, spacing: CGFloat(model.tokens.controlSpacing)) {
+            Text(model.text(.overviewConnection))
                 .font(.title2.weight(.semibold))
 
             Grid(alignment: .leading, horizontalSpacing: 28, verticalSpacing: 12) {
                 GridRow {
-                    Text("CDP 端点").foregroundStyle(.secondary)
-                    Text("127.0.0.1:9335")
+                    Text(model.text(.overviewCdpEndpoint)).foregroundStyle(.secondary)
+                    Text(model.platform.cdpEndpoint)
                         .font(.system(.body, design: .monospaced))
                         .textSelection(.enabled)
                 }
                 GridRow {
-                    Text("注入范围").foregroundStyle(.secondary)
-                    Text("仅 app:// 页面")
+                    Text(model.text(.overviewInjectionScope)).foregroundStyle(.secondary)
+                    Text(model.text(.overviewAppPagesOnly))
                 }
                 GridRow {
-                    Text("刷新策略").foregroundStyle(.secondary)
-                    Text("每 2 秒检查功能包与窗口")
+                    Text(model.text(.overviewRefreshPolicy)).foregroundStyle(.secondary)
+                    Text(model.text(.overviewRefreshEveryTwoSeconds))
                 }
                 GridRow {
-                    Text("包加载顺序").foregroundStyle(.secondary)
-                    Text("依赖拓扑优先，再按用户有效优先级从小到大")
+                    Text(model.text(.overviewLoadOrder)).foregroundStyle(.secondary)
+                    Text(model.text(.overviewLoadOrderDetail))
                         .font(.system(.callout, design: .monospaced))
                 }
                 GridRow {
-                    Text("资源目录").foregroundStyle(.secondary)
+                    Text(model.text(.overviewResources)).foregroundStyle(.secondary)
                     Text(model.tweaksDirectoryPath)
                         .font(.system(.callout, design: .monospaced))
                         .lineLimit(2)
@@ -1284,61 +1331,47 @@ private struct OverviewView: View {
                 }
             }
 
-            Button("在 Finder 中管理功能包") {
+            Button(model.text(.overviewOpenPackagesDirectory)) {
                 model.openTweaksDirectory()
             }
+            .disabled(!model.actions.openPackagesDirectory)
         }
     }
 
     @ViewBuilder
     private var primaryStatusAction: some View {
-        if model.status.canRestartCodex {
-            Button("重启并连接") {
+        if model.actions.restartCodex {
+            Button(model.text(.overviewRestartAndConnect)) {
                 model.confirmAndRestartCodex()
             }
             .buttonStyle(.borderedProminent)
         } else if model.status.isCDPAvailable {
-            Button("打开 Codex") {
+            Button(model.text(.overviewOpenCodex)) {
                 model.openCodex()
             }
             .buttonStyle(.bordered)
+            .disabled(!model.actions.openCodex)
         } else {
-            Button("打开 Codex") {
+            Button(model.text(.overviewOpenCodex)) {
                 model.openCodex()
             }
             .buttonStyle(.borderedProminent)
-        }
-    }
-
-    private var statusSummary: String {
-        switch model.status {
-        case .connected:
-            return "已编译且启用的功能包已应用到 Codex。"
-        case .disabled:
-            return "Codex 保持运行，但不会应用任何自定义内容。"
-        case .starting, .launchingCodex, .waitingForCDP, .waitingForPage:
-            return "Codex Tweaks 正在建立本地连接。"
-        case .codexNotRunning:
-            return "打开 Codex 后会自动建立连接。"
-        case .restartRequired:
-            return "需要重新启动 Codex 才能开启本地调试端口。"
-        case .error:
-            return "请查看运行日志了解详细原因。"
+            .disabled(!model.actions.openCodex)
         }
     }
 
     private var statusTint: Color {
-        switch model.status {
-        case .connected:
-            return .green
-        case .restartRequired:
-            return .orange
-        case .error:
-            return .red
-        case .disabled, .codexNotRunning:
+        switch model.statusTone {
+        case "success":
+            return model.tokens.successColorValue
+        case "warning":
+            return model.tokens.warningColorValue
+        case "danger":
+            return model.tokens.dangerColorValue
+        case "neutral":
             return .secondary
         default:
-            return .accentColor
+            return model.tokens.accentColorValue
         }
     }
 }
@@ -1364,33 +1397,35 @@ private struct LogView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("连接与注入日志")
+                VStack(alignment: .leading, spacing: CGFloat(model.tokens.compactSpacing)) {
+                    Text(model.text(.logsTitle))
                         .font(.largeTitle.weight(.semibold))
-                    Text("查看启动、连接和注入过程。")
+                    Text(model.text(.logsSubtitle))
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("刷新", systemImage: "arrow.clockwise") {
+                Button(model.text(.logsRefresh), systemImage: "arrow.clockwise") {
                     model.refreshLog()
                 }
-                Button("打开日志文件", systemImage: "arrow.up.forward.app") {
+                .disabled(!model.actions.refreshLog)
+                Button(model.text(.logsOpenFile), systemImage: "arrow.up.forward.app") {
                     model.openLog()
                 }
+                .disabled(!model.actions.openLogFile)
                 Button(role: .destructive) {
                     presentedAlert = .confirmClear
                 } label: {
-                    Label("清除日志", systemImage: "trash")
+                    Label(model.text(.logsClear), systemImage: "trash")
                 }
-                .disabled(model.logText.isEmpty)
+                .disabled(!model.actions.clearLog)
             }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 26)
+            .padding(.horizontal, CGFloat(model.tokens.pagePadding))
+            .padding(.vertical, CGFloat(model.tokens.cardPadding))
 
             Divider()
 
             ScrollView(.vertical) {
-                Text(model.logText.isEmpty ? "暂无日志" : model.logText)
+                Text(model.logText.isEmpty ? model.text(.logsEmpty) : model.logText)
                     .font(.system(.callout, design: .monospaced))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -1410,39 +1445,30 @@ private struct LogView: View {
                 .padding(.horizontal, 18)
                 .padding(.vertical, 12)
         }
-        .navigationTitle("运行日志")
+        .navigationTitle(model.text(.navLogs))
         .alert(item: $presentedAlert) { alert in
             switch alert {
             case .confirmClear:
                 return Alert(
-                    title: Text("清除所有日志？"),
-                    message: Text("日志文件中的现有记录将被永久删除，此操作无法撤销。"),
-                    primaryButton: .destructive(Text("清除")) {
+                    title: Text(model.text(.logsClearTitle)),
+                    message: Text(model.text(.logsClearMessage)),
+                    primaryButton: .destructive(Text(model.text(.logsClear))) {
                         if let message = model.clearLog() {
                             DispatchQueue.main.async {
                                 presentedAlert = .clearFailed(message)
                             }
                         }
                     },
-                    secondaryButton: .cancel(Text("取消"))
+                    secondaryButton: .cancel(Text(model.text(.commonCancel)))
                 )
             case let .clearFailed(message):
                 return Alert(
-                    title: Text("无法清除日志"),
+                    title: Text(model.text(.logsClearFailed)),
                     message: Text(message),
-                    dismissButton: .default(Text("好"))
+                    dismissButton: .default(Text(model.text(.commonOk)))
                 )
             }
         }
-        .task {
-            while !Task.isCancelled {
-                model.refreshLog()
-                do {
-                    try await Task.sleep(nanoseconds: 2_000_000_000)
-                } catch {
-                    return
-                }
-            }
-        }
+        .task { model.refreshLog() }
     }
 }

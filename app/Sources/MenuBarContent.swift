@@ -7,63 +7,71 @@ struct MenuBarContent: View {
     @ObservedObject var updateChecker: UpdateChecker
 
     var body: some View {
-        Label(model.status.title, systemImage: model.status.symbol)
+        Label(model.statusTitle, systemImage: model.status.symbol)
 
-        if let detail = model.status.detail {
+        if let detail = model.statusDetail {
             Text(detail)
                 .font(.caption)
         }
 
         Divider()
 
-        Button("显示 Codex Tweaks") {
+        Button(model.text(.menuShow)) {
             NSApplication.shared.activate(ignoringOtherApps: true)
             openWindow(id: "main")
         }
         .keyboardShortcut("1")
 
-        Button("打开 Codex") {
+        Button(model.text(.overviewOpenCodex)) {
             model.openCodex()
         }
+        .disabled(!model.actions.openCodex)
 
-        if model.status.canRestartCodex {
-            Button("重启 Codex 并开启调试…") {
+        if model.actions.restartCodex {
+            Button(model.text(.overviewRestartAndConnect)) {
                 model.confirmAndRestartCodex()
             }
         }
 
-        Toggle("启用界面增强", isOn: $model.isEnabled)
+        Toggle(model.text(.overviewEnable), isOn: $model.isEnabled)
+            .disabled(!model.actions.setEnabled)
 
-        Button("重新注入") {
+        Button(model.text(.overviewReinject)) {
             model.reinject()
         }
-        .disabled(!model.isEnabled || !model.status.isCDPAvailable)
+        .disabled(!model.actions.reinject)
 
         Divider()
 
-        Button("管理功能包") {
+        Button(model.text(.overviewManagePackages)) {
             model.openTweaksDirectory()
         }
+        .disabled(!model.actions.openPackagesDirectory)
 
-        Button(model.isAuthoringPromptCopied ? "功能包开发 Skill 已复制" : "复制功能包开发 Skill") {
+        Button(model.text(model.isAuthoringPromptCopied ? .overviewCopied : .overviewCopy)) {
             model.copyAuthoringPrompt()
         }
+        .disabled(!model.actions.readAuthoringPrompt)
 
-        Button("查看日志") {
+        Button(model.text(.overviewViewLogs)) {
             model.openLog()
         }
+        .disabled(!model.actions.openLogFile)
 
         Divider()
 
         if updateChecker.updateAvailable {
-            Button("下载 Codex Tweaks \(updateChecker.latestVersionString)") {
+            Button(model.text(
+                .updateDownload,
+                ["version": updateChecker.latestVersionString]
+            )) {
                 if let url = updateChecker.downloadURL {
                     NSWorkspace.shared.open(url)
                 }
             }
         }
 
-        Button(updateChecker.checking ? "正在检查更新…" : "检查更新…") {
+        Button(model.text(updateChecker.checking ? .updateChecking : .updateCheck)) {
             Task {
                 await updateChecker.check(prompt: true)
                 if updateChecker.pendingUpdate != nil {
@@ -72,11 +80,11 @@ struct MenuBarContent: View {
                 }
             }
         }
-        .disabled(updateChecker.checking)
+        .disabled(!model.actions.checkAppUpdate)
 
         Divider()
 
-        Button("退出 Codex Tweaks") {
+        Button(model.text(.menuQuit)) {
             model.quit()
         }
         .keyboardShortcut("q")

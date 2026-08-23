@@ -2,70 +2,85 @@ import AppKit
 import SwiftUI
 
 struct UpdateView: View {
+    @ObservedObject var model: AppModel
     @ObservedObject var updateChecker: UpdateChecker
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: CGFloat(model.tokens.sectionSpacing)) {
                 header
                 applicationCard
                 updateCard
             }
-            .frame(maxWidth: 720, alignment: .leading)
-            .padding(32)
+            .frame(maxWidth: CGFloat(model.tokens.contentMaxWidth), alignment: .leading)
+            .padding(CGFloat(model.tokens.pagePadding))
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .navigationTitle("关于与更新")
+        .navigationTitle(model.text(.navUpdates))
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text("关于与更新")
+        VStack(alignment: .leading, spacing: CGFloat(model.tokens.compactSpacing)) {
+            Text(model.text(.updateTitle))
                 .font(.largeTitle.weight(.semibold))
-            Text("选择更新通道，并从 GitHub Releases 获取适合当前 Mac 的版本。")
+            Text(model.text(.updateSubtitle))
                 .foregroundStyle(.secondary)
         }
     }
 
     private var applicationCard: some View {
-        HStack(spacing: 18) {
+        HStack(spacing: CGFloat(model.tokens.controlSpacing)) {
             Image(nsImage: NSApplication.shared.applicationIconImage)
                 .resizable()
                 .interpolation(.high)
                 .frame(width: 64, height: 64)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(
+                    cornerRadius: CGFloat(model.tokens.cardCornerRadius),
+                    style: .continuous
+                ))
 
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Codex Tweaks")
+            VStack(alignment: .leading, spacing: CGFloat(model.tokens.compactSpacing)) {
+                Text(model.text(.appName))
                     .font(.title2.weight(.semibold))
-                Text("版本 \(updateChecker.currentVersion)（构建 \(updateChecker.buildNumber)）")
+                Text(model.text(
+                    .updateVersionBuild,
+                    [
+                        "version": updateChecker.currentVersion,
+                        "build": updateChecker.buildNumber,
+                    ]
+                ))
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
             }
 
             Spacer()
 
-            Button("项目主页", systemImage: "arrow.up.right") {
-                NSWorkspace.shared.open(UpdateChecker.repositoryURL)
+            Button(model.text(.updateRepository), systemImage: "arrow.up.right") {
+                guard let repositoryURL = URL(string: model.platform.repositoryURL) else { return }
+                NSWorkspace.shared.open(repositoryURL)
             }
+            .disabled(
+                !model.actions.openRepository
+                    || URL(string: model.platform.repositoryURL) == nil
+            )
         }
-        .padding(20)
-        .cardSurface()
+        .padding(CGFloat(model.tokens.cardPadding))
+        .cardSurface(tokens: model.tokens)
     }
 
     private var updateCard: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: CGFloat(model.tokens.controlSpacing)) {
             HStack {
-                Text("软件更新")
+                Text(model.text(.updateSoftwareUpdate))
                     .font(.title2.weight(.semibold))
                 Spacer()
                 updateBadge
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Picker("更新通道", selection: $updateChecker.channel) {
+            VStack(alignment: .leading, spacing: CGFloat(model.tokens.compactSpacing)) {
+                Picker(model.text(.updateChannel), selection: $updateChecker.channel) {
                     ForEach(UpdateChecker.Channel.allCases) { channel in
-                        Text(channel.rawValue).tag(channel)
+                        Text(model.text(channel.titleKey)).tag(channel)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -73,7 +88,7 @@ struct UpdateView: View {
                     Task { await updateChecker.check() }
                 }
 
-                Text(updateChecker.channel.detail)
+                Text(model.text(updateChecker.channel.detailKey))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -82,14 +97,14 @@ struct UpdateView: View {
 
             Grid(alignment: .leading, horizontalSpacing: 30, verticalSpacing: 13) {
                 GridRow {
-                    Text("当前版本")
+                    Text(model.text(.updateCurrentVersion))
                         .foregroundStyle(.secondary)
                     Text(updateChecker.currentVersion)
                         .font(.system(.body, design: .monospaced))
                         .textSelection(.enabled)
                 }
                 GridRow {
-                    Text("通道最新版本")
+                    Text(model.text(.updateLatestVersion))
                         .foregroundStyle(.secondary)
                     HStack(spacing: 7) {
                         if updateChecker.checking {
@@ -100,84 +115,92 @@ struct UpdateView: View {
                                 .font(.system(.body, design: .monospaced))
                             if updateChecker.hasNewerVersion {
                                 Image(systemName: "arrow.up.circle.fill")
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(model.tokens.accentColorValue)
                             }
                         }
                     }
                 }
                 GridRow {
-                    Text("上次检查")
+                    Text(model.text(.updateLastCheck))
                         .foregroundStyle(.secondary)
                     Text(lastCheckText)
                 }
             }
 
-            Toggle("启动 Codex Tweaks 时自动检查更新", isOn: $updateChecker.autoCheck)
+            Toggle(model.text(.updateAutoCheck), isOn: $updateChecker.autoCheck)
+                .disabled(!model.actions.setUpdatePreferences)
 
             if let error = updateChecker.lastError {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.callout)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(model.tokens.dangerColorValue)
             } else if updateChecker.latestVersionIsSkipped {
                 Label(
-                    "已跳过版本 \(updateChecker.latestVersionString)，仍可手动下载或恢复提醒。",
+                    model.text(
+                        .updateSkipMessage,
+                        ["version": updateChecker.latestVersionString]
+                    ),
                     systemImage: "forward.end"
                 )
                 .font(.callout)
                 .foregroundStyle(.secondary)
             } else if updateChecker.lastCheckDate != nil && updateChecker.latestRelease == nil {
-                Label("当前通道还没有可用的 GitHub Release。", systemImage: "info.circle")
+                Label(model.text(.updateNoRelease), systemImage: "info.circle")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 10) {
-                Button("检查更新", systemImage: "arrow.clockwise") {
+                Button(model.text(.updateCheck), systemImage: "arrow.clockwise") {
                     Task { await updateChecker.check(prompt: true) }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(updateChecker.checking)
+                .disabled(!model.actions.checkAppUpdate)
 
                 if updateChecker.hasNewerVersion {
-                    Button("下载 \(updateChecker.latestVersionString)", systemImage: "arrow.down.circle") {
+                    Button(model.text(
+                        .updateDownload,
+                        ["version": updateChecker.latestVersionString]
+                    ), systemImage: "arrow.down.circle") {
                         openLatestDownload()
                     }
 
                     if updateChecker.latestVersionIsSkipped {
-                        Button("恢复提醒") {
+                        Button(model.text(.updateRestoreReminder)) {
                             updateChecker.unskipAndPrompt()
                         }
                     }
                 } else if let releaseURL = updateChecker.latestRelease?.htmlURL {
-                    Button("查看 Release", systemImage: "arrow.up.right") {
+                    Button(model.text(.updateViewRelease), systemImage: "arrow.up.right") {
                         NSWorkspace.shared.open(releaseURL)
                     }
                 }
             }
         }
-        .padding(20)
-        .cardSurface()
+        .padding(CGFloat(model.tokens.cardPadding))
+        .cardSurface(tokens: model.tokens)
     }
 
     @ViewBuilder
     private var updateBadge: some View {
         if updateChecker.updateAvailable {
-            Label("有新版本", systemImage: "sparkles")
+            Label(model.text(.updateAvailable), systemImage: "sparkles")
                 .font(.callout.weight(.medium))
-                .foregroundStyle(.blue)
+                .foregroundStyle(model.tokens.accentColorValue)
         } else if updateChecker.checking {
-            Text("正在检查…")
+            Text(model.text(.updateChecking))
                 .font(.callout)
                 .foregroundStyle(.secondary)
         } else if updateChecker.lastCheckDate != nil && updateChecker.latestRelease != nil {
-            Text(updateChecker.hasNewerVersion ? "已跳过" : "已是最新")
+            Text(model.text(updateChecker.hasNewerVersion ? .updateSkipped : .updateCurrent))
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
     }
 
     private var lastCheckText: String {
-        updateChecker.lastCheckDate?.formatted(date: .abbreviated, time: .shortened) ?? "从未"
+        updateChecker.lastCheckDate?.formatted(date: .abbreviated, time: .shortened)
+            ?? model.text(.updateNever)
     }
 
     private func openLatestDownload() {
@@ -187,11 +210,17 @@ struct UpdateView: View {
 }
 
 private extension View {
-    func cardSurface() -> some View {
+    func cardSurface(tokens: BackendPresentationTokens) -> some View {
         background(Color(nsColor: .controlBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(
+                cornerRadius: CGFloat(tokens.cardCornerRadius),
+                style: .continuous
+            ))
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: CGFloat(tokens.cardCornerRadius),
+                    style: .continuous
+                )
                     .stroke(Color(nsColor: .separatorColor).opacity(0.7), lineWidth: 1)
             }
     }

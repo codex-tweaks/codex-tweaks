@@ -6,6 +6,7 @@ cd "$ROOT_DIR"
 
 RELEASE_TAG="${RELEASE_TAG:-${1:-}}"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
+DIST_DIR="${DIST_DIR:-dist}"
 
 if [[ ! "$RELEASE_TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
   echo "RELEASE_TAG 必须是 v1.2.3 或 v1.2.3-beta.1 形式" >&2
@@ -22,16 +23,16 @@ fi
 
 PRODUCT_NAME="Codex Tweaks"
 
-mkdir -p dist
+mkdir -p "$DIST_DIR"
 rm -rf \
-  "dist/${PRODUCT_NAME}.app" \
-  "dist/${PRODUCT_NAME}-arm64.app" \
-  "dist/${PRODUCT_NAME}-x86_64.app"
+  "${DIST_DIR}/${PRODUCT_NAME}.app" \
+  "${DIST_DIR}/${PRODUCT_NAME}-arm64.app" \
+  "${DIST_DIR}/${PRODUCT_NAME}-x86_64.app"
 rm -f \
-  "dist/Codex-Tweaks-${RELEASE_TAG}.dmg" \
-  "dist/Codex-Tweaks-${RELEASE_TAG}-arm64.dmg" \
-  "dist/Codex-Tweaks-${RELEASE_TAG}-x86_64.dmg" \
-  dist/SHA256SUMS
+  "${DIST_DIR}/Codex-Tweaks-${RELEASE_TAG}.dmg" \
+  "${DIST_DIR}/Codex-Tweaks-${RELEASE_TAG}-arm64.dmg" \
+  "${DIST_DIR}/Codex-Tweaks-${RELEASE_TAG}-x86_64.dmg" \
+  "${DIST_DIR}/SHA256SUMS"
 
 build_app() {
   local label="$1"
@@ -57,7 +58,7 @@ build_app() {
 
   ditto \
     "$derived_data/Build/Products/Release/${PRODUCT_NAME}.app" \
-    "dist/${output_name}.app"
+    "${DIST_DIR}/${output_name}.app"
 }
 
 create_dmg() (
@@ -68,16 +69,16 @@ create_dmg() (
   settings_file="$(mktemp "${TMPDIR:-/tmp}/codex-tweaks-dmgbuild.XXXXXX.json")"
   trap 'rm -f "$settings_file"' EXIT
   sed \
-    "s|Codex Tweaks-arm64.app|${app_name}.app|" \
+    "s|dist/Codex Tweaks-arm64.app|${DIST_DIR}/${app_name}.app|" \
     scripts/dmgbuild.json \
     > "$settings_file"
 
   dmgbuild \
     -s "$settings_file" \
     "$PRODUCT_NAME" \
-    "dist/${dmg_name}"
+    "${DIST_DIR}/${dmg_name}"
 
-  echo "已创建 dist/${dmg_name}"
+  echo "已创建 ${DIST_DIR}/${dmg_name}"
 )
 
 build_app universal "arm64 x86_64" "$PRODUCT_NAME"
@@ -89,7 +90,7 @@ create_dmg "${PRODUCT_NAME}-arm64" "Codex-Tweaks-${RELEASE_TAG}-arm64.dmg"
 create_dmg "${PRODUCT_NAME}-x86_64" "Codex-Tweaks-${RELEASE_TAG}-x86_64.dmg"
 
 (
-  cd dist
+  cd "$DIST_DIR"
   shasum -a 256 \
     "Codex-Tweaks-${RELEASE_TAG}.dmg" \
     "Codex-Tweaks-${RELEASE_TAG}-arm64.dmg" \

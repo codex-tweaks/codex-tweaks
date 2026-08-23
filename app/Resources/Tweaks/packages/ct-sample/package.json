@@ -1,0 +1,13 @@
+{
+  "name": "ct-sample",
+  "version": "1.0.0",
+  "description": "在页面右下角显示 codex_tweaks 已注入状态。",
+  "type": "module",
+  "dependencies": {},
+  "codexTweaks": {
+    "apiVersion": 2,
+    "entry": "src/index.js",
+    "priority": 100,
+    "packageDependencies": {}
+  }
+}

@@ -1,0 +1,17 @@
+[data-codex-tweaks-ct-sample] {
+  position: fixed;
+  right: 16px;
+  bottom: 10px;
+  z-index: 2147483000;
+  pointer-events: none;
+}
+
+[data-codex-tweaks-ct-sample] .ct-sample-status {
+  color: CanvasText;
+  opacity: 0.32;
+  pointer-events: none;
+  font: 500 11px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  user-select: none;
+}

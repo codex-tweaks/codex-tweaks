@@ -3,25 +3,19 @@ import XCTest
 @testable import CodexTweaks
 
 final class TweakAuthoringPromptBuilderTests: XCTestCase {
-    func testPromptContainsDynamicPathAndCoreContracts() {
+    func testPromptIsExactlyTheProjectSkill() throws {
         let directoryURL = URL(fileURLWithPath: "/tmp/Custom Tweaks", isDirectory: true)
-
         let prompt = TweakAuthoringPromptBuilder.makePrompt(
             tweaksDirectoryURL: directoryURL
         )
+        let skill = try XCTUnwrap(TweakAuthoringPromptBuilder.skillContents())
 
-        XCTAssertTrue(prompt.contains("/tmp/Custom Tweaks"))
-        XCTAssertTrue(prompt.contains("vendor/**/*.js → ui.js → scripts/**/*.js"))
-        XCTAssertTrue(prompt.contains("styles/NN-feature.css"))
-        XCTAssertTrue(prompt.contains("api.registerCleanup(callback)"))
-        XCTAssertTrue(prompt.contains("api.getLibrary(name)"))
-        XCTAssertTrue(prompt.contains("IIFE/UMD"))
-        XCTAssertTrue(prompt.contains("不要使用远程 CDN"))
-        XCTAssertTrue(prompt.contains("node --check"))
-        XCTAssertTrue(prompt.contains("我的具体需求"))
-        XCTAssertFalse(prompt.contains("## 执行边界"))
-        XCTAssertFalse(prompt.contains("如果你能访问本地文件"))
-        XCTAssertFalse(prompt.contains("默认只允许修改"))
+        XCTAssertEqual(prompt, skill)
+        XCTAssertTrue(prompt.contains("apiVersion\": 2"))
+        XCTAssertTrue(prompt.contains("packageDependencies"))
+        XCTAssertTrue(prompt.contains("dependencies.get"))
+        XCTAssertTrue(prompt.contains("Omitting `source` declares a local-only dependency"))
+        XCTAssertTrue(prompt.contains("A Git URL alone is not a valid canonical dependency declaration"))
     }
 
     func testCopyPromptWritesCompletePromptToPasteboard() {
@@ -39,9 +33,7 @@ final class TweakAuthoringPromptBuilderTests: XCTestCase {
         )
         XCTAssertEqual(
             pasteboard.string(forType: .string),
-            TweakAuthoringPromptBuilder.makePrompt(
-                tweaksDirectoryURL: directoryURL
-            )
+            TweakAuthoringPromptBuilder.skillContents()
         )
     }
 }

@@ -40,18 +40,31 @@ actor CDPService {
             forceGeneration: forceGeneration
         )
         var successCount = 0
+        var packageErrors: [String: String] = [:]
 
         for target in targets {
             guard let url = target.debuggerURL else { continue }
             do {
-                try await evaluate(script, in: url)
+                let value = try await evaluate(script, in: url)
                 successCount += 1
+                for error in value?["packageErrors"] as? [[String: Any]] ?? [] {
+                    guard let packageID = error["id"] as? String,
+                          !packageID.isEmpty,
+                          let message = error["message"] as? String else {
+                        continue
+                    }
+                    packageErrors[packageID] = message
+                }
             } catch {
                 AppLogger.shared.error("目标 \(target.id) 注入失败：\(error)")
             }
         }
 
-        return CDPInjectionResult(targetCount: targets.count, successCount: successCount)
+        return CDPInjectionResult(
+            targetCount: targets.count,
+            successCount: successCount,
+            packageErrors: packageErrors
+        )
     }
 
     func cleanupAllTargets() async throws {
@@ -59,7 +72,7 @@ actor CDPService {
         for target in targets {
             guard let url = target.debuggerURL else { continue }
             do {
-                try await evaluate(InjectionScriptBuilder.cleanupScript, in: url)
+                _ = try await evaluate(InjectionScriptBuilder.cleanupScript, in: url)
             } catch {
                 AppLogger.shared.error("目标 \(target.id) 清理失败：\(error)")
             }
@@ -87,7 +100,7 @@ actor CDPService {
         }
     }
 
-    private func evaluate(_ expression: String, in debuggerURL: URL) async throws {
+    private func evaluate(_ expression: String, in debuggerURL: URL) async throws -> [String: Any]? {
         var request = URLRequest(url: debuggerURL)
         request.timeoutInterval = 5
         request.setValue(Self.allowedOrigin, forHTTPHeaderField: "Origin")
@@ -150,7 +163,11 @@ actor CDPService {
                     ?? "注入脚本执行失败"
                 throw CDPServiceError.commandRejected(description)
             }
-            return
+            guard let result = object["result"] as? [String: Any],
+                  let remoteObject = result["result"] as? [String: Any] else {
+                return nil
+            }
+            return remoteObject["value"] as? [String: Any]
         }
     }
 }

@@ -71,6 +71,8 @@ jobs:
       - name: Verify Go backend on Windows
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           Push-Location backend
           try {
             go run ./cmd/contractgen -root .. -check

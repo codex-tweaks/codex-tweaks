@@ -2,6 +2,7 @@ package core
 
 import (
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -31,7 +32,11 @@ func TestBuilderArgumentsPreserveLockedAndPinnedContract(t *testing.T) {
 
 func TestNodeCandidatesUsePathAndDeduplicate(t *testing.T) {
 	candidates := NodeCandidates(map[string]string{"PATH": filepath.Join("/custom", "bin") + string(filepath.ListSeparator) + filepath.Join("/custom", "bin") + string(filepath.ListSeparator) + filepath.Join("/second", "bin")}, "/tmp/home")
-	if candidates[0] != filepath.Join("/custom", "bin", "node") || candidates[1] != filepath.Join("/second", "bin", "node") {
+	executable := "node"
+	if runtime.GOOS == "windows" {
+		executable = "node.exe"
+	}
+	if candidates[0] != filepath.Join("/custom", "bin", executable) || candidates[1] != filepath.Join("/second", "bin", executable) {
 		t.Fatalf("unexpected candidates: %#v", candidates)
 	}
 }

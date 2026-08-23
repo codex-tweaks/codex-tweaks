@@ -2,6 +2,7 @@ package core
 
 import (
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -32,7 +33,7 @@ func TestLoggerClearAndNewestFirst(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0o600 {
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Fatalf("permissions = %o", info.Mode().Perm())
 	}
 }

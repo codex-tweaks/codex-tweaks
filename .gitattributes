@@ -1,0 +1,3 @@
+contract/presentation-contract.json text eol=lf
+app/Sources/GeneratedPresentationContract.swift text eol=lf
+windows/CodexTweaks.Windows/Generated/PresentationContract.g.cs text eol=lf

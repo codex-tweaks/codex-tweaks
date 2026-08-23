@@ -50,7 +50,7 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 35
     env:
-      CI_VERSION: 0.0.0-ci.${{ github.run_number }}
+      CI_VERSION: 0.0.1-ci.${{ github.run_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7

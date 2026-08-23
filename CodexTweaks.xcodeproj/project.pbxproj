@@ -9,24 +9,34 @@
 /* Begin PBXBuildFile section */
 		0488BFD8720D54A39CFF8165 /* TweakAuthoringPromptBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7703E879D0408F3BBA57438D /* TweakAuthoringPromptBuilderTests.swift */; };
 		09AE8B0020303164FEA244C9 /* InjectionScriptBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4132D354FF25B2E4BD946FE /* InjectionScriptBuilderTests.swift */; };
+		0A9213D10869622765D63DD4 /* TweakPackageLocalInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5052F47130A1CFF705D6C21D /* TweakPackageLocalInstaller.swift */; };
+		0AD62E2F7A6F5259A737C7E7 /* TweakPackageDependencyResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CB762E9C9F9FD3D4400C65F /* TweakPackageDependencyResolver.swift */; };
 		0C1AA02F95574A89518B4FFF /* UpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C4B014C4282346EC90203A /* UpdateView.swift */; };
 		0E09371136BF758B5CE8EBF6 /* CodexLauncherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F009F1629BDF7EAAECA9CE54 /* CodexLauncherTests.swift */; };
+		0E2FBEE784B852532424F206 /* TweakPackageBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63708A61AFD3EB99BE1C3359 /* TweakPackageBuilder.swift */; };
+		14B0D083A2E1BA6C1422C62C /* TweakPackageRemoteManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6E8AEF730D9F5D842F7F685 /* TweakPackageRemoteManagerTests.swift */; };
 		17B179AE9EB7BA3D313C8745 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A6E8317D1401E4D66BE07F /* AppLogger.swift */; };
 		190A7AEFAABCEC4290F6548F /* TweakAuthoringPromptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B8AFB7665A9A53F1C22A8A5 /* TweakAuthoringPromptBuilder.swift */; };
 		20E842FFBE6F22751C5C61E9 /* CodexTweaksApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C054F18E9178A1188A15F944 /* CodexTweaksApp.swift */; };
 		2DAF6336FC078325C573311E /* AppLoggerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E612786CC94D3486AC386077 /* AppLoggerTests.swift */; };
 		2F02C1394FDE9FDB5A3BC708 /* CodexLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B1BB0714B37CAF50F3732D /* CodexLauncher.swift */; };
+		3B707AADACD7A7B903164E18 /* TweakPackageStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5BB65358BF20CA031A17F4F /* TweakPackageStoreTests.swift */; };
+		4289396A35618C2A8038D04A /* TweakPackageLocalInstallerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D31BD2C3790F8B3EAA48C77 /* TweakPackageLocalInstallerTests.swift */; };
 		444F810FBED64BEF61A48D3D /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F53421B72A4751C046846C60 /* MainWindowView.swift */; };
 		5DDE42750711BDE523AA30EC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0B0DED2144F0CDD788DF8C77 /* Assets.xcassets */; };
 		6087A559D3E3BA2A74451813 /* CDPTargetSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97CA9852144C10DAED3BF792 /* CDPTargetSelectorTests.swift */; };
 		6B8D9368C4F6D59C4D871A04 /* CDPService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42394A29ABE26BEAD319D3C5 /* CDPService.swift */; };
 		6EE55D663F4BA7C8C133418A /* Tweaks in Resources */ = {isa = PBXBuildFile; fileRef = ED5BA7E20B31B6B736EF5A33 /* Tweaks */; };
 		7824CE3D453FE429FB9B83A2 /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 710989624754350B9549F3B1 /* UpdateChecker.swift */; };
+		7E126D97027BBDE166562902 /* TweakPackageBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E5E79E869EE6D79D2B3928E /* TweakPackageBuilderTests.swift */; };
+		8D48324BF8BB9B44F95E2850 /* TweakPackageDependencyResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D43C843414F043BEC4C1362 /* TweakPackageDependencyResolverTests.swift */; };
 		94C33449DBA02945C7D244B0 /* InjectionScriptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6099D5DCAC584B867D1AE4DB /* InjectionScriptBuilder.swift */; };
 		9BD95832142FCA6E642F6E68 /* MenuBarContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */; };
-		AAAF623CB357736B59648B5B /* TweakResourceStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2955590779C022FAB0B06E9 /* TweakResourceStoreTests.swift */; };
-		BEF57B2143B4B2D80A1C5771 /* TweakResourceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40197E46D7C66D568ADC4F16 /* TweakResourceStore.swift */; };
+		C6EF7C822C1A087A5B678E40 /* Skills in Resources */ = {isa = PBXBuildFile; fileRef = 272C1FF554CEC91593F59C8F /* Skills */; };
+		C90628F61E522C2FC62419A5 /* TweakPackageRemoteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECCE54F4FF81979BBBAB5CC /* TweakPackageRemoteManager.swift */; };
+		D202E89C2074CD2C36209CBD /* TweakPackageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C96B76DD7F87449046DC596 /* TweakPackageStore.swift */; };
 		D7A55C21FE48E9384D3029A5 /* CDPModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6EDF3247E154B189319CA49 /* CDPModels.swift */; };
+		E33110037A563D6AD07FD34B /* TweakPackageModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED75A85C1B3152DC926A30F /* TweakPackageModels.swift */; };
 		F7A1ECDD4A02A3A692A8694D /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12AEDA74C8286F095B2A4E60 /* AppModel.swift */; };
 		FE9F87315CFFB24632464D85 /* UpdateCheckerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7410EB53AEF5033774F2E0F3 /* UpdateCheckerTests.swift */; };
 /* End PBXBuildFile section */
@@ -45,27 +55,37 @@
 		06B1BB0714B37CAF50F3732D /* CodexLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLauncher.swift; sourceTree = "<group>"; };
 		0B0DED2144F0CDD788DF8C77 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		12AEDA74C8286F095B2A4E60 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		272C1FF554CEC91593F59C8F /* Skills */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Skills; sourceTree = SOURCE_ROOT; };
+		2E5E79E869EE6D79D2B3928E /* TweakPackageBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageBuilderTests.swift; sourceTree = "<group>"; };
+		2ED75A85C1B3152DC926A30F /* TweakPackageModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageModels.swift; sourceTree = "<group>"; };
 		3F957412A0DB83396B755B2E /* CodexTweaksTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexTweaksTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		40197E46D7C66D568ADC4F16 /* TweakResourceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakResourceStore.swift; sourceTree = "<group>"; };
 		42394A29ABE26BEAD319D3C5 /* CDPService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CDPService.swift; sourceTree = "<group>"; };
+		5052F47130A1CFF705D6C21D /* TweakPackageLocalInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageLocalInstaller.swift; sourceTree = "<group>"; };
 		5B8AFB7665A9A53F1C22A8A5 /* TweakAuthoringPromptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakAuthoringPromptBuilder.swift; sourceTree = "<group>"; };
+		5CB762E9C9F9FD3D4400C65F /* TweakPackageDependencyResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageDependencyResolver.swift; sourceTree = "<group>"; };
 		6099D5DCAC584B867D1AE4DB /* InjectionScriptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InjectionScriptBuilder.swift; sourceTree = "<group>"; };
+		63708A61AFD3EB99BE1C3359 /* TweakPackageBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageBuilder.swift; sourceTree = "<group>"; };
 		66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContent.swift; sourceTree = "<group>"; };
 		710989624754350B9549F3B1 /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
 		7410EB53AEF5033774F2E0F3 /* UpdateCheckerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckerTests.swift; sourceTree = "<group>"; };
 		7703E879D0408F3BBA57438D /* TweakAuthoringPromptBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakAuthoringPromptBuilderTests.swift; sourceTree = "<group>"; };
 		7D31064D54183A1230D1918D /* Codex Tweaks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Codex Tweaks.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7D43C843414F043BEC4C1362 /* TweakPackageDependencyResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageDependencyResolverTests.swift; sourceTree = "<group>"; };
 		84A6E8317D1401E4D66BE07F /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+		8C96B76DD7F87449046DC596 /* TweakPackageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageStore.swift; sourceTree = "<group>"; };
 		97CA9852144C10DAED3BF792 /* CDPTargetSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CDPTargetSelectorTests.swift; sourceTree = "<group>"; };
-		A2955590779C022FAB0B06E9 /* TweakResourceStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakResourceStoreTests.swift; sourceTree = "<group>"; };
+		9D31BD2C3790F8B3EAA48C77 /* TweakPackageLocalInstallerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageLocalInstallerTests.swift; sourceTree = "<group>"; };
 		C054F18E9178A1188A15F944 /* CodexTweaksApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTweaksApp.swift; sourceTree = "<group>"; };
 		C6C4B014C4282346EC90203A /* UpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateView.swift; sourceTree = "<group>"; };
+		D5BB65358BF20CA031A17F4F /* TweakPackageStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageStoreTests.swift; sourceTree = "<group>"; };
+		DECCE54F4FF81979BBBAB5CC /* TweakPackageRemoteManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageRemoteManager.swift; sourceTree = "<group>"; };
 		E4132D354FF25B2E4BD946FE /* InjectionScriptBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InjectionScriptBuilderTests.swift; sourceTree = "<group>"; };
 		E612786CC94D3486AC386077 /* AppLoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLoggerTests.swift; sourceTree = "<group>"; };
 		E6EDF3247E154B189319CA49 /* CDPModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CDPModels.swift; sourceTree = "<group>"; };
 		ED5BA7E20B31B6B736EF5A33 /* Tweaks */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Tweaks; path = app/Resources/Tweaks; sourceTree = SOURCE_ROOT; };
 		F009F1629BDF7EAAECA9CE54 /* CodexLauncherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLauncherTests.swift; sourceTree = "<group>"; };
 		F53421B72A4751C046846C60 /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
+		F6E8AEF730D9F5D842F7F685 /* TweakPackageRemoteManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageRemoteManagerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -77,7 +97,11 @@
 				F009F1629BDF7EAAECA9CE54 /* CodexLauncherTests.swift */,
 				E4132D354FF25B2E4BD946FE /* InjectionScriptBuilderTests.swift */,
 				7703E879D0408F3BBA57438D /* TweakAuthoringPromptBuilderTests.swift */,
-				A2955590779C022FAB0B06E9 /* TweakResourceStoreTests.swift */,
+				2E5E79E869EE6D79D2B3928E /* TweakPackageBuilderTests.swift */,
+				7D43C843414F043BEC4C1362 /* TweakPackageDependencyResolverTests.swift */,
+				9D31BD2C3790F8B3EAA48C77 /* TweakPackageLocalInstallerTests.swift */,
+				F6E8AEF730D9F5D842F7F685 /* TweakPackageRemoteManagerTests.swift */,
+				D5BB65358BF20CA031A17F4F /* TweakPackageStoreTests.swift */,
 				7410EB53AEF5033774F2E0F3 /* UpdateCheckerTests.swift */,
 			);
 			path = Tests;
@@ -96,7 +120,12 @@
 				F53421B72A4751C046846C60 /* MainWindowView.swift */,
 				66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */,
 				5B8AFB7665A9A53F1C22A8A5 /* TweakAuthoringPromptBuilder.swift */,
-				40197E46D7C66D568ADC4F16 /* TweakResourceStore.swift */,
+				63708A61AFD3EB99BE1C3359 /* TweakPackageBuilder.swift */,
+				5CB762E9C9F9FD3D4400C65F /* TweakPackageDependencyResolver.swift */,
+				5052F47130A1CFF705D6C21D /* TweakPackageLocalInstaller.swift */,
+				2ED75A85C1B3152DC926A30F /* TweakPackageModels.swift */,
+				DECCE54F4FF81979BBBAB5CC /* TweakPackageRemoteManager.swift */,
+				8C96B76DD7F87449046DC596 /* TweakPackageStore.swift */,
 				710989624754350B9549F3B1 /* UpdateChecker.swift */,
 				C6C4B014C4282346EC90203A /* UpdateView.swift */,
 			);
@@ -125,6 +154,7 @@
 		A68F526B0C92689E44E5868C = {
 			isa = PBXGroup;
 			children = (
+				272C1FF554CEC91593F59C8F /* Skills */,
 				97D480478F1DC70304266CB9 /* app */,
 				DC9550B98A120B5A32C477F0 /* Products */,
 			);
@@ -221,6 +251,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5DDE42750711BDE523AA30EC /* Assets.xcassets in Resources */,
+				C6EF7C822C1A087A5B678E40 /* Skills in Resources */,
 				6EE55D663F4BA7C8C133418A /* Tweaks in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -237,7 +268,11 @@
 				0E09371136BF758B5CE8EBF6 /* CodexLauncherTests.swift in Sources */,
 				09AE8B0020303164FEA244C9 /* InjectionScriptBuilderTests.swift in Sources */,
 				0488BFD8720D54A39CFF8165 /* TweakAuthoringPromptBuilderTests.swift in Sources */,
-				AAAF623CB357736B59648B5B /* TweakResourceStoreTests.swift in Sources */,
+				7E126D97027BBDE166562902 /* TweakPackageBuilderTests.swift in Sources */,
+				8D48324BF8BB9B44F95E2850 /* TweakPackageDependencyResolverTests.swift in Sources */,
+				4289396A35618C2A8038D04A /* TweakPackageLocalInstallerTests.swift in Sources */,
+				14B0D083A2E1BA6C1422C62C /* TweakPackageRemoteManagerTests.swift in Sources */,
+				3B707AADACD7A7B903164E18 /* TweakPackageStoreTests.swift in Sources */,
 				FE9F87315CFFB24632464D85 /* UpdateCheckerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -256,7 +291,12 @@
 				444F810FBED64BEF61A48D3D /* MainWindowView.swift in Sources */,
 				9BD95832142FCA6E642F6E68 /* MenuBarContent.swift in Sources */,
 				190A7AEFAABCEC4290F6548F /* TweakAuthoringPromptBuilder.swift in Sources */,
-				BEF57B2143B4B2D80A1C5771 /* TweakResourceStore.swift in Sources */,
+				0E2FBEE784B852532424F206 /* TweakPackageBuilder.swift in Sources */,
+				0AD62E2F7A6F5259A737C7E7 /* TweakPackageDependencyResolver.swift in Sources */,
+				0A9213D10869622765D63DD4 /* TweakPackageLocalInstaller.swift in Sources */,
+				E33110037A563D6AD07FD34B /* TweakPackageModels.swift in Sources */,
+				C90628F61E522C2FC62419A5 /* TweakPackageRemoteManager.swift in Sources */,
+				D202E89C2074CD2C36209CBD /* TweakPackageStore.swift in Sources */,
 				7824CE3D453FE429FB9B83A2 /* UpdateChecker.swift in Sources */,
 				0C1AA02F95574A89518B4FFF /* UpdateView.swift in Sources */,
 			);

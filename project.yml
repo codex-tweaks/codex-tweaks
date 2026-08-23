@@ -27,6 +27,8 @@ targets:
       - path: app/Resources/Assets.xcassets
       - path: app/Resources/Tweaks
         type: folder
+      - path: Skills
+        type: folder
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zgccrui.CodexTweaks

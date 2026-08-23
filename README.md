@@ -5,24 +5,25 @@
 <h1 align="center">Codex Tweaks</h1>
 
 <p align="center">
-  用一个原生 macOS App，管理 Codex 桌面客户端的本地 CSS、JavaScript 模块与第三方浏览器库。
+  用原生 macOS App 按包管理、编译与加载 Codex 桌面客户端的本地界面增强。
 </p>
 
 <p align="center">
   <img alt="macOS" src="https://img.shields.io/badge/macOS-13.0%2B-black?logo=apple&logoColor=white">
   <img alt="Swift" src="https://img.shields.io/badge/Swift-5-F05138?logo=swift&logoColor=white">
-  <img alt="SwiftUI" src="https://img.shields.io/badge/UI-SwiftUI-0A84FF">
+  <img alt="Node.js" src="https://img.shields.io/badge/package_build-Node.js-5FA04E?logo=nodedotjs&logoColor=white">
   <img alt="CDP" src="https://img.shields.io/badge/CDP-127.0.0.1%3A9335-4A5568">
-  <img alt="mise" src="https://img.shields.io/badge/toolchain-mise-3FA7D6">
   <a href="https://github.com/cr-zhichen/codex-tweaks/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/cr-zhichen/codex-tweaks/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/cr-zhichen/codex-tweaks/releases"><img alt="Release" src="https://img.shields.io/github/v/release/cr-zhichen/codex-tweaks"></a>
 </p>
 
 ## 简介
 
-Codex Tweaks 是一个带主窗口与菜单栏入口的原生 macOS 工具。它通过仅监听本机的 Chrome DevTools Protocol（CDP），把用户自己的 CSS 和 JavaScript 注入 Codex 的 `app://` 页面，并在文件变化、页面刷新或新窗口出现后自动恢复。
+Codex Tweaks 是一个带主窗口和菜单栏入口的原生 macOS 工具。它通过仅监听本机的 Chrome DevTools Protocol（CDP），将已启用功能包的 CSS 和 JavaScript 加载到 Codex `app://` 页面。
 
-项目不会修改 `ChatGPT.app` 或 `app.asar`，也不需要常驻的 Node.js CLI。所有自定义资源都保存在用户目录中，可以直接检查、编辑、停用或删除。
+一个目录就是一个包。包可使用常见的 Node.js 模块写法、TypeScript、CSS import 和锁定的 npm 依赖；用户在 UI 中明确点击后，应用才会下载依赖并用固定版本 esbuild 编译成浏览器可执行产物。
+
+项目不修改 `ChatGPT.app` 或 `app.asar`。Node.js 只用于功能包编译，不是页面注入时的常驻运行时。
 
 > Codex Tweaks 是非官方本地定制工具。Codex 客户端升级后，页面结构或调试参数可能发生变化。
 
@@ -30,59 +31,63 @@ Codex Tweaks 是一个带主窗口与菜单栏入口的原生 macOS 工具。它
 
 | 模块 | 功能 |
 | --- | --- |
-| Codex 连接 | Codex 未运行时使用本机 CDP 参数启动；已运行但未开启 CDP 时提示确认重启；用户主动退出后不会反复拉起 |
-| 自动注入 | 发现全部 `app://` 页面并幂等注入 CSS/JavaScript；每 2 秒检查窗口与资源变化 |
-| 模块化定制 | 按固定顺序递归加载 `vendor`、入口文件与功能模块；每个 JavaScript 文件使用独立作用域 |
-| 第三方库 | 支持本地固定版本的 IIFE/UMD 浏览器 bundle，并通过库注册表在功能模块间显式共享 |
-| AI 编写提示词 | 一键复制包含当前路径、模块契约、第三方库规则、生命周期和验证要求的提示词，交给 Codex 或其他智能体执行 |
-| 本地编辑 | 从概览页直接编辑入口 CSS/JavaScript，或在 Finder 中管理全部模块；保存后自动重新注入 |
-| 原生界面 | SwiftUI 主窗口集中显示连接状态、注入控制、资源入口、运行日志和软件更新；菜单栏保留常用快捷操作 |
-| 日志 | 最新记录优先显示，支持刷新、打开日志文件，以及确认后清除现有日志 |
-| 软件更新 | 启动或手动检查 GitHub Releases；支持正式版/测试版通道、跳过版本，以及自动选择 arm64、x86_64 或 universal DMG |
-| 生命周期 | 停用增强或正常退出时清理样式、Shadow DOM 和已注册的事件监听器 |
-| 默认示例 | Codex 页面右下角显示隔离在 Shadow DOM 中的 `CT` 按钮；模型选择器作为独立模块使用 Pretext 计算菜单宽度 |
-
-## 界面预览
-
-| 连接概览 | 运行日志 |
-| --- | --- |
-| ![连接概览](docs/screenshot-overview.png) | ![运行日志](docs/screenshot-logs.png) |
+| Codex 连接 | Codex 未运行时使用本机 CDP 参数启动；已运行但未开启 CDP 时由用户确认是否重启 |
+| 包级开关 | 按功能包整体启用/停用；新发现的包默认停用，包内文件不再单独设置开关 |
+| 可读元数据 | 在 UI 中显示包名、说明、源版本、当前激活版本和更新原因 |
+| 本地优先级 | 用户可调整有效优先级或恢复作者默认值；覆盖值独立存储，与声明值一致时自动移除；依赖关系覆盖数值顺序时显示原因 |
+| 包依赖 | 逐条显示本地/Git 来源、版本和解析状态；依赖拓扑优先于数值优先级，缺失、停用、来源冲突、版本冲突与循环依赖会明确提示 |
+| 本地导入 | 选择功能包目录或 ZIP，完整校验后原子复制到本地 packages 目录 |
+| Git 包管理 | 从 HTTPS/SSH Git 仓库按分支、最新 SemVer Tag、指定 Tag、GitHub Release 或 Commit 安装，并锁定到精确 Commit |
+| 更新检查 | 定期只检查远端是否有更新；只有用户点击“更新并编译”后才拉取、编译并切换 |
+| 手动更新 | 只有点击包的编译/更新按钮才会执行依赖同步与编译 |
+| 原子激活 | 新产物完整编译成功后才切换；失败时保留上一个可用版本 |
+| 开发者模式 | 自动编译已启用包的源码变化，但不自动下载新依赖或切换包版本 |
+| 故障隔离 | 一个包编译或运行失败时，其他包继续加载；错误回显在对应包上 |
+| 开发 Skill | 项目内置功能包开发 Skill；“复制给 AI”直接读取同一份 `SKILL.md`，避免两套说明漂移 |
+| 软件更新 | 检查 GitHub Releases，支持正式版/测试版通道、跳过版本和架构匹配 DMG |
+| 内置示例 | 只提供 `ct-sample`：在右下角显示 `codex_tweaks 已注入` 状态 |
 
 ## 工作方式
 
 ```text
-Codex Tweaks.app
-  ├─ 启动或连接 ChatGPT.app
-  ├─ GET 127.0.0.1:9335/json/list
-  ├─ 筛选 type=page 且 URL 为 app:// 的目标
-  ├─ WebSocket → Runtime.evaluate
-  └─ 按顺序注入 vendor + ui 入口 + scripts/styles 模块
+本地包：Tweaks/packages/<package>/
+远程包：ManagedPackages/sources/<package-hash>/<commit>/
+  package.json + src + package-lock.json
+                |
+                | 依赖解析：拓扑顺序 > 用户有效优先级 > 包名
+                | 用户在 UI 中点击编译或更新
+                v
+        npm ci --ignore-scripts
+        esbuild 0.25.9 --platform=browser --format=cjs
+                |
+                | 成功后原子切换
+                v
+~/Library/Caches/Codex Tweaks/PackageBuilds/
+                |
+                v
+CDP Runtime.evaluate -> Codex app:// 页面
 ```
 
-注入脚本使用内容指纹判断资源是否变化，并在独立的 Shadow DOM 中承载默认组件。重复检查不会重复创建节点；重新注入前会先执行上一版本注册的清理回调。
+Codex Tweaks 每 2 秒重新发现页面与包状态。注入使用产物指纹保证幂等；重新注入前会从后往前执行已注册的清理回调。
 
 ## 开始使用
 
-### 安装发行版
-
-从 [GitHub Releases](https://github.com/cr-zhichen/codex-tweaks/releases) 下载适合当前 Mac 的 DMG：
-
-- `Codex-Tweaks-vX.Y.Z.dmg`：universal，同时支持 Apple 芯片和 Intel Mac
-- `Codex-Tweaks-vX.Y.Z-arm64.dmg`：仅支持 Apple 芯片
-- `Codex-Tweaks-vX.Y.Z-x86_64.dmg`：仅支持 Intel Mac
-
-打开 DMG 后，将 Codex Tweaks 图标拖移到“应用程序”文件夹即可安装。发行版采用 ad-hoc 签名且未经过 Apple 公证。若 macOS 阻止首次打开，请在“系统设置 → 隐私与安全性”中确认打开。下载后可以使用同一 Release 中的 `SHA256SUMS` 校验文件完整性。
-
-应用默认在启动时检查更新，也可以从“关于与更新”或菜单栏手动检查。正式版通道只接收稳定版本；测试版通道接收稳定版、Beta 与 RC，但不会接收 Alpha 或其他预发布类型。发现新版本后可以立即下载、稍后提醒，或跳过当前版本。
-
-### 环境要求
+### 运行环境
 
 - macOS 13 或更新版本
-- Xcode
-- [mise](https://mise.jdx.dev/)
 - 已安装包含 Codex 桌面客户端的 `ChatGPT.app`
+- Node.js（需同时提供 `node`、`npm` 和 `npx`），用于功能包的依赖下载与编译
+- Git，用于安装和更新远程功能包；私有仓库可使用本机已有的 SSH 凭据，应用不会弹出交互式凭据提示
 
-### 构建与启动
+应用会从常见位置检测 Node.js 和 Git，并在功能包页面显示实际结果。没有 Node.js 时，已编译的包仍可加载，但不能更新产物；没有 Git 时，本地包仍可使用，但不能安装或更新远程包。
+
+### 安装发行版
+
+从 [GitHub Releases](https://github.com/cr-zhichen/codex-tweaks/releases) 下载适合当前 Mac 的 DMG，打开后将 Codex Tweaks 拖移到“应用程序”。发行版使用 ad-hoc 签名且未经 Apple 公证；如果 macOS 阻止首次打开，请在“系统设置 → 隐私与安全性”中确认打开。
+
+### 从源码构建
+
+开发需要 Xcode 和 [mise](https://mise.jdx.dev/)：
 
 ```sh
 mise install
@@ -90,139 +95,210 @@ mise run build
 open "dist/Codex Tweaks.app"
 ```
 
-首次连接时：
+## 功能包格式
 
-1. Codex 未运行：Codex Tweaks 会使用仅监听 `127.0.0.1:9335` 的调试参数启动客户端。
-2. Codex 已运行且 CDP 可用：直接连接并注入当前全部 `app://` 窗口。
-3. Codex 已运行但没有 CDP：界面会说明原因，并在用户确认后重新启动 Codex。
-
-## 自定义 CSS 与 JavaScript
-
-首次启动会创建下面的资源结构，旧版的 `ui.css` 与 `ui.js` 入口仍然兼容：
+用户功能包位于：
 
 ```text
 ~/Library/Application Support/Codex Tweaks/Tweaks/
-├── vendor/   # 第三方浏览器 bundle，最先加载
-├── ui.css    # CSS 入口
-├── styles/   # 功能样式
-├── ui.js     # JavaScript 入口
-└── scripts/  # 功能脚本
+└── packages/
+    └── my-tweak/
+        ├── package.json
+        ├── package-lock.json   # 有 npm 依赖时必须提供
+        └── src/
+            ├── index.js
+            └── style.css
 ```
 
-在“概览”中点击“编辑入口 CSS”或“编辑入口 JS”可用系统关联的外部编辑器打开入口文件；点击“在 Finder 中管理模块与第三方库”可以管理完整目录。保存、增加、删除或重命名任意 `.css` / `.js` 文件后无需重启应用，下一轮检查会根据文件路径与内容指纹自动重新注入。
+旧的平铺 `ui.css` / `ui.js` / `vendor` / `scripts` / `styles` 格式不再加载。
 
-加载顺序固定为：
+应用会在首次使用新格式时记录当前包及其开关状态。此后新发现的包会默认保持停用，完成审阅和编译后需由用户在功能包页面手动启用。
 
-1. CSS：`vendor/**/*.css` → `ui.css` → `styles/**/*.css`
-2. JavaScript：`vendor/**/*.js` → `ui.js` → `scripts/**/*.js`
+### package.json
 
-每个目录内部按相对路径升序递归加载，因此推荐用 `10-`、`20-` 这样的文件名前缀表达依赖顺序。隐藏文件和扩展名不匹配的文件不会加载。每个 JavaScript 文件都在自己的函数作用域中运行，一个模块里的 `const`、`let`、`var` 或函数声明不会污染其他模块；模块异常会带上对应的相对文件名。
+```json
+{
+  "name": "my-tweak",
+  "version": "1.0.0",
+  "description": "在这里写会显示在 UI 中的功能说明。",
+  "type": "module",
+  "dependencies": {},
+  "codexTweaks": {
+    "apiVersion": 2,
+    "entry": "src/index.js",
+    "priority": 100,
+    "packageDependencies": {}
+  }
+}
+```
 
-每个 JavaScript 模块都会获得：
+- `name`：唯一包标识。同名包都会被标记为无效，不影响其他包。
+- `version`：必须是有效 SemVer；当源版本高于当前产物时，UI 会继续显示当前激活版本，直到用户手动更新。
+- `description`：显示在功能包页面。
+- `dependencies`：运行时必须打包进浏览器产物的 npm 依赖；建议使用明确版本。
+- `codexTweaks.entry`：esbuild 入口，必须位于包目录中。
+- `codexTweaks.priority`：作者提供的默认优先级。用户在 UI 中设置的有效优先级保存在 `State/package-settings.json`，不会改写清单。
+- `codexTweaks.packageDependencies`：其他功能包的版本要求与可选 Git 安装来源；它与 npm `dependencies` 是两套不同的依赖。
 
-- `root`：隔离的 `ShadowRoot`
-- `api.version`：当前资源版本
-- `api.registerLibrary(name, value)`：注册一个跨模块共享的库；同名重复注册会报错
-- `api.hasLibrary(name)`：判断库是否已经注册
-- `api.getLibrary(name)`：取得已注册的库；缺失时会报错
-- `api.listLibraries()`：列出当前注册的库名
-- `api.registerCleanup(callback)`：注册重新注入或停用时的清理逻辑
+### 入口与生命周期
 
-### 引入第三方库
+```js
+import "./style.css";
 
-Codex 页面的内容安全策略会阻止常见的远程或 `data:` 动态模块导入，因此 Codex Tweaks 不绕过 CSP，也不直接执行 CDN URL。稳定的方式是把依赖固定为经过审阅的浏览器 bundle：
+export function activate({ root, onCleanup, api, dependencies }) {
+  const button = document.createElement("button");
+  button.textContent = "Hello";
 
-1. 将库打包为单文件 IIFE/UMD，并保留版本与许可证，例如 `vendor/10-some-lib.js`。
-2. 如果库暴露为 `globalThis.SomeLib`，在随后加载的 `vendor/11-some-lib-adapter.js` 中注册并移除临时全局变量：
+  const handleClick = () => console.log("clicked");
+  button.addEventListener("click", handleClick);
+  root.append(button);
 
-   ```js
-   api.registerLibrary("some-lib", globalThis.SomeLib);
-   delete globalThis.SomeLib;
-   ```
+  onCleanup(() => {
+    button.removeEventListener("click", handleClick);
+  });
+}
+```
 
-3. 在功能模块（例如 `scripts/20-my-feature.js`）中显式取得：
+`activate(context)` 可以是同步或异步函数，也可直接返回清理函数。`context` 包含：
 
-   ```js
-   const SomeLib = api.getLibrary("some-lib");
-   ```
+- `id` / `name` / `version`：当前激活包的信息
+- `root`：当前包独立的 DOM 根节点
+- `onCleanup(callback)` / `api.registerCleanup(callback)`：注册停用、重新注入或退出时的清理逻辑
+- `api.registerLibrary` / `hasLibrary` / `getLibrary` / `listLibraries`：为依赖当前包的功能包注册具名能力
+- `dependencies.has` / `get` / `list`：只访问清单中已声明且成功激活的功能包依赖及其能力
 
-第三方样式可以直接放入 `vendor` 下的 `.css` 文件。如果 npm 包只提供 ESM/CJS，需要先用 bundler 转成面向浏览器的单文件 IIFE/UMD；模块文件本身不支持静态 `import` / `export`。默认资源中的 `@chenglou/pretext` 就使用这套注册表提供给模型选择器。
+包可直接使用 `import` / `export` 组织多个 JS/TS/CSS 文件。包内顺序使用正常模块依赖图表达：先 import 底层模块，再由入口组合，不依赖文件名前缀。
 
-### 交给 AI 编写
+### 跨包加载顺序
 
-概览页和菜单栏都提供“复制 AI 编写提示词”。复制内容会自动带上当前 Tweaks 目录，并明确模块加载顺序、JavaScript 生命周期、第三方库、样式与验证规则。
+1. 先按功能包依赖图做拓扑排序，保证依赖在使用方之前；互不依赖的包再按用户有效优先级从小到大、同值按 `name` 排序。
+2. 先按该顺序插入所有包的 CSS，使 JavaScript 启动时样式已就绪。
+3. 再按同一顺序调用每个包的 `activate(context)`。
+4. 单包失败时立即清理该包的 CSS、DOM、能力和回调；依赖它的包不会启动，其他无关包继续运行。
 
-粘贴给 Codex 或其他智能体后，只需把末尾“我的具体需求”占位内容替换为实际需求。
+依赖关系是硬约束，数值优先级只处理没有依赖关系的包。作者默认优先级仍保留在包中，用户调整值只影响本机。
 
-## 安全边界
+### 功能包依赖
 
-- CDP 固定监听 `127.0.0.1:9335`，不会主动暴露到局域网。
-- 调试端口开启期间，本机其他进程仍可能连接；不要把该端口转发或代理到外部网络。
-- 退出 Codex Tweaks 会清理当前注入内容，但不会关闭 Codex 已开启的调试端口；完全退出并正常重开 Codex 后才会关闭。
-- 自定义 JavaScript 与 Codex 页面拥有相同的渲染上下文权限，只运行自己审阅过的本地脚本和第三方 bundle，并固定依赖版本、保留许可证。
-- 目标筛选刻意排除普通 `https://` 页面，不会向 Codex 的应用内浏览器网页注入。
+```json
+{
+  "codexTweaks": {
+    "apiVersion": 2,
+    "entry": "src/index.js",
+    "priority": 100,
+    "packageDependencies": {
+      "shared-core": {
+        "version": "^1.2.0",
+        "source": {
+          "url": "https://github.com/example/shared-core.git",
+          "selector": { "type": "latestSemverTag" }
+        }
+      }
+    }
+  }
+}
+```
+
+- 版本要求支持精确 SemVer、`^`、`~`、`>=` / `>` / `<=` / `<`，以及 `x` / `*` 通配符。
+- 包 ID 是离线构建依赖图所需的规范身份；版本范围始终需要明确声明。
+- 没有 `source` 时是仅本地依赖，应用只提示缺失，不猜测仓库。
+- 带有 `source` 时可从明确的 Git 来源安装；运行时仍使用本地锁定、编译后的产物。
+- 只有 Git 地址的输入必须先读取远程 `package.json`，解析出包 ID 后再规范化为“包 ID + Git 来源”，不能把 URL 本身当作依赖身份。
+- 应用可递归安装缺失依赖，并检查同一包 ID 的来源与版本约束是否冲突。
+- 功能包依赖只提供加载顺序和运行时具名能力，不允许在编译时直接 import 另一个包的源码。需要共享编译代码时应使用 npm 包。
+
+## 更新、编译与开发者模式
+
+正常模式下：
+
+1. Codex Tweaks 发现源码、版本、依赖锁文件或编译器版本变化。
+2. UI 显示更新原因，页面继续使用上一个有效产物。
+3. 用户点击按钮后，有依赖的包执行 `npm ci --ignore-scripts --no-audit --no-fund`，然后调用固定版本 esbuild。
+4. 成功后原子更新激活记录并重新注入；失败则保留上一个产物。
+
+开发者模式下：
+
+- 已启用包的普通源码变化会自动编译和激活。
+- 自动编译使用 `npx --offline`，不下载编译器或依赖。
+- 新包含 npm 依赖、包版本变化、`package-lock.json` 变化或构建配置变化仍需手动点击。
+- 同一次失败的源码状态不会每 2 秒重复尝试；继续修改源码或手动编译可再次触发。
+
+### 从本地安装
+
+功能包页面可以直接选择一个包目录或 ZIP 压缩包。`package.json` 可以位于所选内容的根目录，也可以位于 ZIP 中唯一的一级目录。程序先复制或解压到隐藏暂存目录，完成全部校验后才原子移动到 `Tweaks/packages/`；校验失败不会留下半安装目录，也不会覆盖同名包。
+
+本地安装使用与 Git 安装相同的清单校验，包括 JSON 结构、包 ID、SemVer、API v2、入口文件范围、功能包依赖版本与 npm 锁文件。导入时不复制 `.git` 和 `node_modules`，并拒绝符号链接、特殊文件、危险 ZIP 路径、超量文件和过大的解压内容。安装结果属于普通本地包，不登记远程来源或检查 Git 更新。
+
+新安装包默认保持停用；如果已检测到 Node.js，用户确认本地安装后会继续下载锁定依赖并编译，但不会自动启用。
+
+### 从 Git 安装与更新
+
+功能包页面可填写 HTTPS、`ssh://` 或 `git@host:path` 仓库地址，并选择：
+
+- `branch`：跟踪指定分支。
+- `latestSemverTag`：选择满足全部依赖版本约束的最新 SemVer Tag。
+- `tag`：固定指定 Tag。
+- `githubLatestRelease`：跟踪 github.com 仓库的最新 Release。
+- `githubRelease`：固定指定 GitHub Release 的 Tag。
+- `commit`：固定完整 40 位 Commit SHA。
+
+检出首先发生在临时目录；只有仓库通过与本地安装相同的包格式校验后，程序才会写入 `ManagedPackages/registry.json` 和 `ManagedPackages/packages.lock.json`。实际运行永远使用锁文件中的精确 Commit。分支、最新 Tag 和最新 Release 可以报告有可安装更新；固定 Tag、固定 Release 或 Commit 不会因远端引用漂移而被静默替换。普通更新检查只读取远端引用，不会拉取源码、运行 npm 或切换当前产物。用户点击“更新并编译”后，应用才会检出新 Commit、编译并在成功后切换。
+
+远程安装不执行 Git 凭据交互、不加载子模块，也不执行 npm lifecycle scripts。仓库源码与 npm 依赖仍属于用户选择运行的第三方代码，启用前应自行审阅。
+
+## 依赖与安全边界
+
+- `dependencies` 非空时必须提供 `package-lock.json`，手动更新使用 `npm ci`而不是可漂移的 `npm install`。
+- 安装时固定使用 `--ignore-scripts`，不执行依赖声明的 lifecycle scripts。
+- 功能包依赖使用 `codexTweaks.packageDependencies`，应用只会为带有明确 `source` 的缺失依赖执行 Git 安装。
+- Git 安装锁定精确 Commit；仓库 URL 不允许在 HTTPS 地址中内嵌用户名或密码，Git 命令强制使用非交互模式。
+- 页面不会获得 Node.js 内置 API；`fs`、`child_process` 等 Node 专用模块不能在浏览器产物中运行。
+- 运行时不从 CDN 加载脚本或样式，不绕过 Codex CSP。
+- 包 JavaScript 拥有与 Codex 页面相同的渲染上下文权限，只应启用自己审阅过的代码和依赖。
+- CDP 固定监听 `127.0.0.1:9335`，但本机其他进程仍可能连接；不要把该端口转发到外部网络。
+- 目标筛选仅允许 `app://` 页面，不向应用内普通 `https://` 网页注入。
+
+## 功能包开发 Skill 与交给 AI
+
+项目中的 [`Skills/develop-codex-tweaks-package/SKILL.md`](Skills/develop-codex-tweaks-package/SKILL.md) 是功能包开发的唯一指导源，覆盖 API v2 清单、生命周期、npm 与功能包依赖、Git 来源、浏览器约束及验证要求。
+
+概览页和菜单栏的“复制给 AI”会直接读取 App 中打包的同一份 `SKILL.md`，不会维护第二份提示词。修改 Skill 后重新生成并构建工程，UI 复制内容会自然同步。
 
 ## 开发
 
-项目使用 XcodeGen 生成工程，相关工具版本与任务由 `mise.toml` 统一管理。
+项目使用 XcodeGen 生成工程，工具版本与任务由 `mise.toml` 统一管理。
 
 ```sh
-mise run generate   # 生成 CodexTweaks.xcodeproj
-mise run test       # 运行 macOS 单元测试
-mise run build      # 构建 Release App 到 dist/
-mise run launch     # 启动已构建的 App
-mise run workflows:lint # 检查 GitHub Actions 与 Release 脚本
-mise run verify     # 工作流检查、测试、Release 构建与差异检查
-mise run kill       # 停止 Codex Tweaks
-mise run clean      # 清理 build/ 与 dist/
+mise run generate        # 生成 CodexTweaks.xcodeproj
+mise run test            # 运行 macOS 单元测试
+mise run build           # 构建 Release App 到 dist/
+mise run launch          # 启动已构建的 App
+mise run workflows:lint  # 检查 GitHub Actions 与 Release 脚本
+mise run verify          # 工作流检查、测试、Release 构建与工程差异检查
+mise run clean           # 清理 build/ 与 dist/
 ```
 
-Release 构建输出：
-
-```text
-dist/Codex Tweaks.app
-```
-
-## CI/CD
-
-GitHub Actions 使用 macOS 26 runner，并通过 `jdx/mise-action` 安装 `mise.toml` 中固定的 XcodeGen、actionlint 与 ShellCheck：
-
-- `CI`：在 `main`、Pull Request 和手动触发时运行 `mise run verify`，并保留 14 天的 arm64 App 构建产物。
-- `Release`：推送 `v*` 标签后运行测试，构建并校验 universal、arm64、x86_64 三套 DMG，随后发布到 GitHub Releases。
-- 带连字符的标签（例如 `v0.1.0-beta.1`）会成为 Prerelease；普通标签（例如 `v0.1.0`）会成为稳定版本。
-- 重跑同一标签时会更新构建产物，但不会重复追加自动生成的 Release Notes。
-
-发布新版本：
-
-```sh
-git tag -a v0.1.0 -m "v0.1.0"
-git push origin v0.1.0
-```
-
-也可以在 GitHub Actions 中手动运行 `Release`，并填写一个已经存在的 `v*` 标签。发布脚本同样可以在本机运行：
-
-```sh
-RELEASE_TAG=v0.1.0 BUILD_NUMBER=1 mise run release
-```
+CI 在 `main`、Pull Request 和手动触发时运行 `mise run verify`。推送 `v*` 标签后，Release 工作流会构建 universal、arm64 和 x86_64 DMG 并发布到 GitHub Releases。
 
 ## 验证范围
 
-自动测试覆盖 CDP 目标筛选、注入脚本生成、清理逻辑、内容指纹，以及完整 SemVer 排序、更新通道筛选、GitHub 请求、跳过状态与 DMG 架构选择。`mise run verify` 会检查 GitHub Actions、执行测试与 Release 构建，并确认 XcodeGen 没有产生未提交的工程差异；本地构建成功不代表所有未来 Codex 客户端版本都保持相同页面结构。
+自动测试覆盖 CDP 目标筛选、包验证与排序、用户优先级独立持久化、依赖拓扑与故障隔离、Git Tag 安装和更新检查、源码/依赖/版本更新识别、产物选择加载、固定编译参数、Skill 同源复制、SemVer 和软件更新策略。
 
-当前实现仅对 `app://` 页面生效。真实注入仍取决于 Codex 客户端允许的 CDP 启动参数、端口状态以及页面生命周期。
+单元测试与本地构建成功不等于所有未来 Codex 版本都保持相同 DOM。真实视觉效果仍需在对应 Codex 版本中确认。
 
 ## 项目结构
 
 ```text
 app/
-├── Sources/                    # SwiftUI、启动器、CDP 与注入实现
-├── Resources/Assets.xcassets/  # macOS AppIcon 资产目录
-├── Resources/Branding/         # B1 原始图标母版
-├── Resources/Tweaks/           # 默认入口、第三方 vendor 与功能模块
-└── Tests/                      # 目标筛选、脚本生成与内容指纹测试
-docs/                           # README 界面截图
-.github/workflows/              # CI 与标签发布工作流
-scripts/                        # Release 打包与产物校验脚本
-mise.toml                       # 固定依赖与统一任务入口
-project.yml                     # XcodeGen 工程定义
+├── Sources/                     # SwiftUI、包存储/编译、启动器、CDP 与注入实现
+├── Resources/Assets.xcassets/   # macOS AppIcon
+├── Resources/Branding/          # 图标母版
+├── Resources/Tweaks/packages/   # 内置 ct-sample 源码包
+└── Tests/                       # 包、编译、注入、连接与更新测试
+Skills/
+└── develop-codex-tweaks-package/ # 功能包开发 Skill，也是 UI 复制内容的唯一来源
+.github/workflows/               # CI 与标签发布工作流
+scripts/                         # Release 打包与产物校验脚本
+mise.toml                        # 固定工具与统一任务
+project.yml                      # XcodeGen 工程定义
 ```

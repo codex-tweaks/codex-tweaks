@@ -27,6 +27,7 @@ enum CDPTargetSelector {
 struct CDPInjectionResult: Equatable {
     let targetCount: Int
     let successCount: Int
+    let packageErrors: [String: String]
 
     var failureCount: Int {
         targetCount - successCount

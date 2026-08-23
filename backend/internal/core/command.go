@@ -19,6 +19,7 @@ type SystemCommandRunner struct{}
 
 func (SystemCommandRunner) Run(ctx context.Context, executable string, arguments []string, directory string, environment []string) (CommandResult, error) {
 	command := exec.CommandContext(ctx, executable, arguments...)
+	configureCommand(command)
 	command.Dir = directory
 	command.Env = environment
 	var output bytes.Buffer

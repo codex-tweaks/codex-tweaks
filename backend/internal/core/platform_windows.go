@@ -5,6 +5,7 @@ package core
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +14,28 @@ import (
 	"time"
 )
 
-type windowsPlatform struct{ runner CommandRunner }
+const packagedCodexPowerShell = `$ErrorActionPreference = 'SilentlyContinue'
+$package = Get-AppxPackage -Name 'OpenAI.Codex' | Sort-Object Version -Descending | Select-Object -First 1
+if ($null -ne $package) {
+    $application = ($package | Get-AppxPackageManifest).Package.Applications.Application |
+        Where-Object { $_.Executable -match '(^|[\\/])ChatGPT[.]exe$' } |
+        Select-Object -First 1
+    if ($null -eq $application) {
+        $application = ($package | Get-AppxPackageManifest).Package.Applications.Application |
+            Where-Object { $_.Executable } |
+            Select-Object -First 1
+    }
+    if ($null -ne $application) {
+        Write-Output ($package.PackageFamilyName + '!' + $application.Id)
+    }
+}`
+
+type windowsPackageActivator func(appUserModelID, arguments string) (uint32, error)
+
+type windowsPlatform struct {
+	runner           CommandRunner
+	activatePackaged windowsPackageActivator
+}
 
 func NewPlatform(runner CommandRunner) Platform {
 	if runner == nil {
@@ -37,10 +59,25 @@ func (p *windowsPlatform) ActivateCodex(ctx context.Context) error {
 }
 
 func (p *windowsPlatform) LaunchCodex(ctx context.Context) error {
-	executable := p.locateCodex()
-	if executable == "" {
-		return errors.New("没有找到 ChatGPT.exe（Codex 桌面客户端）")
+	if executable := p.locateUnpackagedCodex(); executable != "" {
+		return p.launchUnpackagedCodex(ctx, executable)
 	}
+
+	appUserModelID := p.locatePackagedCodex(ctx)
+	if appUserModelID == "" {
+		return errors.New("没有找到 Codex Windows 桌面客户端；请确认已为当前 Windows 用户安装 Microsoft Store 版 Codex")
+	}
+	activate := p.activatePackaged
+	if activate == nil {
+		activate = activatePackagedApplication
+	}
+	if _, err := activate(appUserModelID, strings.Join(CodexDebuggingArguments, " ")); err != nil {
+		return fmt.Errorf("启动 Codex Windows 应用失败：%w", err)
+	}
+	return nil
+}
+
+func (p *windowsPlatform) launchUnpackagedCodex(ctx context.Context, executable string) error {
 	arguments := []string{"/D", "/C", "start", "", "/B", executable}
 	arguments = append(arguments, CodexDebuggingArguments...)
 	result, err := p.runner.Run(
@@ -73,12 +110,14 @@ func (p *windowsPlatform) RestartCodex(ctx context.Context) error {
 
 func (*windowsPlatform) Architecture() string { return runtime.GOARCH }
 
-func (*windowsPlatform) locateCodex() string {
+func (*windowsPlatform) locateUnpackagedCodex() string {
 	for _, candidate := range []string{
 		os.Getenv("CODEX_APP_PATH"),
 		filepath.Join(os.Getenv("LOCALAPPDATA"), "Microsoft", "WindowsApps", "ChatGPT.exe"),
 		filepath.Join(os.Getenv("LOCALAPPDATA"), "Programs", "ChatGPT", "ChatGPT.exe"),
+		filepath.Join(os.Getenv("LOCALAPPDATA"), "Programs", "Codex", "ChatGPT.exe"),
 		filepath.Join(os.Getenv("ProgramFiles"), "ChatGPT", "ChatGPT.exe"),
+		filepath.Join(os.Getenv("ProgramFiles"), "Codex", "ChatGPT.exe"),
 	} {
 		if isExecutable(candidate) {
 			return candidate
@@ -87,53 +126,28 @@ func (*windowsPlatform) locateCodex() string {
 	if candidate, err := exec.LookPath("ChatGPT.exe"); err == nil && isExecutable(candidate) {
 		return candidate
 	}
-	for _, programFiles := range uniqueNonEmptyStrings(
-		os.Getenv("ProgramFiles"),
-		os.Getenv("ProgramW6432"),
-	) {
-		matches, _ := filepath.Glob(filepath.Join(
-			programFiles,
-			"WindowsApps",
-			"OpenAI.Codex_*__2p2nqsd0c76g0",
-			"app",
-			"ChatGPT.exe",
-		))
-		if candidate := newestExecutable(matches); candidate != "" {
+	return ""
+}
+
+func (p *windowsPlatform) locatePackagedCodex(ctx context.Context) string {
+	result, err := p.runner.Run(
+		ctx,
+		"powershell.exe",
+		[]string{"-NoProfile", "-NonInteractive", "-Command", packagedCodexPowerShell},
+		"",
+		environmentSlice(environmentMap()),
+	)
+	if err != nil || result.Status != 0 {
+		return ""
+	}
+	for _, line := range strings.Split(result.Output, "\n") {
+		candidate := strings.TrimSpace(strings.TrimPrefix(line, "\ufeff"))
+		lowercase := strings.ToLower(candidate)
+		if strings.HasPrefix(lowercase, "openai.codex_") && strings.Contains(candidate, "!") && !strings.ContainsAny(candidate, " \t") {
 			return candidate
 		}
 	}
 	return ""
-}
-
-func newestExecutable(candidates []string) string {
-	var newest string
-	var newestTime time.Time
-	for _, candidate := range candidates {
-		info, err := os.Stat(candidate)
-		if err != nil || !info.Mode().IsRegular() {
-			continue
-		}
-		if newest == "" || info.ModTime().After(newestTime) {
-			newest = candidate
-			newestTime = info.ModTime()
-		}
-	}
-	return newest
-}
-
-func uniqueNonEmptyStrings(values ...string) []string {
-	seen := map[string]bool{}
-	result := []string{}
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		key := strings.ToLower(value)
-		if value == "" || seen[key] {
-			continue
-		}
-		seen[key] = true
-		result = append(result, value)
-	}
-	return result
 }
 
 func waitContext(ctx context.Context, duration time.Duration) error {

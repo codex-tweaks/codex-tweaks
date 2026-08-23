@@ -63,6 +63,42 @@ func TestControllerUsesGoDefaultsReadsSkillAndDisablesNewPackages(t *testing.T) 
 	}
 }
 
+func TestControllerDoesNotEmitUnchangedSnapshots(t *testing.T) {
+	root := t.TempDir()
+	eventCount := 0
+	controller, err := NewController(
+		InitializeParams{
+			ApplicationSupportDirectory: filepath.Join(root, "support"),
+			CacheDirectory:              filepath.Join(root, "cache"),
+			CurrentVersion:              "0.1.0",
+			BuildNumber:                 "1",
+		},
+		func(AppSnapshot) { eventCount++ },
+		ControllerDependencies{DisableBackground: true},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer controller.cancel()
+
+	if eventCount != 1 {
+		t.Fatalf("initial event count = %d, want 1", eventCount)
+	}
+	controller.emit()
+	controller.emit()
+	if eventCount != 1 {
+		t.Fatalf("unchanged event count = %d, want 1", eventCount)
+	}
+
+	controller.mu.Lock()
+	controller.status = AppStatus{Kind: StatusDisabled}
+	controller.mu.Unlock()
+	controller.emit()
+	if eventCount != 2 {
+		t.Fatalf("changed event count = %d, want 2", eventCount)
+	}
+}
+
 func TestControllerRejectsUnsupportedConfigurationSchema(t *testing.T) {
 	root := t.TempDir()
 	support := filepath.Join(root, "support")

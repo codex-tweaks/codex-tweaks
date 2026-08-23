@@ -39,7 +39,7 @@ public sealed class MainWindow : Window
     private readonly Grid RootGrid = new();
     private BackendAppSnapshot? _snapshot;
     private VelopackUpdateResult? _velopackResult;
-    private string _section = "overview";
+    private string _section = InitialSection();
     private string _packageSearch = string.Empty;
     private bool _started;
     private bool _applyingUpdate;
@@ -112,6 +112,7 @@ public sealed class MainWindow : Window
         button.Click += (_, _) =>
         {
             _section = section;
+            App.Log($"Navigating to {section}.");
             UpdateNavigationSelection();
             RenderCurrentPage();
         };
@@ -176,9 +177,9 @@ public sealed class MainWindow : Window
 
     private void RenderLoading()
     {
-        SetPage(CreatePage(
+        SetPage(WrapPage(CreatePage(
             T(PresentationTextKey.StatusStartingTitle),
-            T(PresentationTextKey.OverviewConnectingDetail)));
+            T(PresentationTextKey.OverviewConnectingDetail))));
     }
 
     private void RenderCurrentPage()
@@ -188,6 +189,7 @@ public sealed class MainWindow : Window
             RenderLoading();
             return;
         }
+        App.Log($"Rendering {_section} page.");
         FrameworkElement page = _section switch
         {
             "packages" => BuildPackagesPage(),
@@ -195,7 +197,9 @@ public sealed class MainWindow : Window
             "updates" => BuildUpdatesPage(),
             _ => BuildOverviewPage(),
         };
+        App.Log($"Built {_section} page; attaching visual tree.");
         SetPage(page);
+        App.Log($"Attached {_section} page.");
     }
 
     private FrameworkElement BuildOverviewPage()
@@ -480,24 +484,55 @@ public sealed class MainWindow : Window
         }
 
         var actions = Row();
-        var priority = new NumberBox
+        var priority = new TextBox
         {
             Header = T(PresentationTextKey.PackagesPriority),
-            Value = package.Priority,
-            SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
+            Text = package.Priority.ToString(CultureInfo.InvariantCulture),
             Width = 120,
             IsEnabled = package.AvailableActions.SetPriority,
         };
-        priority.ValueChanged += async (_, eventArgs) =>
+        var applyingPriority = false;
+        async Task ApplyPriorityAsync()
         {
-            if (!double.IsNaN(eventArgs.NewValue)
-                && (int)eventArgs.NewValue != package.Priority)
+            if (applyingPriority)
+            {
+                return;
+            }
+
+            if (!int.TryParse(
+                    priority.Text,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var value))
+            {
+                priority.Text = package.Priority.ToString(CultureInfo.InvariantCulture);
+                return;
+            }
+            if (value == package.Priority)
+            {
+                return;
+            }
+
+            applyingPriority = true;
+            try
             {
                 await RunBackendAsync(
                     "setPackagePriority",
-                    new { packageID = package.Id, priority = (int)eventArgs.NewValue });
+                    new { packageID = package.Id, priority = value });
+            }
+            finally
+            {
+                applyingPriority = false;
+            }
+        }
+        priority.KeyDown += async (_, eventArgs) =>
+        {
+            if (eventArgs.Key == VirtualKey.Enter)
+            {
+                await ApplyPriorityAsync();
             }
         };
+        priority.LostFocus += async (_, _) => await ApplyPriorityAsync();
         actions.Children.Add(priority);
         if (package.PriorityOverride is not null)
         {
@@ -1063,7 +1098,7 @@ public sealed class MainWindow : Window
     private void SetPage(FrameworkElement page)
     {
         PageHost.Children.Clear();
-        PageHost.Children.Add(page is StackPanel stack ? WrapPage(stack) : page);
+        PageHost.Children.Add(page);
     }
 
     private Border Card(UIElement content)
@@ -1204,6 +1239,12 @@ public sealed class MainWindow : Window
                 (byte)(rgb & 0xff));
         }
         return Colors.DodgerBlue;
+    }
+
+    private static string InitialSection()
+    {
+        var requested = Environment.GetEnvironmentVariable("CODEX_TWEAKS_INITIAL_SECTION");
+        return requested is "packages" or "logs" or "updates" ? requested : "overview";
     }
 
     private void ShowError(string message)

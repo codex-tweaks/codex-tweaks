@@ -53,8 +53,23 @@ function Assert-PeMachine([string]$Path, [uint16]$Expected) {
 }
 
 function Invoke-BackendSmoke([string]$Backend, [string]$Publish, [string]$ExpectedVersion) {
-    $actualVersion = (& $Backend --version).Trim()
-    if ($LASTEXITCODE -ne 0 -or $actualVersion -ne $ExpectedVersion) {
+    $versionStartInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $versionStartInfo.FileName = $Backend
+    $versionStartInfo.Arguments = '--version'
+    $versionStartInfo.UseShellExecute = $false
+    $versionStartInfo.CreateNoWindow = $true
+    $versionStartInfo.RedirectStandardOutput = $true
+    $versionStartInfo.RedirectStandardError = $true
+    $versionProcess = New-Object System.Diagnostics.Process
+    $versionProcess.StartInfo = $versionStartInfo
+    [void]$versionProcess.Start()
+    $actualVersion = $versionProcess.StandardOutput.ReadToEnd().Trim()
+    $versionError = $versionProcess.StandardError.ReadToEnd().Trim()
+    $versionProcess.WaitForExit()
+    if ($versionProcess.ExitCode -ne 0 -or $actualVersion -ne $ExpectedVersion) {
+        if (-not [string]::IsNullOrWhiteSpace($versionError)) {
+            throw "Backend version check failed: $versionError"
+        }
         throw "Backend version mismatch: expected $ExpectedVersion, actual $actualVersion"
     }
 

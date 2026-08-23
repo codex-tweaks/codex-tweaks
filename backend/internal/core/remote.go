@@ -103,13 +103,13 @@ func GitCandidates(environment map[string]string) []string {
 		executable = "git.exe"
 	}
 	candidates := []string{}
-	for _, directory := range filepath.SplitList(environment["PATH"]) {
+	for _, directory := range filepath.SplitList(environmentValue(environment, "PATH")) {
 		if directory != "" {
 			candidates = append(candidates, filepath.Join(directory, executable))
 		}
 	}
 	if runtime.GOOS == "windows" {
-		for _, root := range []string{environment["ProgramFiles"], environment["ProgramFiles(x86)"]} {
+		for _, root := range []string{environmentValue(environment, "ProgramFiles"), environmentValue(environment, "ProgramFiles(x86)")} {
 			if root != "" {
 				candidates = append(candidates, filepath.Join(root, "Git", "cmd", executable))
 			}

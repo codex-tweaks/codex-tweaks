@@ -56,6 +56,7 @@ internal sealed class BackendClient : IAsyncDisposable
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
             StandardInputEncoding = Utf8NoBom,
             StandardOutputEncoding = Utf8NoBom,
             StandardErrorEncoding = Utf8NoBom,

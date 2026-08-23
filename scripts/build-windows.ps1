@@ -56,7 +56,7 @@ foreach ($rid in $RuntimeIdentifiers) {
         try {
             & go build `
                 -trimpath `
-                -ldflags "-s -w -X main.version=$Version" `
+                -ldflags "-H=windowsgui -s -w -X main.version=$Version" `
                 -o (Join-Path $publish 'codex-tweaks-backend.exe') `
                 ./cmd/codex-tweaks-backend
             if ($LASTEXITCODE -ne 0) { throw "Go sidecar build failed: $rid" }

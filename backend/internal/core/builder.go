@@ -132,13 +132,13 @@ func NodeCandidates(environment map[string]string, home string) []string {
 		executable = "node.exe"
 	}
 	candidates := []string{}
-	for _, path := range filepath.SplitList(environment["PATH"]) {
+	for _, path := range filepath.SplitList(environmentValue(environment, "PATH")) {
 		if path != "" {
 			candidates = append(candidates, filepath.Join(path, executable))
 		}
 	}
 	if runtime.GOOS == "windows" {
-		for _, root := range []string{environment["ProgramFiles"], environment["LOCALAPPDATA"]} {
+		for _, root := range []string{environmentValue(environment, "ProgramFiles"), environmentValue(environment, "LOCALAPPDATA")} {
 			if root != "" {
 				candidates = append(candidates, filepath.Join(root, "nodejs", executable))
 			}
@@ -189,14 +189,14 @@ func processEnvironment(nodeBinDirectory string, values map[string]string) []str
 	for key, value := range values {
 		clone[key] = value
 	}
-	existingPath := clone["PATH"]
+	existingPath := environmentValue(clone, "PATH")
 	if existingPath == "" {
 		existingPath = "/usr/bin:/bin:/usr/sbin:/sbin"
 	}
 	if nodeBinDirectory != "" {
-		clone["PATH"] = nodeBinDirectory + string(os.PathListSeparator) + existingPath
+		setEnvironmentValue(clone, "PATH", nodeBinDirectory+string(os.PathListSeparator)+existingPath)
 	} else {
-		clone["PATH"] = existingPath
+		setEnvironmentValue(clone, "PATH", existingPath)
 	}
 	clone["NO_UPDATE_NOTIFIER"] = "1"
 	return environmentSlice(clone)
@@ -223,6 +223,31 @@ func environmentMap() map[string]string {
 		}
 	}
 	return result
+}
+
+func environmentValue(values map[string]string, key string) string {
+	if value, exists := values[key]; exists {
+		return value
+	}
+	if runtime.GOOS == "windows" {
+		for candidate, value := range values {
+			if strings.EqualFold(candidate, key) {
+				return value
+			}
+		}
+	}
+	return ""
+}
+
+func setEnvironmentValue(values map[string]string, key, value string) {
+	if runtime.GOOS == "windows" {
+		for candidate := range values {
+			if candidate != key && strings.EqualFold(candidate, key) {
+				delete(values, candidate)
+			}
+		}
+	}
+	values[key] = value
 }
 
 func isExecutable(path string) bool {

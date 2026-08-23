@@ -17,11 +17,13 @@ import (
 const ProtocolVersion = 2
 
 type Controller struct {
-	mu        sync.Mutex
-	refreshMu sync.Mutex
-	ctx       context.Context
-	cancel    context.CancelFunc
-	event     func(AppSnapshot)
+	mu                  sync.Mutex
+	refreshMu           sync.Mutex
+	eventMu             sync.Mutex
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	event               func(AppSnapshot)
+	lastEmittedSnapshot *AppSnapshot
 
 	store             *Store
 	logger            *Logger
@@ -462,9 +464,17 @@ func preferredDownloadForRelease(release *GitHubRelease, architecture string) *s
 }
 
 func (c *Controller) emit() {
-	if c.event != nil {
-		c.event(c.Snapshot())
+	if c.event == nil {
+		return
 	}
+	snapshot := c.Snapshot()
+	c.eventMu.Lock()
+	defer c.eventMu.Unlock()
+	if c.lastEmittedSnapshot != nil && reflect.DeepEqual(*c.lastEmittedSnapshot, snapshot) {
+		return
+	}
+	c.lastEmittedSnapshot = &snapshot
+	c.event(snapshot)
 }
 
 func (c *Controller) refreshLog() {

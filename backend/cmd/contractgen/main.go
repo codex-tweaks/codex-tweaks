@@ -47,15 +47,9 @@ func main() {
 }
 
 func generatedFiles(root string) ([]outputFile, error) {
-	contract := core.NewPresentationContract(core.PresentationState{})
-	swiftContract := contract
-	swiftContract.Platform = core.PlatformPresentation{
-		OperatingSystem:       "darwin",
-		Architecture:          "universal",
-		CDPEndpoint:           core.CodexCDPEndpoint,
-		RepositoryURL:         core.UpdateRepositoryURL,
-		UpdateInstallStrategy: "openDownload",
-	}
+	state := core.PresentationState{}
+	contract := core.NewPresentationContractForPlatform(state, "windows", "x64")
+	swiftContract := core.NewPresentationContractForPlatform(state, "darwin", "universal")
 	keys := make([]string, 0, len(contract.Text))
 	for key := range contract.Text {
 		keys = append(keys, key)

@@ -52,3 +52,13 @@ func TestPresentationContractDisablesConflictingPackageInstallActions(t *testing
 		t.Fatalf("install actions must be disabled while an install is active: %#v", contract.Actions)
 	}
 }
+
+func TestPresentationContractCanBeGeneratedForAnExplicitPlatform(t *testing.T) {
+	contract := NewPresentationContractForPlatform(PresentationState{}, "windows", "arm64")
+	if contract.Platform.OperatingSystem != "windows" || contract.Platform.Architecture != "arm64" {
+		t.Fatalf("unexpected explicit platform: %#v", contract.Platform)
+	}
+	if contract.Platform.UpdateInstallStrategy != "velopack" || !contract.Actions.InstallAppUpdate {
+		t.Fatalf("Windows update presentation is incomplete: %#v %#v", contract.Platform, contract.Actions)
+	}
+}

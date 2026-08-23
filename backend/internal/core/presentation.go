@@ -91,10 +91,14 @@ type PresentationState struct {
 }
 
 func NewPresentationContract(state PresentationState) PresentationContract {
+	return NewPresentationContractForPlatform(state, runtime.GOOS, runtime.GOARCH)
+}
+
+func NewPresentationContractForPlatform(state PresentationState, operatingSystem, architecture string) PresentationContract {
 	text := PresentationText()
 	cdpAvailable := state.Status.Kind == StatusWaitingForPage || state.Status.Kind == StatusConnected || state.Status.Kind == StatusDisabled
 	strategy := "openDownload"
-	if runtime.GOOS == "windows" {
+	if operatingSystem == "windows" {
 		strategy = "velopack"
 	}
 	return PresentationContract{
@@ -122,12 +126,12 @@ func NewPresentationContract(state PresentationState) PresentationContract {
 			ReadAuthoringPrompt:        state.AuthoringPromptAvailable,
 			CheckAppUpdate:             !state.UpdateChecking,
 			SetUpdatePreferences:       !state.UpdateChecking,
-			InstallAppUpdate:           runtime.GOOS == "windows" || state.UpdateAvailable,
+			InstallAppUpdate:           operatingSystem == "windows" || state.UpdateAvailable,
 		},
 		Status: statusPresentation(state.Status, text),
 		Platform: PlatformPresentation{
-			OperatingSystem:       runtime.GOOS,
-			Architecture:          runtime.GOARCH,
+			OperatingSystem:       operatingSystem,
+			Architecture:          architecture,
 			CDPEndpoint:           CodexCDPEndpoint,
 			RepositoryURL:         UpdateRepositoryURL,
 			UpdateInstallStrategy: strategy,

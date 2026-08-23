@@ -8,12 +8,12 @@ import (
 	"testing"
 )
 
-func TestBuilderBuildsBundledSampleOnMacOS(t *testing.T) {
+func TestBuilderBuildsBundledSampleOnDesktop(t *testing.T) {
 	if os.Getenv("CODEX_TWEAKS_INTEGRATION") != "1" {
 		t.Skip("set CODEX_TWEAKS_INTEGRATION=1 to run the real Node/esbuild smoke test")
 	}
-	if runtime.GOOS != "darwin" {
-		t.Skip("macOS runtime smoke test")
+	if runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
+		t.Skip("desktop runtime smoke test")
 	}
 	bundled, err := filepath.Abs(filepath.Join("..", "..", "..", "app", "Resources", "Tweaks", "packages"))
 	if err != nil {

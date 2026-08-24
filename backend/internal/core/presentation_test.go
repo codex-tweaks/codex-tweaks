@@ -20,6 +20,9 @@ func TestPresentationContractOwnsCopyTokensPlatformAndActions(t *testing.T) {
 	if contract.Text["app.name"] == "" || contract.Text["packages.status.active"] == "" {
 		t.Fatalf("required presentation copy is missing: %#v", contract.Text)
 	}
+	if contract.Text["update.downloadProgress"] == "" || contract.Text["update.installingProgress"] == "" {
+		t.Fatalf("update progress copy is missing: %#v", contract.Text)
+	}
 	if contract.Tokens.PagePadding <= 0 || contract.Tokens.CardCornerRadius <= 0 {
 		t.Fatalf("invalid presentation tokens: %#v", contract.Tokens)
 	}

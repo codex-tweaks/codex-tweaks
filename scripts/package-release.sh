@@ -95,15 +95,6 @@ create_dmg() (
     "$PRODUCT_NAME" \
     "${DIST_DIR}/${dmg_name}"
 
-  if [[ "$CODE_SIGN_IDENTITY" != "-" ]]; then
-    codesign \
-      --force \
-      --sign "$CODE_SIGN_IDENTITY" \
-      --keychain "$MACOS_SIGNING_KEYCHAIN" \
-      --timestamp=none \
-      "${DIST_DIR}/${dmg_name}"
-  fi
-
   echo "已创建 ${DIST_DIR}/${dmg_name}"
 )
 

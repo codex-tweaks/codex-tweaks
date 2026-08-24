@@ -231,8 +231,10 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case updateCurrent = "update.current"
     case updateCurrentVersion = "update.currentVersion"
     case updateDownload = "update.download"
+    case updateDownloadProgress = "update.downloadProgress"
     case updateInstall = "update.install"
     case updateInstallFailed = "update.installFailed"
+    case updateInstallingProgress = "update.installingProgress"
     case updateLastCheck = "update.lastCheck"
     case updateLater = "update.later"
     case updateLatestVersion = "update.latestVersion"
@@ -539,7 +541,7 @@ enum GeneratedPresentationDefaults {
         .statusWaitingForPageDetail: "调试端口可用，尚未发现 app:// 页面",
         .statusWaitingForPageTitle: "正在等待 Codex 页面",
         .updateApplyProgress: "正在下载并安装完整更新…",
-        .updateAutoCheck: "自动检查并下载更新，退出应用时静默安装",
+        .updateAutoCheck: "自动检查更新；发现新版本时询问，确认后下载并安装",
         .updateAvailable: "有新版本",
         .updateChannel: "更新通道",
         .updateChannelBeta: "测试版",
@@ -553,8 +555,10 @@ enum GeneratedPresentationDefaults {
         .updateCurrent: "已是最新",
         .updateCurrentVersion: "当前版本",
         .updateDownload: "下载 {version}",
+        .updateDownloadProgress: "正在下载更新：{progress}%",
         .updateInstall: "安装 {version}",
         .updateInstallFailed: "安装更新失败：{message}",
+        .updateInstallingProgress: "下载完成，正在安装并重启…",
         .updateLastCheck: "上次检查",
         .updateLater: "稍后",
         .updateLatestVersion: "通道最新版本",
@@ -562,7 +566,7 @@ enum GeneratedPresentationDefaults {
         .updateNoRelease: "当前通道还没有可用的 GitHub Release。",
         .updateNoneAvailable: "当前没有可安装的更新。",
         .updateNotInstalled: "当前是便携构建；请先使用 Setup.exe 安装后再使用自动更新。",
-        .updatePromptMessage: "当前版本为 {current}，新版本 {latest} 已可下载。",
+        .updatePromptMessage: "当前版本为 {current}，新版本 {latest} 已可用。是否现在下载并安装？",
         .updateRepository: "项目主页",
         .updateRestoreReminder: "恢复提醒",
         .updateSkip: "跳过此版本",

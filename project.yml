@@ -2,6 +2,7 @@ name: CodexTweaks
 options:
   bundleIdPrefix: com.zgccrui
   createIntermediateGroups: true
+  developmentLanguage: zh-Hans
   deploymentTarget:
     macOS: "13.0"
 

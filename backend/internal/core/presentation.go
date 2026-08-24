@@ -100,7 +100,9 @@ func NewPresentationContractForPlatform(state PresentationState, operatingSystem
 	text := PresentationText()
 	cdpAvailable := state.Status.Kind == StatusWaitingForPage || state.Status.Kind == StatusConnected || state.Status.Kind == StatusDisabled
 	strategy := "openDownload"
-	if operatingSystem == "windows" {
+	if operatingSystem == "darwin" {
+		strategy = "sparkle"
+	} else if operatingSystem == "windows" {
 		strategy = "velopack"
 	}
 	return PresentationContract{
@@ -444,7 +446,7 @@ func PresentationText() map[string]string {
 		"update.latestVersion":                        "通道最新版本",
 		"update.lastCheck":                            "上次检查",
 		"update.never":                                "从未",
-		"update.autoCheck":                            "启动 Codex Tweaks 时自动检查更新",
+		"update.autoCheck":                            "自动检查并下载更新，退出应用时静默安装",
 		"update.noRelease":                            "当前通道还没有可用的 GitHub Release。",
 		"update.check":                                "检查更新",
 		"update.download":                             "下载 {version}",

@@ -134,16 +134,6 @@ struct UpdateView: View {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.callout)
                     .foregroundStyle(model.tokens.dangerColorValue)
-            } else if updateChecker.latestVersionIsSkipped {
-                Label(
-                    model.text(
-                        .updateSkipMessage,
-                        ["version": updateChecker.latestVersionString]
-                    ),
-                    systemImage: "forward.end"
-                )
-                .font(.callout)
-                .foregroundStyle(.secondary)
             } else if updateChecker.lastCheckDate != nil && updateChecker.latestRelease == nil {
                 Label(model.text(.updateNoRelease), systemImage: "info.circle")
                     .font(.callout)
@@ -159,17 +149,12 @@ struct UpdateView: View {
 
                 if updateChecker.hasNewerVersion {
                     Button(model.text(
-                        .updateDownload,
+                        .updateInstall,
                         ["version": updateChecker.latestVersionString]
-                    ), systemImage: "arrow.down.circle") {
-                        openLatestDownload()
+                    ), systemImage: "arrow.triangle.2.circlepath") {
+                        updateChecker.installUpdate()
                     }
-
-                    if updateChecker.latestVersionIsSkipped {
-                        Button(model.text(.updateRestoreReminder)) {
-                            updateChecker.unskipAndPrompt()
-                        }
-                    }
+                    .disabled(!model.actions.installAppUpdate)
                 } else if let releaseURL = updateChecker.latestRelease?.htmlURL {
                     Button(model.text(.updateViewRelease), systemImage: "arrow.up.right") {
                         NSWorkspace.shared.open(releaseURL)
@@ -192,7 +177,7 @@ struct UpdateView: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
         } else if updateChecker.lastCheckDate != nil && updateChecker.latestRelease != nil {
-            Text(model.text(updateChecker.hasNewerVersion ? .updateSkipped : .updateCurrent))
+            Text(model.text(.updateCurrent))
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
@@ -203,10 +188,6 @@ struct UpdateView: View {
             ?? model.text(.updateNever)
     }
 
-    private func openLatestDownload() {
-        guard let url = updateChecker.downloadURL else { return }
-        NSWorkspace.shared.open(url)
-    }
 }
 
 private extension View {

@@ -61,6 +61,9 @@ try {
         elseif (-not [string]::IsNullOrWhiteSpace($env:VPK_SIGN_TEMPLATE)) {
             $arguments += @('--signTemplate', $env:VPK_SIGN_TEMPLATE)
         }
+        elseif (-not [string]::IsNullOrWhiteSpace($env:VPK_SIGN_PARAMS)) {
+            $arguments += @('--signParams', $env:VPK_SIGN_PARAMS)
+        }
 
         & dotnet tool run vpk -- @arguments
         if ($LASTEXITCODE -ne 0) { throw "Velopack packaging failed: $rid" }

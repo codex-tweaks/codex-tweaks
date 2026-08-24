@@ -658,7 +658,7 @@ internal static class PresentationDefaults
         [PresentationTextKey.StatusWaitingForPageDetail] = "调试端口可用，尚未发现 app:// 页面",
         [PresentationTextKey.StatusWaitingForPageTitle] = "正在等待 Codex 页面",
         [PresentationTextKey.UpdateApplyProgress] = "正在下载并安装完整更新…",
-        [PresentationTextKey.UpdateAutoCheck] = "启动 Codex Tweaks 时自动检查更新",
+        [PresentationTextKey.UpdateAutoCheck] = "自动检查并下载更新，退出应用时静默安装",
         [PresentationTextKey.UpdateAvailable] = "有新版本",
         [PresentationTextKey.UpdateChannel] = "更新通道",
         [PresentationTextKey.UpdateChannelBeta] = "测试版",

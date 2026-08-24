@@ -9,6 +9,7 @@ BUILD_NUMBER="${BUILD_NUMBER:-1}"
 DIST_DIR="${DIST_DIR:-dist}"
 EXPECTED_MINOS="13.0"
 EXPECTED_BACKEND_MINOS="12.0"
+EXPECTED_SIGNING_CERT_SHA256="${MACOS_SIGNING_CERT_SHA256:-}"
 
 if [[ ! "$RELEASE_TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
   echo "RELEASE_TAG 必须是 v1.2.3 或 v1.2.3-beta.1 形式" >&2
@@ -22,6 +23,64 @@ if [[ ! "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
   echo "BUILD_NUMBER 必须是正整数" >&2
   exit 1
 fi
+
+normalize_fingerprint() {
+  tr '[:lower:]' '[:upper:]' | tr -cd '0-9A-F'
+}
+
+EXPECTED_SIGNING_CERT_SHA256="$(
+  printf '%s' "$EXPECTED_SIGNING_CERT_SHA256" | normalize_fingerprint
+)"
+if [[ -n "$EXPECTED_SIGNING_CERT_SHA256" ]] \
+  && [[ ${#EXPECTED_SIGNING_CERT_SHA256} -ne 64 ]]; then
+  echo "MACOS_SIGNING_CERT_SHA256 必须是完整的 SHA-256 指纹。" >&2
+  exit 1
+fi
+
+verify_signing_certificate() {
+  local target_path="$1"
+  local certificate_dir
+  local actual_sha256
+
+  if [[ -z "$EXPECTED_SIGNING_CERT_SHA256" ]]; then
+    return
+  fi
+
+  certificate_dir="$(mktemp -d "${TMPDIR:-/tmp}/codex-tweaks-signature.XXXXXX")"
+  if ! codesign \
+    --display \
+    --extract-certificates="${certificate_dir}/certificate-" \
+    "$target_path" \
+    >/dev/null 2>&1; then
+    find "$certificate_dir" -depth -delete 2>/dev/null || true
+    echo "无法从签名中提取证书：${target_path}" >&2
+    return 1
+  fi
+  if [[ ! -f "${certificate_dir}/certificate-0" ]]; then
+    find "$certificate_dir" -depth -delete 2>/dev/null || true
+    echo "产物不是证书签名（可能仍为 ad-hoc）：${target_path}" >&2
+    return 1
+  fi
+
+  actual_sha256="$(
+    openssl x509 \
+      -inform DER \
+      -in "${certificate_dir}/certificate-0" \
+      -noout \
+      -fingerprint \
+      -sha256 \
+      | cut -d= -f2 \
+      | normalize_fingerprint
+  )"
+  find "$certificate_dir" -depth -delete 2>/dev/null || true
+
+  if [[ "$actual_sha256" != "$EXPECTED_SIGNING_CERT_SHA256" ]]; then
+    echo "签名证书 SHA-256 不匹配：${target_path}" >&2
+    echo "期望：${EXPECTED_SIGNING_CERT_SHA256}" >&2
+    echo "实际：${actual_sha256}" >&2
+    return 1
+  fi
+}
 
 verify_app() {
   local app_path="$1"
@@ -85,6 +144,8 @@ verify_app() {
 
   codesign --verify --strict --verbose=2 "$backend"
   codesign --verify --deep --strict --verbose=2 "$app_path"
+  verify_signing_certificate "$backend"
+  verify_signing_certificate "$app_path"
   echo "已校验 ${app_path}：${actual_archs}，macOS ${EXPECTED_MINOS}+"
 }
 
@@ -101,6 +162,10 @@ for dmg in \
     exit 1
   fi
   hdiutil verify "$dmg"
+  if [[ -n "$EXPECTED_SIGNING_CERT_SHA256" ]]; then
+    codesign --verify --strict --verbose=2 "$dmg"
+    verify_signing_certificate "$dmg"
+  fi
 done
 
 echo "Release ${RELEASE_TAG} 的全部产物校验通过"

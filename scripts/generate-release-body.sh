@@ -17,6 +17,7 @@ download_base="${GITHUB_SERVER_URL%/}/${GITHUB_REPOSITORY}/releases/download/${R
 macos_universal_asset="Codex-Tweaks-${RELEASE_TAG}.dmg"
 macos_arm64_asset="Codex-Tweaks-${RELEASE_TAG}-arm64.dmg"
 macos_x86_64_asset="Codex-Tweaks-${RELEASE_TAG}-x86_64.dmg"
+macos_sparkle_asset="Codex-Tweaks-${RELEASE_TAG}-sparkle.zip"
 windows_x64_asset="Codex-Tweaks-v${release_version}-windows-Setup-x86_64.exe"
 windows_arm64_asset="Codex-Tweaks-v${release_version}-windows-Setup-arm64.exe"
 
@@ -25,6 +26,8 @@ if [[ -n "$RELEASE_ASSET_ROOT" ]]; then
     "${RELEASE_ASSET_ROOT}/macos/${macos_universal_asset}"
     "${RELEASE_ASSET_ROOT}/macos/${macos_arm64_asset}"
     "${RELEASE_ASSET_ROOT}/macos/${macos_x86_64_asset}"
+    "${RELEASE_ASSET_ROOT}/macos/${macos_sparkle_asset}"
+    "${RELEASE_ASSET_ROOT}/macos/appcast.xml"
     "${RELEASE_ASSET_ROOT}/windows/${windows_x64_asset}"
     "${RELEASE_ASSET_ROOT}/windows/${windows_arm64_asset}"
   )
@@ -53,7 +56,7 @@ cat > "$RELEASE_BODY_PATH" <<EOF
 - 普通用户只需下载上表中与自己系统对应的文件。
 - macOS：打开 DMG 后，将 Codex Tweaks 拖入 Applications（应用程序）文件夹。
 - Windows：运行对应架构的 EXE 安装程序。
-- Release 中的 <code>.nupkg</code> 和 <code>releases.*.json</code> 文件供 Windows 应用内自动更新使用，请勿手动下载。
+- Release 中的 Sparkle ZIP、<code>appcast.xml</code>、<code>.nupkg</code> 和 <code>releases.*.json</code> 文件供应用内自动更新使用，请勿手动下载。
 
 ---
 
@@ -72,7 +75,7 @@ cat > "$RELEASE_BODY_PATH" <<EOF
 - Most users only need the file matching their system in the table above.
 - macOS: Open the DMG, then drag Codex Tweaks to the Applications folder.
 - Windows: Run the EXE installer matching your system architecture.
-- The <code>.nupkg</code> and <code>releases.*.json</code> files are used by the Windows in-app updater and should not be downloaded manually.
+- The Sparkle ZIP, <code>appcast.xml</code>, <code>.nupkg</code>, and <code>releases.*.json</code> files are used by the in-app updaters and should not be downloaded manually.
 
 ---
 

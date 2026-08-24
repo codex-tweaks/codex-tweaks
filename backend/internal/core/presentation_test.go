@@ -63,6 +63,17 @@ func TestPresentationContractCanBeGeneratedForAnExplicitPlatform(t *testing.T) {
 	}
 }
 
+func TestPresentationContractUsesSparkleForMacOSUpdates(t *testing.T) {
+	contract := NewPresentationContractForPlatform(
+		PresentationState{UpdateAvailable: true},
+		"darwin",
+		"arm64",
+	)
+	if contract.Platform.UpdateInstallStrategy != "sparkle" || !contract.Actions.InstallAppUpdate {
+		t.Fatalf("macOS update presentation is incomplete: %#v %#v", contract.Platform, contract.Actions)
+	}
+}
+
 func TestPresentationContractKeepsPlatformWindowMetricsIndependent(t *testing.T) {
 	macOS := NewPresentationContractForPlatform(PresentationState{}, "darwin", "universal")
 	windows := NewPresentationContractForPlatform(PresentationState{}, "windows", "x64")

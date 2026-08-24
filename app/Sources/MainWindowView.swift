@@ -73,42 +73,6 @@ struct MainWindowView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
-        .alert(
-            model.text(.updateAvailable),
-            isPresented: Binding(
-                get: { updateChecker.pendingUpdate != nil },
-                set: { isPresented in
-                    if !isPresented {
-                        updateChecker.dismissUpdate()
-                    }
-                }
-            ),
-            presenting: updateChecker.pendingUpdate
-        ) { release in
-            Button(model.text(
-                .updateDownload,
-                ["version": updateChecker.latestVersionString]
-            )) {
-                if let url = updateChecker.downloadURL(for: release) {
-                    NSWorkspace.shared.open(url)
-                }
-                updateChecker.dismissUpdate()
-            }
-            Button(model.text(.updateLater), role: .cancel) {
-                updateChecker.dismissUpdate()
-            }
-            Button(model.text(.updateSkip), role: .destructive) {
-                updateChecker.skipUpdate(release)
-            }
-        } message: { release in
-            Text(model.text(
-                .updatePromptMessage,
-                [
-                    "current": updateChecker.currentVersion,
-                    "latest": updateChecker.latestVersionString,
-                ]
-            ))
-        }
     }
 }
 

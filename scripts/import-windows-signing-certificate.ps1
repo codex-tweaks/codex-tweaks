@@ -155,7 +155,7 @@ $certutilPath = (Get-Command certutil.exe -ErrorAction Stop).Source
 $certificatePathArgument = '"' + $certificatePath.Replace('"', '\"') + '"'
 $certutilProcess = Start-Process `
     -FilePath $certutilPath `
-    -ArgumentList @('-user', '-f', '-addstore', 'Root', $certificatePathArgument) `
+    -ArgumentList @('-user', '-f', '-silent', '-addstore', 'Root', $certificatePathArgument) `
     -NoNewWindow `
     -PassThru `
     -Wait

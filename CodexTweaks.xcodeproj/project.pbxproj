@@ -16,6 +16,7 @@
 		54B0B6FE5BFFCD0689A620EF /* BackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ECD0C73EE0D60F0F6A53202 /* BackendClient.swift */; };
 		5DBF9AC702A390EB5F6499B2 /* PresentationColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8078C635651B9E12B769538 /* PresentationColor.swift */; };
 		5DDE42750711BDE523AA30EC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0B0DED2144F0CDD788DF8C77 /* Assets.xcassets */; };
+		679D7FF97A038DA4D7C90826 /* SparkleLocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD05BAEA4FC2428057D00725 /* SparkleLocalizationTests.swift */; };
 		6EE55D663F4BA7C8C133418A /* Tweaks in Resources */ = {isa = PBXBuildFile; fileRef = ED5BA7E20B31B6B736EF5A33 /* Tweaks */; };
 		7824CE3D453FE429FB9B83A2 /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 710989624754350B9549F3B1 /* UpdateChecker.swift */; };
 		801487236AF0F6797A8F1341 /* GeneratedPresentationContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFBAED99F1376AC7FE90B523 /* GeneratedPresentationContract.swift */; };
@@ -55,6 +56,7 @@
 		710989624754350B9549F3B1 /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
 		752944AE65CF3C41046BE3B3 /* BackendProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendProtocolTests.swift; sourceTree = "<group>"; };
 		7D31064D54183A1230D1918D /* Codex Tweaks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Codex Tweaks.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		BD05BAEA4FC2428057D00725 /* SparkleLocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleLocalizationTests.swift; sourceTree = "<group>"; };
 		C054F18E9178A1188A15F944 /* CodexTweaksApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTweaksApp.swift; sourceTree = "<group>"; };
 		C6C4B014C4282346EC90203A /* UpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateView.swift; sourceTree = "<group>"; };
 		D46E6EAFFFA8697F8252BAFC /* BackendProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendProtocol.swift; sourceTree = "<group>"; };
@@ -84,6 +86,7 @@
 			children = (
 				3586156F50638102CDE5AB2C /* BackendBundleTests.swift */,
 				752944AE65CF3C41046BE3B3 /* BackendProtocolTests.swift */,
+				BD05BAEA4FC2428057D00725 /* SparkleLocalizationTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -208,11 +211,11 @@
 				};
 			};
 			buildConfigurationList = B82C042986D23E35D9F39D27 /* Build configuration list for PBXProject "CodexTweaks" */;
-			developmentRegion = en;
+			developmentRegion = "zh-Hans";
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
-				en,
+				"zh-Hans",
 			);
 			mainGroup = A68F526B0C92689E44E5868C;
 			minimizedProjectReferenceProxies = 1;
@@ -272,6 +275,7 @@
 			files = (
 				D8F49C523471E569DA4B7726 /* BackendBundleTests.swift in Sources */,
 				E9018AF1601AFC8EDE07CBAD /* BackendProtocolTests.swift in Sources */,
+				679D7FF97A038DA4D7C90826 /* SparkleLocalizationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

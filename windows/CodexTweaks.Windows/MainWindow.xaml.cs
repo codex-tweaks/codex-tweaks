@@ -26,13 +26,18 @@ public sealed partial class MainWindow : Window
     private readonly PackagesPage _packagesPage;
     private readonly LogsPage _logsPage;
     private readonly UpdatesPage _updatesPage;
+    private AppWindow? _appWindow;
     private BackendAppSnapshot? _snapshot;
     private VelopackUpdateResult? _velopackResult;
+    private string? _trayError;
+    private Task? _shutdownTask;
     private string _section = InitialSection();
     private bool _started;
     private bool _applyingUpdate;
     private bool _promptingUpdate;
     private bool _selectingNavigation;
+    private bool _trayModeEnabled;
+    private bool _allowClose;
 
     public MainWindow()
     {
@@ -48,10 +53,40 @@ public sealed partial class MainWindow : Window
         _backend.SnapshotChanged += snapshot =>
             DispatcherQueue.TryEnqueue(() => ApplySnapshot(snapshot));
         _backend.BackendFailed += message =>
-            DispatcherQueue.TryEnqueue(() => ShowError(message));
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                _trayError = message;
+                ShowError(message);
+                NotifyTrayStateChanged();
+            });
         Activated += MainWindow_Activated;
         Closed += MainWindow_Closed;
     }
+
+    internal event Action? TrayStateChanged;
+
+    internal BackendAppSnapshot? CurrentSnapshot => _snapshot;
+
+    internal string TrayStatusTitle
+    {
+        get
+        {
+            var title = _trayError is null
+                ? _snapshot?.Presentation.Status.Title
+                : Text(PresentationTextKey.StatusErrorTitle);
+            return string.IsNullOrWhiteSpace(title)
+                ? Text(PresentationTextKey.StatusStartingTitle)
+                : title;
+        }
+    }
+
+    internal string? TrayStatusDetail => _trayError
+        ?? _snapshot?.Presentation.Status.Detail;
+
+    internal string? AvailableUpdateVersion =>
+        _velopackResult is { Installed: true, Version: { Length: > 0 } version }
+            ? version
+            : null;
 
     internal BackendAppSnapshot Snapshot => _snapshot
         ?? throw new InvalidOperationException(
@@ -76,6 +111,7 @@ public sealed partial class MainWindow : Window
             var windowHandle = WindowNative.GetWindowHandle(this);
             var windowId = Win32Interop.GetWindowIdFromWindow(windowHandle);
             var appWindow = AppWindow.GetFromWindowId(windowId);
+            _appWindow = appWindow;
             var scale = Math.Max(1.0, GetDpiForWindow(windowHandle) / 96.0);
             int Pixels(int dips) => (int)Math.Ceiling(dips * scale);
             if (appWindow.Presenter is OverlappedPresenter presenter)
@@ -88,6 +124,7 @@ public sealed partial class MainWindow : Window
                 Pixels(Tokens.WindowDefaultHeight)));
             appWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
             appWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+            appWindow.Closing += MainWindow_Closing;
         }
         catch (Exception exception)
         {
@@ -127,14 +164,28 @@ public sealed partial class MainWindow : Window
         catch (Exception exception)
         {
             App.Log($"Backend startup failed: {exception}");
+            _trayError = exception.Message;
             LoadingPanel.Visibility = Visibility.Collapsed;
             ShowError(exception.Message);
+            NotifyTrayStateChanged();
         }
     }
 
-    private async void MainWindow_Closed(object sender, WindowEventArgs args)
+    private void MainWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
     {
-        await _backend.DisposeAsync();
+        if (!_trayModeEnabled || _allowClose)
+        {
+            return;
+        }
+
+        args.Cancel = true;
+        sender.Hide();
+        App.Log("Main window hidden to the notification area.");
+    }
+
+    private void MainWindow_Closed(object sender, WindowEventArgs args)
+    {
+        _ = ShutdownAsync();
     }
 
     private void ApplySnapshot(BackendAppSnapshot snapshot)
@@ -146,9 +197,53 @@ public sealed partial class MainWindow : Window
         }
 
         _snapshot = snapshot;
+        _trayError = null;
         LoadingPanel.Visibility = Visibility.Collapsed;
         ApplyStaticText();
         RenderCurrentPage();
+        NotifyTrayStateChanged();
+    }
+
+    internal bool EnableTrayMode()
+    {
+        if (_appWindow is null)
+        {
+            return false;
+        }
+
+        _trayModeEnabled = true;
+        return true;
+    }
+
+    internal void ShowFromTray()
+    {
+        if (_appWindow?.Presenter is OverlappedPresenter
+            {
+                State: OverlappedPresenterState.Minimized,
+            } presenter)
+        {
+            presenter.Restore();
+        }
+        if (_appWindow is not null)
+        {
+            _appWindow.Show(true);
+        }
+        else
+        {
+            Activate();
+        }
+        App.Log("Main window shown from the notification area.");
+    }
+
+    internal void CloseForExit()
+    {
+        _allowClose = true;
+        Close();
+    }
+
+    internal Task ShutdownAsync()
+    {
+        return _shutdownTask ??= _backend.DisposeAsync().AsTask();
     }
 
     private void ShellNavigation_SelectionChanged(
@@ -276,15 +371,24 @@ public sealed partial class MainWindow : Window
         return new SolidColorBrush(Color.FromArgb(30, color.R, color.G, color.B));
     }
 
-    internal async Task RunBackendAsync(string method, object? parameters = null)
+    internal async Task<string?> RunBackendAsync(
+        string method,
+        object? parameters = null,
+        bool showError = true)
     {
         try
         {
             await _backend.SendAsync(method, parameters);
+            return null;
         }
         catch (Exception exception)
         {
-            ShowError(exception.Message);
+            App.Log($"Backend command {method} failed: {exception}");
+            if (showError)
+            {
+                ShowError(exception.Message);
+            }
+            return exception.Message;
         }
     }
 
@@ -441,7 +545,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    internal async Task CopyAuthoringPromptAsync()
+    internal async Task<string?> CopyAuthoringPromptAsync(bool showFeedback = true)
     {
         try
         {
@@ -449,11 +553,20 @@ public sealed partial class MainWindow : Window
             var data = new DataPackage();
             data.SetText(prompt);
             Clipboard.SetContent(data);
-            ShowMessage(Text(PresentationTextKey.OverviewCopied), isError: false);
+            if (showFeedback)
+            {
+                ShowMessage(Text(PresentationTextKey.OverviewCopied), isError: false);
+            }
+            return null;
         }
         catch (Exception exception)
         {
-            ShowError(exception.Message);
+            App.Log($"Copying the authoring prompt failed: {exception}");
+            if (showFeedback)
+            {
+                ShowError(exception.Message);
+            }
+            return exception.Message;
         }
     }
 
@@ -479,6 +592,7 @@ public sealed partial class MainWindow : Window
 
         _applyingUpdate = true;
         RenderCurrentPage();
+        NotifyTrayStateChanged();
         var progressBar = new ProgressBar
         {
             Minimum = 0,
@@ -522,6 +636,7 @@ public sealed partial class MainWindow : Window
             progressDialog.Hide();
             _applyingUpdate = false;
             RenderCurrentPage();
+            NotifyTrayStateChanged();
         }
         catch (Exception exception)
         {
@@ -529,6 +644,7 @@ public sealed partial class MainWindow : Window
             _applyingUpdate = false;
             ShowError(Text(PresentationTextKey.UpdateInstallFailed, ("message", exception.Message)));
             RenderCurrentPage();
+            NotifyTrayStateChanged();
         }
     }
 
@@ -539,6 +655,7 @@ public sealed partial class MainWindow : Window
             Snapshot.Presentation.Platform.Architecture,
             Snapshot.Presentation.Platform.RepositoryURL);
         RenderCurrentPage();
+        NotifyTrayStateChanged();
         if (promptForUpdate)
         {
             await PromptForUpdateAsync();
@@ -557,6 +674,7 @@ public sealed partial class MainWindow : Window
         _promptingUpdate = true;
         try
         {
+            ShowFromTray();
             var dialog = new ContentDialog
             {
                 XamlRoot = RootGrid.XamlRoot,
@@ -622,6 +740,11 @@ public sealed partial class MainWindow : Window
         GlobalInfoBar.Message = message;
         GlobalInfoBar.Severity = isError ? InfoBarSeverity.Error : InfoBarSeverity.Success;
         GlobalInfoBar.IsOpen = true;
+    }
+
+    private void NotifyTrayStateChanged()
+    {
+        TrayStateChanged?.Invoke();
     }
 
     private static Color ParseColor(string value)

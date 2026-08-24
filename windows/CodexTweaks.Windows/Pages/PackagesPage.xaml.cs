@@ -1,4 +1,7 @@
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using CodexTweaks.Windows.Generated;
 using CodexTweaks.Windows.Models;
 using Microsoft.UI.Xaml;
@@ -29,6 +32,8 @@ public sealed partial class PackagesPage : Page
     private MainWindow? _host;
     private BackendAppSnapshot? _snapshot;
     private List<PackageRowViewModel> _allRows = [];
+    private readonly Dictionary<string, PackageRowViewModel> _rowsById = new(StringComparer.Ordinal);
+    private readonly ObservableCollection<PackageRowViewModel> _visibleRows = [];
     private PackageFilter _filter = PackageFilter.All;
     private string _search = string.Empty;
     private bool _rendering;
@@ -36,6 +41,7 @@ public sealed partial class PackagesPage : Page
     public PackagesPage()
     {
         InitializeComponent();
+        PackagesList.ItemsSource = _visibleRows;
     }
 
     internal void Render(MainWindow host, BackendAppSnapshot snapshot)
@@ -111,9 +117,7 @@ public sealed partial class PackagesPage : Page
             AutomationProperties.SetName(ClearFilterButton, host.Text(PresentationTextKey.PackagesClearSearch));
             ToolTipService.SetToolTip(ClearFilterButton, host.Text(PresentationTextKey.PackagesClearSearch));
 
-            _allRows = snapshot.Packages
-                .Select(package => new PackageRowViewModel(host, snapshot, package))
-                .ToList();
+            UpdateRows(host, snapshot);
             ApplyFilters();
         }
         finally
@@ -130,6 +134,32 @@ public sealed partial class PackagesPage : Page
         new(PackageFilter.Pending, host.Text(PresentationTextKey.PackagesFilterPending)),
         new(PackageFilter.Error, host.Text(PresentationTextKey.PackagesFilterError)),
     ];
+
+    private void UpdateRows(MainWindow host, BackendAppSnapshot snapshot)
+    {
+        var currentPackageIds = snapshot.Packages
+            .Select(package => package.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var packageId in _rowsById.Keys
+                     .Where(packageId => !currentPackageIds.Contains(packageId))
+                     .ToList())
+        {
+            _rowsById.Remove(packageId);
+        }
+
+        var rows = new List<PackageRowViewModel>(snapshot.Packages.Count);
+        foreach (var package in snapshot.Packages)
+        {
+            if (!_rowsById.TryGetValue(package.Id, out var row))
+            {
+                row = new PackageRowViewModel(package.Id);
+                _rowsById.Add(package.Id, row);
+            }
+            row.Update(host, snapshot, package);
+            rows.Add(row);
+        }
+        _allRows = rows;
+    }
 
     private void ApplyFilters()
     {
@@ -166,7 +196,7 @@ public sealed partial class PackagesPage : Page
             }.Any(value => value.Contains(query, StringComparison.CurrentCultureIgnoreCase));
         }).ToList();
 
-        PackagesList.ItemsSource = filtered;
+        SynchronizeVisibleRows(filtered);
         PackagesList.Visibility = filtered.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         EmptyState.Visibility = filtered.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         ClearFilterButton.Visibility = IsFiltering ? Visibility.Visible : Visibility.Collapsed;
@@ -183,6 +213,33 @@ public sealed partial class PackagesPage : Page
             EmptyStateButton.Content = _host.Text(hasPackages
                 ? PresentationTextKey.PackagesClearSearch
                 : PresentationTextKey.OverviewOpenPackagesDirectory);
+        }
+    }
+
+    private void SynchronizeVisibleRows(IReadOnlyList<PackageRowViewModel> rows)
+    {
+        // Preserve row identity so periodic backend snapshots do not recreate active controls.
+        for (var index = 0; index < rows.Count; index++)
+        {
+            var row = rows[index];
+            if (index < _visibleRows.Count && ReferenceEquals(_visibleRows[index], row))
+            {
+                continue;
+            }
+
+            var currentIndex = _visibleRows.IndexOf(row);
+            if (currentIndex >= 0)
+            {
+                _visibleRows.Move(currentIndex, index);
+            }
+            else
+            {
+                _visibleRows.Insert(index, row);
+            }
+        }
+        while (_visibleRows.Count > rows.Count)
+        {
+            _visibleRows.RemoveAt(_visibleRows.Count - 1);
         }
     }
 
@@ -344,12 +401,17 @@ public sealed partial class PackagesPage : Page
             return;
         }
         var currentlyEnabled = !_snapshot.DisabledPackageIds.Contains(row.Id);
-        if (toggle.IsOn != currentlyEnabled)
+        if (toggle.IsOn == currentlyEnabled || row.EnablementPending)
         {
-            await Host.RunBackendAsync(
-                "setPackageEnabled",
-                new { packageID = row.Id, enabled = toggle.IsOn });
+            return;
         }
+
+        var requestedEnabled = toggle.IsOn;
+        row.BeginEnablementChange(requestedEnabled);
+        var error = await Host.RunBackendAsync(
+            "setPackageEnabled",
+            new { packageID = row.Id, enabled = requestedEnabled });
+        row.EndEnablementChange(error is null);
     }
 
     private async void PriorityTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
@@ -441,12 +503,85 @@ public sealed partial class PackagesPage : Page
     private MainWindow Host => _host ?? throw new InvalidOperationException("Packages page is not attached.");
 }
 
-internal sealed class PackageRowViewModel
+internal sealed class PackageRowViewModel : INotifyPropertyChanged
 {
-    internal PackageRowViewModel(MainWindow host, BackendAppSnapshot snapshot, PackageView package)
+    private bool _canSetEnabledFromSnapshot;
+    private bool _enablementPending;
+    private bool _requestedEnabled;
+    private bool _snapshotEnabled;
+    private string _displayName = string.Empty;
+    private string _versionText = string.Empty;
+    private string _detail = string.Empty;
+    private string _statusTitle = string.Empty;
+    private string _statusDetail = string.Empty;
+    private Brush _statusBrush = null!;
+    private Visibility _statusDetailVisibility;
+    private bool _isEnabled;
+    private bool _canSetEnabled;
+    private string _priorityLabel = string.Empty;
+    private string _priorityText = string.Empty;
+    private bool _canSetPriority;
+    private string _resetPriorityLabel = string.Empty;
+    private Visibility _resetPriorityVisibility;
+    private string _installDependenciesLabel = string.Empty;
+    private Visibility _installDependenciesVisibility;
+    private bool _canInstallDependencies;
+    private string _enableDependenciesLabel = string.Empty;
+    private Visibility _enableDependenciesVisibility;
+    private bool _canEnableDependencies;
+    private string _updateLabel = string.Empty;
+    private Visibility _updateVisibility;
+    private bool _canUpdate;
+    private string _openDirectoryLabel = string.Empty;
+    private bool _canOpenDirectory;
+    private string _buildLabel = string.Empty;
+    private bool _canBuild;
+    private string _messagesText = string.Empty;
+    private Visibility _messagesVisibility;
+
+    internal PackageRowViewModel(string id)
+    {
+        Id = id;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    internal PackageView Package { get; private set; } = null!;
+    internal bool EnablementPending => _enablementPending;
+    public string Id { get; }
+    public string DisplayName { get => _displayName; private set => SetProperty(ref _displayName, value); }
+    public string VersionText { get => _versionText; private set => SetProperty(ref _versionText, value); }
+    public string Detail { get => _detail; private set => SetProperty(ref _detail, value); }
+    public string StatusTitle { get => _statusTitle; private set => SetProperty(ref _statusTitle, value); }
+    public string StatusDetail { get => _statusDetail; private set => SetProperty(ref _statusDetail, value); }
+    public Brush StatusBrush { get => _statusBrush; private set => SetProperty(ref _statusBrush, value); }
+    public Visibility StatusDetailVisibility { get => _statusDetailVisibility; private set => SetProperty(ref _statusDetailVisibility, value); }
+    public bool IsEnabled { get => _isEnabled; private set => SetProperty(ref _isEnabled, value); }
+    public bool CanSetEnabled { get => _canSetEnabled; private set => SetProperty(ref _canSetEnabled, value); }
+    public string PriorityLabel { get => _priorityLabel; private set => SetProperty(ref _priorityLabel, value); }
+    public string PriorityText { get => _priorityText; private set => SetProperty(ref _priorityText, value); }
+    public bool CanSetPriority { get => _canSetPriority; private set => SetProperty(ref _canSetPriority, value); }
+    public string ResetPriorityLabel { get => _resetPriorityLabel; private set => SetProperty(ref _resetPriorityLabel, value); }
+    public Visibility ResetPriorityVisibility { get => _resetPriorityVisibility; private set => SetProperty(ref _resetPriorityVisibility, value); }
+    public string InstallDependenciesLabel { get => _installDependenciesLabel; private set => SetProperty(ref _installDependenciesLabel, value); }
+    public Visibility InstallDependenciesVisibility { get => _installDependenciesVisibility; private set => SetProperty(ref _installDependenciesVisibility, value); }
+    public bool CanInstallDependencies { get => _canInstallDependencies; private set => SetProperty(ref _canInstallDependencies, value); }
+    public string EnableDependenciesLabel { get => _enableDependenciesLabel; private set => SetProperty(ref _enableDependenciesLabel, value); }
+    public Visibility EnableDependenciesVisibility { get => _enableDependenciesVisibility; private set => SetProperty(ref _enableDependenciesVisibility, value); }
+    public bool CanEnableDependencies { get => _canEnableDependencies; private set => SetProperty(ref _canEnableDependencies, value); }
+    public string UpdateLabel { get => _updateLabel; private set => SetProperty(ref _updateLabel, value); }
+    public Visibility UpdateVisibility { get => _updateVisibility; private set => SetProperty(ref _updateVisibility, value); }
+    public bool CanUpdate { get => _canUpdate; private set => SetProperty(ref _canUpdate, value); }
+    public string OpenDirectoryLabel { get => _openDirectoryLabel; private set => SetProperty(ref _openDirectoryLabel, value); }
+    public bool CanOpenDirectory { get => _canOpenDirectory; private set => SetProperty(ref _canOpenDirectory, value); }
+    public string BuildLabel { get => _buildLabel; private set => SetProperty(ref _buildLabel, value); }
+    public bool CanBuild { get => _canBuild; private set => SetProperty(ref _canBuild, value); }
+    public string MessagesText { get => _messagesText; private set => SetProperty(ref _messagesText, value); }
+    public Visibility MessagesVisibility { get => _messagesVisibility; private set => SetProperty(ref _messagesVisibility, value); }
+
+    internal void Update(MainWindow host, BackendAppSnapshot snapshot, PackageView package)
     {
         Package = package;
-        Id = package.Id;
         DisplayName = package.DisplayName;
         VersionText = host.Text(
             PresentationTextKey.PackagesSourceVersion,
@@ -460,8 +595,10 @@ internal sealed class PackageRowViewModel
         StatusDetailVisibility = string.IsNullOrWhiteSpace(StatusDetail)
             ? Visibility.Collapsed
             : Visibility.Visible;
-        IsEnabled = !snapshot.DisabledPackageIds.Contains(package.Id);
-        CanSetEnabled = package.AvailableActions.SetEnabled;
+        _snapshotEnabled = !snapshot.DisabledPackageIds.Contains(package.Id);
+        IsEnabled = _enablementPending ? _requestedEnabled : _snapshotEnabled;
+        _canSetEnabledFromSnapshot = package.AvailableActions.SetEnabled;
+        CanSetEnabled = _canSetEnabledFromSnapshot && !_enablementPending;
         PriorityLabel = host.Text(PresentationTextKey.PackagesPriority);
         PriorityText = package.Priority.ToString(CultureInfo.InvariantCulture);
         CanSetPriority = package.AvailableActions.SetPriority;
@@ -498,35 +635,31 @@ internal sealed class PackageRowViewModel
             : Visibility.Visible;
     }
 
-    internal PackageView Package { get; }
-    public string Id { get; }
-    public string DisplayName { get; }
-    public string VersionText { get; }
-    public string Detail { get; }
-    public string StatusTitle { get; }
-    public string StatusDetail { get; }
-    public Brush StatusBrush { get; }
-    public Visibility StatusDetailVisibility { get; }
-    public bool IsEnabled { get; }
-    public bool CanSetEnabled { get; }
-    public string PriorityLabel { get; }
-    public string PriorityText { get; }
-    public bool CanSetPriority { get; }
-    public string ResetPriorityLabel { get; }
-    public Visibility ResetPriorityVisibility { get; }
-    public string InstallDependenciesLabel { get; }
-    public Visibility InstallDependenciesVisibility { get; }
-    public bool CanInstallDependencies { get; }
-    public string EnableDependenciesLabel { get; }
-    public Visibility EnableDependenciesVisibility { get; }
-    public bool CanEnableDependencies { get; }
-    public string UpdateLabel { get; }
-    public Visibility UpdateVisibility { get; }
-    public bool CanUpdate { get; }
-    public string OpenDirectoryLabel { get; }
-    public bool CanOpenDirectory { get; }
-    public string BuildLabel { get; }
-    public bool CanBuild { get; }
-    public string MessagesText { get; }
-    public Visibility MessagesVisibility { get; }
+    internal void BeginEnablementChange(bool enabled)
+    {
+        _enablementPending = true;
+        _requestedEnabled = enabled;
+        IsEnabled = enabled;
+        CanSetEnabled = false;
+    }
+
+    internal void EndEnablementChange(bool succeeded)
+    {
+        _enablementPending = false;
+        if (!succeeded)
+        {
+            IsEnabled = _snapshotEnabled;
+        }
+        CanSetEnabled = _canSetEnabledFromSnapshot;
+    }
+
+    private void SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(storage, value))
+        {
+            return;
+        }
+        storage = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }

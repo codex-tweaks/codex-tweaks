@@ -24,13 +24,17 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <Border Style="{StaticResource CodexStatusIconContainerStyle}">
-                            <SymbolIcon
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                Symbol="Setting"
-                                Style="{StaticResource CodexSmallIconStyle}" />
+                        <Border
+                            Width="64"
+                            Height="64"
+                            VerticalAlignment="Center"
+                            AutomationProperties.AccessibilityView="Raw"
+                            CornerRadius="{StaticResource CodexCardCornerRadiusValue}">
+                            <Border.Background>
+                                <ImageBrush
+                                    ImageSource="ms-appx:///Assets/CodexTweaks.png"
+                                    Stretch="UniformToFill" />
+                            </Border.Background>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="5">
                             <TextBlock x:Name="ApplicationTitle" Style="{StaticResource CodexSectionTitleTextStyle}" />

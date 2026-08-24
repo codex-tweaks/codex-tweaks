@@ -123,7 +123,7 @@ public sealed partial class OverviewPage : Page
         await Host.NavigateAsync("logs");
 
     private async void CopySkillButton_Click(object sender, RoutedEventArgs e) =>
-        await RunButtonAsync(CopySkillButton, Host.CopyAuthoringPromptAsync);
+        await RunButtonAsync(CopySkillButton, () => Host.CopyAuthoringPromptAsync());
 
     private async void OpenPackagesDirectoryButton_Click(object sender, RoutedEventArgs e) =>
         await MainWindow.OpenPathAsync(Host.Snapshot.PackagesDirectory);

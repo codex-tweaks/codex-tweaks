@@ -7,7 +7,7 @@
   "codexTweaks": {
     "apiVersion": 2,
     "entry": "src/index.js",
-    "priority": 100,
+    "priority": -1,
     "packageDependencies": {}
   }
 }

@@ -42,12 +42,11 @@ func (b *Builder) DetectNodeEnvironment(ctx context.Context) *NodeEnvironment {
 	home, _ := os.UserHomeDir()
 	for _, nodePath := range NodeCandidates(environment, home) {
 		binDirectory := filepath.Dir(nodePath)
-		npmName, npxName := "npm", "npx"
-		if runtime.GOOS == "windows" {
-			npmName, npxName = "npm.cmd", "npx.cmd"
+		if !isExecutable(nodePath) {
+			continue
 		}
-		npmPath, npxPath := filepath.Join(binDirectory, npmName), filepath.Join(binDirectory, npxName)
-		if !isExecutable(nodePath) || !isExecutable(npmPath) || !isExecutable(npxPath) {
+		npmPath, npxPath, ok := nodeCompanionPaths(binDirectory)
+		if !ok {
 			continue
 		}
 		result, err := b.runner.Run(ctx, nodePath, []string{"--version"}, binDirectory, processEnvironment(binDirectory, environment))
@@ -143,21 +142,23 @@ func NodeCandidates(environment map[string]string, home string) []string {
 				candidates = append(candidates, filepath.Join(root, "nodejs", executable))
 			}
 		}
+		miseRoots := []string{}
+		if root := environmentValue(environment, "MISE_DATA_DIR"); root != "" {
+			miseRoots = append(miseRoots, root)
+		}
+		if root := environmentValue(environment, "LOCALAPPDATA"); root != "" {
+			miseRoots = append(miseRoots, filepath.Join(root, "mise"))
+		}
+		for _, root := range miseRoots {
+			candidates = append(candidates, filepath.Join(root, "shims", executable))
+			candidates = append(candidates, installedNodeCandidates(filepath.Join(root, "installs", "node"), executable, "")...)
+		}
 	} else {
 		for _, binDirectory := range []string{"/opt/homebrew/bin", "/usr/local/bin", filepath.Join(home, ".local", "bin"), filepath.Join(home, ".local", "share", "mise", "shims"), filepath.Join(home, ".volta", "bin")} {
 			candidates = append(candidates, filepath.Join(binDirectory, executable))
 		}
 		for _, root := range []string{filepath.Join(home, ".local", "share", "mise", "installs", "node"), filepath.Join(home, ".nvm", "versions", "node")} {
-			entries, err := os.ReadDir(root)
-			if err != nil {
-				continue
-			}
-			sort.Slice(entries, func(left, right int) bool { return entries[left].Name() > entries[right].Name() })
-			for _, entry := range entries {
-				if entry.IsDir() {
-					candidates = append(candidates, filepath.Join(root, entry.Name(), "bin", executable))
-				}
-			}
+			candidates = append(candidates, installedNodeCandidates(root, executable, "bin")...)
 		}
 	}
 	seen := map[string]bool{}
@@ -170,6 +171,47 @@ func NodeCandidates(environment map[string]string, home string) []string {
 		}
 	}
 	return result
+}
+
+func installedNodeCandidates(root, executable, binDirectory string) []string {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return nil
+	}
+	sort.Slice(entries, func(left, right int) bool { return entries[left].Name() > entries[right].Name() })
+	result := []string{}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		parts := []string{root, entry.Name()}
+		if binDirectory != "" {
+			parts = append(parts, binDirectory)
+		}
+		result = append(result, filepath.Join(append(parts, executable)...))
+	}
+	return result
+}
+
+func nodeCompanionPaths(binDirectory string) (string, string, bool) {
+	npmNames, npxNames := []string{"npm"}, []string{"npx"}
+	if runtime.GOOS == "windows" {
+		npmNames = []string{"npm.cmd", "npm.exe"}
+		npxNames = []string{"npx.cmd", "npx.exe"}
+	}
+	npmPath := firstExecutablePath(binDirectory, npmNames)
+	npxPath := firstExecutablePath(binDirectory, npxNames)
+	return npmPath, npxPath, npmPath != "" && npxPath != ""
+}
+
+func firstExecutablePath(directory string, names []string) string {
+	for _, name := range names {
+		path := filepath.Join(directory, name)
+		if isExecutable(path) {
+			return path
+		}
+	}
+	return ""
 }
 
 func EsbuildArguments(entryPath, outputPath string, allowCompilerDownload bool) []string {

@@ -25,7 +25,7 @@ internal sealed class VelopackUpdateService
             var options = new UpdateOptions
             {
                 ExplicitChannel = $"win-{ridArchitecture}-{channel}",
-                AllowVersionDowngrade = true,
+                AllowVersionDowngrade = false,
             };
             var manager = string.IsNullOrWhiteSpace(localSource)
                 ? new UpdateManager(

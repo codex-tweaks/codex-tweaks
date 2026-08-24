@@ -40,6 +40,17 @@ func TestPreferredDownloadURL(t *testing.T) {
 	}
 }
 
+func TestStableReleaseIsNewerThanMatchingPrerelease(t *testing.T) {
+	stable := GitHubRelease{TagName: "v3.0.0"}
+	prerelease := GitHubRelease{TagName: "v3.0.0-beta.9"}
+	if !HasNewerVersion(&stable, prerelease.TagName) {
+		t.Fatal("stable release must be newer than its matching prerelease")
+	}
+	if HasNewerVersion(&prerelease, stable.TagName) {
+		t.Fatal("matching prerelease must not be newer than the stable release")
+	}
+}
+
 func TestPreferredWindowsDownloadUsesMSIThenEXEThenReleasePage(t *testing.T) {
 	page, msi, executable := "https://example/release", "https://example/app.msi", "https://example/app.exe"
 	withMSI := GitHubRelease{HTMLURL: &page, Assets: []GitHubAsset{

@@ -77,6 +77,9 @@ internal sealed class PackageView
     [JsonPropertyName("buildDisposition")]
     public string BuildDisposition { get; init; } = string.Empty;
 
+    [JsonPropertyName("hasDependencies")]
+    public bool HasDependencies { get; init; }
+
     [JsonPropertyName("canInstallMissingDependencies")]
     public bool CanInstallMissingDependencies { get; init; }
 

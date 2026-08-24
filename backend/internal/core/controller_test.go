@@ -83,6 +83,67 @@ func TestControllerUsesGoDefaultsReadsSkillAndDisablesNewPackages(t *testing.T) 
 	}
 }
 
+func TestControllerKeepsManualBuildAvailableForLocalPackageChanges(t *testing.T) {
+	root := t.TempDir()
+	controller, err := NewController(
+		InitializeParams{
+			ApplicationSupportDirectory: filepath.Join(root, "support"),
+			CacheDirectory:              filepath.Join(root, "cache"),
+			CurrentVersion:              "0.1.0",
+			BuildNumber:                 "1",
+		},
+		nil,
+		ControllerDependencies{DisableBackground: true},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer controller.cancel()
+
+	directory := makeStorePackage(t, controller.store, "local-package", "local-package", "1.0.0", 0, nil, "")
+	if err := controller.ReloadPackages(); err != nil {
+		t.Fatal(err)
+	}
+	activateTestBuild(t, controller.store, controller.packages[0], "local-js", "")
+	controller.mu.Lock()
+	controller.nodeEnvironment = &NodeEnvironment{Version: "v24.0.0"}
+	controller.mu.Unlock()
+	if err := controller.ReloadPackages(); err != nil {
+		t.Fatal(err)
+	}
+
+	assertBuildState := func(disposition BuildDisposition) {
+		t.Helper()
+		view := controller.Snapshot().Packages[0]
+		if view.BuildDisposition != disposition || !view.AvailableActions.Build {
+			t.Fatalf("build state = %s, available = %t; want %s and available", view.BuildDisposition, view.AvailableActions.Build, disposition)
+		}
+	}
+	assertBuildState(BuildCurrent)
+
+	if err := os.WriteFile(filepath.Join(directory, "src", "index.js"), []byte("changed"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := controller.ReloadPackages(); err != nil {
+		t.Fatal(err)
+	}
+	assertBuildState(BuildSourceChanged)
+
+	var manifest PackageManifest
+	manifestPath := filepath.Join(directory, "package.json")
+	if err := readJSON(manifestPath, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	manifest.Version = "1.1.0"
+	if err := writeJSONAtomic(manifestPath, manifest); err != nil {
+		t.Fatal(err)
+	}
+	if err := controller.ReloadPackages(); err != nil {
+		t.Fatal(err)
+	}
+	assertBuildState(BuildVersionUpdate)
+}
+
 func TestControllerLocalInstallEmitsSnapshotContainingPackage(t *testing.T) {
 	root := t.TempDir()
 	events := make(chan AppSnapshot, 8)

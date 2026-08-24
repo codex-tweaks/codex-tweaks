@@ -31,20 +31,6 @@ jobs:
       - name: Verify macOS
         run: mise run verify
 
-      - name: Archive app
-        run: |
-          ditto -c -k --sequesterRsrc --keepParent \
-            "dist/Codex Tweaks.app" \
-            "dist/Codex-Tweaks-${GITHUB_SHA}-arm64.zip"
-
-      - name: Upload macOS app
-        uses: actions/upload-artifact@v7
-        with:
-          name: Codex-Tweaks-${{ github.sha }}-macOS-arm64
-          path: dist/Codex-Tweaks-${{ github.sha }}-arm64.zip
-          if-no-files-found: error
-          retention-days: 14
-
   windows:
     name: Windows / WinUI 3 + Go + Velopack
     runs-on: windows-2025
@@ -94,11 +80,3 @@ jobs:
       - name: Verify Windows artifacts
         shell: pwsh
         run: ./scripts/verify-windows.ps1 -Version $env:CI_VERSION -Channel beta -RequirePackages
-
-      - name: Upload Windows installers and update feeds
-        uses: actions/upload-artifact@v7
-        with:
-          name: Codex-Tweaks-${{ github.sha }}-Windows
-          path: artifacts/windows/release/*
-          if-no-files-found: error
-          retention-days: 14

@@ -38,22 +38,43 @@ fi
 
 mkdir -p "$(dirname -- "$RELEASE_BODY_PATH")"
 cat > "$RELEASE_BODY_PATH" <<EOF
-## 下载 / Downloads
+## 下载
 
-| 系统 / System | 下载 / Download | 适用于 / For |
+| 系统 | 下载文件 | 适用设备 |
 | --- | --- | --- |
-| macOS 13+ universal（推荐 / Recommended） | [${macos_universal_asset}](${download_base}/${macos_universal_asset}) | Apple Silicon（M 系列）与 Intel Mac / Apple Silicon and Intel Macs |
-| macOS 13+ Apple Silicon | [${macos_arm64_asset}](${download_base}/${macos_arm64_asset}) | Apple Silicon（M 系列），文件更小 / Apple Silicon Macs, smaller download |
-| macOS 13+ Intel | [${macos_x86_64_asset}](${download_base}/${macos_x86_64_asset}) | Intel Mac，文件更小 / Intel Macs, smaller download |
-| Windows x64 | [${windows_x64_asset}](${download_base}/${windows_x64_asset}) | Intel、AMD 64 位 Windows 电脑 / 64-bit Intel and AMD Windows PCs |
-| Windows ARM64 | [${windows_arm64_asset}](${download_base}/${windows_arm64_asset}) | Snapdragon 等 ARM64 Windows 电脑 / ARM64 Windows PCs such as Snapdragon devices |
+| macOS 13+ 通用版（推荐） | [${macos_universal_asset}](${download_base}/${macos_universal_asset}) | Apple Silicon（M 系列）与 Intel Mac |
+| macOS 13+ Apple Silicon 版 | [${macos_arm64_asset}](${download_base}/${macos_arm64_asset}) | Apple Silicon（M 系列），下载文件更小 |
+| macOS 13+ Intel 版 | [${macos_x86_64_asset}](${download_base}/${macos_x86_64_asset}) | Intel Mac，下载文件更小 |
+| Windows x64 | [${windows_x64_asset}](${download_base}/${windows_x64_asset}) | 64 位 Intel 或 AMD Windows 电脑 |
+| Windows ARM64 | [${windows_arm64_asset}](${download_base}/${windows_arm64_asset}) | Snapdragon 等 ARM64 Windows 电脑 |
 
-### 安装提示 / Installation notes
+### 安装说明
 
-- 中文：普通用户只需下载上表中与自己系统对应的文件。macOS 打开 DMG 后拖入 Applications（应用程序）；Windows 运行对应的 EXE 安装器。
-- English: Most users only need the matching file in the table. On macOS, open the DMG and drag the app to Applications. On Windows, run the matching EXE installer.
-- 中文：Release 中的 <code>.nupkg</code> 和 <code>releases.*.json</code> 供 Windows 应用内自动更新使用，请勿手动下载。
-- English: The <code>.nupkg</code> and <code>releases.*.json</code> assets are used by the Windows in-app updater and should not be downloaded manually.
+- 普通用户只需下载上表中与自己系统对应的文件。
+- macOS：打开 DMG 后，将 Codex Tweaks 拖入 Applications（应用程序）文件夹。
+- Windows：运行对应架构的 EXE 安装程序。
+- Release 中的 <code>.nupkg</code> 和 <code>releases.*.json</code> 文件供 Windows 应用内自动更新使用，请勿手动下载。
+
+---
+
+## Downloads
+
+| System | Download | Compatible devices |
+| --- | --- | --- |
+| macOS 13+ Universal (Recommended) | [${macos_universal_asset}](${download_base}/${macos_universal_asset}) | Apple Silicon (M-series) and Intel Macs |
+| macOS 13+ Apple Silicon | [${macos_arm64_asset}](${download_base}/${macos_arm64_asset}) | Apple Silicon (M-series) Macs; smaller download |
+| macOS 13+ Intel | [${macos_x86_64_asset}](${download_base}/${macos_x86_64_asset}) | Intel Macs; smaller download |
+| Windows x64 | [${windows_x64_asset}](${download_base}/${windows_x64_asset}) | 64-bit Intel and AMD Windows PCs |
+| Windows ARM64 | [${windows_arm64_asset}](${download_base}/${windows_arm64_asset}) | ARM64 Windows PCs such as Snapdragon devices |
+
+### Installation notes
+
+- Most users only need the file matching their system in the table above.
+- macOS: Open the DMG, then drag Codex Tweaks to the Applications folder.
+- Windows: Run the EXE installer matching your system architecture.
+- The <code>.nupkg</code> and <code>releases.*.json</code> files are used by the Windows in-app updater and should not be downloaded manually.
+
+---
 
 EOF
 

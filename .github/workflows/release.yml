@@ -59,7 +59,7 @@ jobs:
             dist/Codex-Tweaks-${{ env.RELEASE_TAG }}-arm64.dmg
             dist/Codex-Tweaks-${{ env.RELEASE_TAG }}-x86_64.dmg
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 1
 
   windows:
     name: Build Windows release
@@ -127,7 +127,7 @@ jobs:
           name: release-windows-${{ env.RELEASE_TAG }}
           path: artifacts/windows/release/*
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 1
 
   publish:
     name: Publish GitHub Release
@@ -176,3 +176,35 @@ jobs:
           fail_on_unmatched_files: true
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           generate_release_notes: true
+
+  cleanup:
+    name: Delete temporary release artifacts
+    if: ${{ always() }}
+    needs:
+      - macos
+      - windows
+      - publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Delete artifacts from this workflow run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          artifact_ids="$(
+            gh api --paginate \
+              "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" \
+              --jq '.artifacts[].id'
+          )"
+          if [[ -z "$artifact_ids" ]]; then
+            echo "No temporary release artifacts found."
+            exit 0
+          fi
+          while IFS= read -r artifact_id; do
+            gh api --method DELETE \
+              "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id"
+          done <<< "$artifact_ids"

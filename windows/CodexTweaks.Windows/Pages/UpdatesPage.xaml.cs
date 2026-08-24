@@ -50,11 +50,15 @@ public sealed partial class UpdatesPage : Page
                 Tag = "beta",
             });
             ChannelComboBox.SelectedIndex = snapshot.Update.Channel == "beta" ? 1 : 0;
-            ChannelComboBox.IsEnabled = snapshot.Presentation.Actions.SetUpdatePreferences;
+            ChannelComboBox.IsEnabled = snapshot.Presentation.Actions.SetUpdatePreferences
+                && !host.CheckingUpdate
+                && !host.ApplyingUpdate;
 
             AutoCheckTitle.Text = host.Text(PresentationTextKey.UpdateAutoCheck);
             AutoCheckToggle.IsOn = snapshot.Update.AutoCheck;
-            AutoCheckToggle.IsEnabled = snapshot.Presentation.Actions.SetUpdatePreferences;
+            AutoCheckToggle.IsEnabled = snapshot.Presentation.Actions.SetUpdatePreferences
+                && !host.CheckingUpdate
+                && !host.ApplyingUpdate;
 
             CurrentVersionLabel.Text = host.Text(PresentationTextKey.UpdateCurrentVersion);
             CurrentVersionValue.Text = snapshot.Update.CurrentVersion;
@@ -65,10 +69,12 @@ public sealed partial class UpdatesPage : Page
 
             RenderStatus(host, snapshot);
 
-            CheckButtonText.Text = host.Text(snapshot.Update.Checking || host.ApplyingUpdate
+            CheckButtonText.Text = host.Text(host.CheckingUpdate || host.ApplyingUpdate
                 ? PresentationTextKey.UpdateChecking
                 : PresentationTextKey.UpdateCheck);
-            CheckButton.IsEnabled = snapshot.Presentation.Actions.CheckAppUpdate && !host.ApplyingUpdate;
+            CheckButton.IsEnabled = snapshot.Presentation.Actions.CheckAppUpdate
+                && !host.CheckingUpdate
+                && !host.ApplyingUpdate;
 
             InstallButton.Visibility = host.VelopackResult is { Installed: true, Version: not null }
                 ? Visibility.Visible
@@ -78,7 +84,9 @@ public sealed partial class UpdatesPage : Page
                     ? PresentationTextKey.UpdateApplyProgress
                     : PresentationTextKey.UpdateInstall, ("version", version))
                 : string.Empty;
-            InstallButton.IsEnabled = snapshot.Presentation.Actions.InstallAppUpdate && !host.ApplyingUpdate;
+            InstallButton.IsEnabled = snapshot.Presentation.Actions.InstallAppUpdate
+                && !host.CheckingUpdate
+                && !host.ApplyingUpdate;
 
             ReleaseButton.Visibility = host.VelopackResult is not { Installed: true, Version: not null }
                                        && snapshot.Update.LatestRelease?.HtmlUrl is not null
@@ -95,6 +103,14 @@ public sealed partial class UpdatesPage : Page
     private void RenderStatus(MainWindow host, BackendAppSnapshot snapshot)
     {
         UpdateStatusInfo.IsOpen = false;
+        if (host.CheckingUpdate)
+        {
+            UpdateStatusInfo.Severity = InfoBarSeverity.Informational;
+            UpdateStatusInfo.Title = host.Text(PresentationTextKey.UpdateChecking);
+            UpdateStatusInfo.Message = string.Empty;
+            UpdateStatusInfo.IsOpen = true;
+            return;
+        }
         if (!string.IsNullOrWhiteSpace(snapshot.Update.LastError))
         {
             UpdateStatusInfo.Severity = InfoBarSeverity.Error;

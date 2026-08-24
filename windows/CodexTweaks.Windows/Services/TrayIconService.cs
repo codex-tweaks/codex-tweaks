@@ -199,13 +199,14 @@ internal sealed class TrayIconService : IDisposable
             ("version", updateVersion ?? string.Empty));
         _installUpdateItem.Visible = !string.IsNullOrWhiteSpace(updateVersion);
         _installUpdateItem.Enabled = actions?.InstallAppUpdate == true
+            && !_window.CheckingUpdate
             && !_window.ApplyingUpdate;
         _checkUpdatesItem.Text = Text(
-            snapshot?.Update.Checking == true
+            _window.CheckingUpdate
                 ? PresentationTextKey.UpdateChecking
                 : PresentationTextKey.UpdateCheck);
         _checkUpdatesItem.Enabled = actions?.CheckAppUpdate == true
-            && snapshot?.Update.Checking != true
+            && !_window.CheckingUpdate
             && !_window.ApplyingUpdate;
         _quitItem.Text = Text(PresentationTextKey.MenuQuit);
 

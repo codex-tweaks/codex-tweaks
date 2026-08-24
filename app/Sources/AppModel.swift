@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import UniformTypeIdentifiers
 
 @MainActor
 final class AppModel: ObservableObject {
@@ -43,6 +44,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var tweakPackages: [TweakPackage] = []
     @Published private(set) var disabledTweakPackageIDs: Set<String> = []
     @Published private(set) var buildingPackageIDs: Set<String> = []
+    @Published private(set) var exportingPackageIDs: Set<String> = []
     @Published private(set) var packageBuildErrors: [String: String] = [:]
     @Published private(set) var packageRuntimeErrors: [String: String] = [:]
     @Published private(set) var packagePayloadErrors: [String: String] = [:]
@@ -278,6 +280,26 @@ final class AppModel: ObservableObject {
         command("buildPackage", PackageIDParameter(packageID: package.id))
     }
 
+    func exportPackage(_ package: TweakPackage) {
+        guard package.availableActions.export else { return }
+        let panel = NSSavePanel()
+        panel.title = text(.packagesExportZip)
+        panel.message = text(.packagesExportZipHelp)
+        panel.prompt = text(.packagesExportZip)
+        panel.allowedContentTypes = [.zip]
+        panel.canCreateDirectories = true
+        panel.isExtensionHidden = false
+        panel.nameFieldStringValue = package.exportFileName
+        guard panel.runModal() == .OK, let destinationURL = panel.url else { return }
+        command(
+            "exportPackage",
+            PackageExportParameter(
+                packageID: package.id,
+                destinationPath: destinationURL.path
+            )
+        )
+    }
+
     func openPackageDirectory(_ package: TweakPackage) {
         NSWorkspace.shared.open(package.directoryURL)
     }
@@ -341,7 +363,7 @@ final class AppModel: ObservableObject {
     func sendUpdateCommand(_ method: String) { command(method) }
 
     private func apply(_ snapshot: BackendAppSnapshot) {
-        guard snapshot.protocolVersion == 2 else {
+        guard snapshot.protocolVersion == 3 else {
             status = .error(text(.appProtocolMismatch))
             return
         }
@@ -356,6 +378,7 @@ final class AppModel: ObservableObject {
         tweakPackages = snapshot.packages
         disabledTweakPackageIDs = Set(snapshot.disabledPackageIDs)
         buildingPackageIDs = Set(snapshot.buildingPackageIDs)
+        exportingPackageIDs = Set(snapshot.exportingPackageIDs)
         packageBuildErrors = snapshot.packageBuildErrors
         packageRuntimeErrors = snapshot.packageRuntimeErrors
         packagePayloadErrors = snapshot.packagePayloadErrors
@@ -469,5 +492,9 @@ private struct RemoteInstallParameter: Encodable, Sendable {
     let selectorValue: String
 }
 private struct LocalInstallParameter: Encodable, Sendable { let sourcePath: String }
+private struct PackageExportParameter: Encodable, Sendable {
+    let packageID: String
+    let destinationPath: String
+}
 private struct MessageParameter: Encodable, Sendable { let message: String }
 private struct AutomaticParameter: Encodable, Sendable { let automatic: Bool }

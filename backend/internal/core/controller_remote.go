@@ -10,7 +10,7 @@ const automaticRemoteCheckInterval = 6 * time.Hour
 
 func (c *Controller) InstallRemotePackage(repositoryURL string, selectorType RemoteSelectorType, selectorValue string) {
 	c.mu.Lock()
-	if c.installingRemotePackage || c.installingLocalPackage {
+	if c.installingRemotePackage || c.installingLocalPackage || len(c.exportingPackageIDs) > 0 {
 		c.mu.Unlock()
 		return
 	}
@@ -53,7 +53,7 @@ func (c *Controller) InstallRemotePackage(repositoryURL string, selectorType Rem
 
 func (c *Controller) InstallLocalPackage(sourcePath string) {
 	c.mu.Lock()
-	if c.installingLocalPackage || c.installingRemotePackage {
+	if c.installingLocalPackage || c.installingRemotePackage || len(c.exportingPackageIDs) > 0 {
 		c.mu.Unlock()
 		return
 	}

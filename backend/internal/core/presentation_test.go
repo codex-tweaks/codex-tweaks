@@ -23,6 +23,9 @@ func TestPresentationContractOwnsCopyTokensPlatformAndActions(t *testing.T) {
 	if contract.Text["update.downloadProgress"] == "" || contract.Text["update.installingProgress"] == "" {
 		t.Fatalf("update progress copy is missing: %#v", contract.Text)
 	}
+	if got := contract.Text["packages.title"]; got != "管理页面增强" {
+		t.Fatalf("packages title = %q, want %q", got, "管理页面增强")
+	}
 	if contract.Tokens.PagePadding <= 0 || contract.Tokens.CardCornerRadius <= 0 {
 		t.Fatalf("invalid presentation tokens: %#v", contract.Tokens)
 	}
@@ -53,6 +56,18 @@ func TestPresentationContractDisablesConflictingPackageInstallActions(t *testing
 	})
 	if contract.Actions.InstallLocalPackage || contract.Actions.InstallRemotePackage {
 		t.Fatalf("install actions must be disabled while an install is active: %#v", contract.Actions)
+	}
+}
+
+func TestPresentationContractDisablesInstallActionsDuringPackageExport(t *testing.T) {
+	contract := NewPresentationContract(PresentationState{
+		Status:           AppStatus{Kind: StatusConnected},
+		Enabled:          true,
+		GitAvailable:     true,
+		ExportingPackage: true,
+	})
+	if contract.Actions.InstallLocalPackage || contract.Actions.InstallRemotePackage {
+		t.Fatalf("install actions must be disabled while an export is active: %#v", contract.Actions)
 	}
 }
 

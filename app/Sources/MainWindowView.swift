@@ -106,51 +106,31 @@ private struct TweakPackagesView: View {
     @State private var priorityHintPackageID: String?
 
     var body: some View {
-        let separatorInset = CGFloat(model.tokens.pagePadding)
-        return List {
-            header
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .alignmentGuide(.listRowSeparatorLeading) { _ in
-                    separatorInset
-                }
-                .alignmentGuide(.listRowSeparatorTrailing) { dimensions in
-                    dimensions.width - separatorInset
-                }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                header
+                    .padding(.bottom, CGFloat(model.tokens.pagePadding))
 
-            packageListToolbar
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .alignmentGuide(.listRowSeparatorLeading) { _ in
-                    separatorInset
-                }
-                .alignmentGuide(.listRowSeparatorTrailing) { dimensions in
-                    dimensions.width - separatorInset
-                }
+                Divider()
 
-            if model.tweakPackages.isEmpty {
-                emptyState
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-            } else if filteredPackages.isEmpty {
-                filteredEmptyState
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-            } else {
-                ForEach(filteredPackages) { package in
-                    packageRow(package)
-                        .listRowInsets(
-                            EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28)
-                        )
-                        .alignmentGuide(.listRowSeparatorLeading) { _ in 28 }
-                        .alignmentGuide(.listRowSeparatorTrailing) { dimensions in
-                            dimensions.width - 28
-                        }
+                packageListToolbar
+
+                Divider()
+
+                if model.tweakPackages.isEmpty {
+                    emptyState
+                } else if filteredPackages.isEmpty {
+                    filteredEmptyState
+                } else {
+                    ForEach(filteredPackages) { package in
+                        packageRow(package)
+                        Divider()
+                    }
                 }
             }
+            .frame(maxWidth: CGFloat(model.tokens.contentMaxWidth), alignment: .leading)
+            .padding(CGFloat(model.tokens.pagePadding))
         }
-        .listStyle(.inset)
-        .scrollContentBackground(.hidden)
         .background(Color(nsColor: .windowBackgroundColor))
         .navigationTitle(model.text(.navPackages))
         .task {
@@ -302,8 +282,6 @@ private struct TweakPackagesView: View {
             }
 
         }
-        .padding(.horizontal, CGFloat(model.tokens.pagePadding))
-        .padding(.vertical, CGFloat(model.tokens.cardPadding))
     }
 
     @ViewBuilder
@@ -313,6 +291,16 @@ private struct TweakPackagesView: View {
                 ProgressView()
                     .controlSize(.small)
                 Text(model.text(.packagesInstallingLocal))
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+        } else if let package = model.tweakPackages.first(where: {
+            model.exportingPackageIDs.contains($0.id)
+        }) {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                Text(model.text(.packagesExporting, ["name": package.displayName]))
             }
             .font(.callout)
             .foregroundStyle(.secondary)
@@ -391,7 +379,6 @@ private struct TweakPackagesView: View {
             .pickerStyle(.menu)
             .frame(width: 108)
         }
-        .padding(.horizontal, CGFloat(model.tokens.pagePadding))
         .padding(.vertical, 10)
     }
 
@@ -492,6 +479,20 @@ private struct TweakPackagesView: View {
                     }
                     .help(model.text(.packagesOpenDirectory))
                     .disabled(!package.availableActions.openDirectory)
+
+                    Button {
+                        model.exportPackage(package)
+                    } label: {
+                        if model.exportingPackageIDs.contains(package.id) {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "archivebox")
+                        }
+                    }
+                    .accessibilityLabel(model.text(.packagesExportZip))
+                    .help(model.text(.packagesExportZipHelp))
+                    .disabled(!package.availableActions.export)
 
                     Button(buildButtonTitle(package)) {
                         model.buildPackage(package)
@@ -898,7 +899,7 @@ private struct TweakPackagesView: View {
             .disabled(!model.actions.openPackagesDirectory)
         }
         .frame(maxWidth: .infinity, minHeight: 260)
-        .padding(.horizontal, 32)
+        .padding(.horizontal, CGFloat(model.tokens.pagePadding))
         .padding(.vertical, 48)
     }
 
@@ -917,7 +918,7 @@ private struct TweakPackagesView: View {
             }
         }
         .frame(maxWidth: .infinity, minHeight: 220)
-        .padding(.horizontal, 32)
+        .padding(.horizontal, CGFloat(model.tokens.pagePadding))
         .padding(.vertical, 40)
     }
 
@@ -1382,7 +1383,7 @@ private struct LogView: View {
     @State private var presentedAlert: PresentedAlert?
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: CGFloat(model.tokens.sectionSpacing)) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: CGFloat(model.tokens.compactSpacing)) {
                     Text(model.text(.logsTitle))
@@ -1406,32 +1407,39 @@ private struct LogView: View {
                 }
                 .disabled(!model.actions.clearLog)
             }
-            .padding(.horizontal, CGFloat(model.tokens.pagePadding))
-            .padding(.vertical, CGFloat(model.tokens.cardPadding))
 
-            Divider()
+            VStack(spacing: 0) {
+                Divider()
 
-            ScrollView(.vertical) {
-                Text(model.logText.isEmpty ? model.text(.logsEmpty) : model.logText)
-                    .font(.system(.callout, design: .monospaced))
+                ScrollView(.vertical) {
+                    Text(model.logText.isEmpty ? model.text(.logsEmpty) : model.logText)
+                        .font(.system(.callout, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .padding(CGFloat(model.tokens.cardPadding))
+                }
+                .background(Color(nsColor: .textBackgroundColor))
+
+                Divider()
+
+                Text(model.logFilePath)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
                     .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                    .padding(18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, CGFloat(model.tokens.cardPadding))
+                    .padding(.vertical, CGFloat(model.tokens.controlSpacing))
             }
-            .background(Color(nsColor: .textBackgroundColor))
-
-            Divider()
-
-            Text(model.logFilePath)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 12)
         }
+        .frame(
+            maxWidth: CGFloat(model.tokens.contentMaxWidth),
+            maxHeight: .infinity,
+            alignment: .topLeading
+        )
+        .padding(CGFloat(model.tokens.pagePadding))
+        .background(Color(nsColor: .windowBackgroundColor))
         .navigationTitle(model.text(.navLogs))
         .alert(item: $presentedAlert) { alert in
             switch alert {

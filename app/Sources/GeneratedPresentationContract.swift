@@ -108,6 +108,7 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case packagesDetailCompilerUpdate = "packages.detail.compilerUpdate"
     case packagesDetailDependencyIssues = "packages.detail.dependencyIssues"
     case packagesDetailDependencyUpdate = "packages.detail.dependencyUpdate"
+    case packagesDetailExporting = "packages.detail.exporting"
     case packagesDetailLastBuilt = "packages.detail.lastBuilt"
     case packagesDetailPinnedChanged = "packages.detail.pinnedChanged"
     case packagesDetailRemoteAvailable = "packages.detail.remoteAvailable"
@@ -121,6 +122,11 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case packagesEnablePackage = "packages.enablePackage"
     case packagesEnabledSummary = "packages.enabledSummary"
     case packagesExpanded = "packages.expanded"
+    case packagesExportFailed = "packages.exportFailed"
+    case packagesExportSuccess = "packages.exportSuccess"
+    case packagesExportZip = "packages.exportZip"
+    case packagesExportZipHelp = "packages.exportZipHelp"
+    case packagesExporting = "packages.exporting"
     case packagesFilter = "packages.filter"
     case packagesFilterAll = "packages.filter.all"
     case packagesFilterDisabled = "packages.filter.disabled"
@@ -165,6 +171,7 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case packagesStatusDependencyBlocked = "packages.status.dependencyBlocked"
     case packagesStatusDependencyChanged = "packages.status.dependencyChanged"
     case packagesStatusDisabled = "packages.status.disabled"
+    case packagesStatusExporting = "packages.status.exporting"
     case packagesStatusInstallingRemote = "packages.status.installingRemote"
     case packagesStatusInvalid = "packages.status.invalid"
     case packagesStatusNewVersion = "packages.status.newVersion"
@@ -184,6 +191,7 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case packagesUpdateBuild = "packages.updateBuild"
     case packagesUpdateToVersion = "packages.updateToVersion"
     case packagesUserPriority = "packages.userPriority"
+    case packagesZipFileType = "packages.zipFileType"
     case remoteClose = "remote.close"
     case remoteInstall = "remote.install"
     case remoteRepository = "remote.repository"
@@ -398,8 +406,8 @@ enum GeneratedPresentationDefaults {
         .packagesCheckingRemote: "正在检查…",
         .packagesChooseDirectory: "选择功能包目录",
         .packagesChooseZip: "选择 ZIP 文件",
-        .packagesClearError: "清除安装错误",
-        .packagesClearMessage: "清除安装提示",
+        .packagesClearError: "清除操作错误",
+        .packagesClearMessage: "清除操作提示",
         .packagesClearSearch: "清除搜索与筛选",
         .packagesCollapsed: "已折叠",
         .packagesDependencyConstraint: "依赖约束",
@@ -432,6 +440,7 @@ enum GeneratedPresentationDefaults {
         .packagesDetailCompilerUpdate: "当前产物由 esbuild {version} 生成。",
         .packagesDetailDependencyIssues: "有 {count} 个依赖问题，展开依赖详情可查看具体状态。",
         .packagesDetailDependencyUpdate: "当前编译产物仍在运行；需手动同步依赖或构建配置。",
+        .packagesDetailExporting: "正在将功能包源码整理为可再次安装的 ZIP。",
         .packagesDetailLastBuilt: "上次编译：{date}",
         .packagesDetailPinnedChanged: "远端固定 Tag/Release 指向了新的 commit；为避免静默替换，已阻止普通更新。",
         .packagesDetailRemoteAvailable: "{reference} 已更新到 {commit}，点击后下载并编译。",
@@ -445,6 +454,11 @@ enum GeneratedPresentationDefaults {
         .packagesEnablePackage: "启用 {name}",
         .packagesEnabledSummary: "已启用 {enabled} / {total}，已激活 {active}",
         .packagesExpanded: "已展开",
+        .packagesExportFailed: "导出 {name} 失败：{message}",
+        .packagesExportSuccess: "已导出 {name}：{file}",
+        .packagesExportZip: "导出为 ZIP",
+        .packagesExportZipHelp: "将功能包源码保存为可再次安装的 ZIP",
+        .packagesExporting: "正在导出 {name}…",
         .packagesFilter: "筛选功能包",
         .packagesFilterAll: "全部",
         .packagesFilterDisabled: "已停用",
@@ -489,6 +503,7 @@ enum GeneratedPresentationDefaults {
         .packagesStatusDependencyBlocked: "依赖阻塞",
         .packagesStatusDependencyChanged: "依赖或配置更新",
         .packagesStatusDisabled: "已停用",
+        .packagesStatusExporting: "正在导出",
         .packagesStatusInstallingRemote: "正在处理远程包",
         .packagesStatusInvalid: "配置无效",
         .packagesStatusNewVersion: "发现新版本",
@@ -503,11 +518,12 @@ enum GeneratedPresentationDefaults {
         .packagesStatusUnavailable: "不可用",
         .packagesSubtitle: "每个目录是一个独立包。源码更新不会直接生效，手动编译成功后才会原子切换。",
         .packagesSyncAndBuild: "同步并编译",
-        .packagesTitle: "按包管理页面增强",
+        .packagesTitle: "管理页面增强",
         .packagesUpdateAndBuild: "更新并编译",
         .packagesUpdateBuild: "更新编译",
         .packagesUpdateToVersion: "更新到 v{version}",
         .packagesUserPriority: "{name} 用户优先级",
+        .packagesZipFileType: "ZIP 压缩包",
         .remoteClose: "关闭",
         .remoteInstall: "安装",
         .remoteRepository: "仓库地址",

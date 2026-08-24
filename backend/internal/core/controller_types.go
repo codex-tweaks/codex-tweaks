@@ -50,6 +50,7 @@ type PackageView struct {
 	ID                            string                       `json:"id"`
 	DirectoryName                 string                       `json:"directoryName"`
 	Directory                     string                       `json:"directory"`
+	ExportFileName                string                       `json:"exportFileName"`
 	Manifest                      *PackageManifest             `json:"manifest,omitempty"`
 	SourceFingerprint             *string                      `json:"sourceFingerprint,omitempty"`
 	DependencyFingerprint         *string                      `json:"dependencyFingerprint,omitempty"`
@@ -87,6 +88,7 @@ type PackageAvailableActions struct {
 	SetEnabled                 bool `json:"setEnabled"`
 	SetPriority                bool `json:"setPriority"`
 	OpenDirectory              bool `json:"openDirectory"`
+	Export                     bool `json:"export"`
 	InstallMissingDependencies bool `json:"installMissingDependencies"`
 	EnableDependencies         bool `json:"enableDependencies"`
 	UpdateManagedPackage       bool `json:"updateManagedPackage"`
@@ -119,6 +121,7 @@ type AppSnapshot struct {
 	Packages                   []PackageView                 `json:"packages"`
 	DisabledPackageIDs         []string                      `json:"disabledPackageIDs"`
 	BuildingPackageIDs         []string                      `json:"buildingPackageIDs"`
+	ExportingPackageIDs        []string                      `json:"exportingPackageIDs"`
 	PackageBuildErrors         map[string]string             `json:"packageBuildErrors"`
 	PackageRuntimeErrors       map[string]string             `json:"packageRuntimeErrors"`
 	PackagePayloadErrors       map[string]string             `json:"packagePayloadErrors"`

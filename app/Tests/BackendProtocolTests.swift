@@ -52,6 +52,7 @@ final class BackendProtocolTests: XCTestCase {
               "id": "ct-sample",
               "directoryName": "ct-sample",
               "directory": "/tmp/ct-sample",
+              "exportFileName": "ct-sample-v1.0.0.zip",
               "manifest": {
                 "name": "ct-sample",
                 "version": "1.0.0",
@@ -85,6 +86,7 @@ final class BackendProtocolTests: XCTestCase {
                 "setEnabled": true,
                 "setPriority": true,
                 "openDirectory": true,
+                "export": true,
                 "installMissingDependencies": false,
                 "enableDependencies": false,
                 "updateManagedPackage": false,
@@ -108,7 +110,7 @@ final class BackendProtocolTests: XCTestCase {
             BackendAppSnapshot.self,
             """
             {
-              "protocolVersion": 2,
+              "protocolVersion": 3,
               "presentation": \(presentationJSON),
               "status": {"kind": "connected", "targetCount": 1},
               "enabled": true,
@@ -116,6 +118,7 @@ final class BackendProtocolTests: XCTestCase {
               "packages": [],
               "disabledPackageIDs": [],
               "buildingPackageIDs": [],
+              "exportingPackageIDs": [],
               "packageBuildErrors": {},
               "packageRuntimeErrors": {},
               "packagePayloadErrors": {},
@@ -150,7 +153,7 @@ final class BackendProtocolTests: XCTestCase {
             }
             """
         )
-        XCTAssertEqual(snapshot.protocolVersion, 2)
+        XCTAssertEqual(snapshot.protocolVersion, 3)
         XCTAssertEqual(snapshot.presentation.version, 1)
         XCTAssertEqual(snapshot.status.targetCount, 1)
         XCTAssertEqual(snapshot.update.channel, .stable)

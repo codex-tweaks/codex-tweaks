@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const ProtocolVersion = 2
+const ProtocolVersion = 3
 
 type Controller struct {
 	mu                  sync.Mutex
@@ -30,6 +30,7 @@ type Controller struct {
 	builder           *Builder
 	remote            *RemoteManager
 	installer         *LocalInstaller
+	exporter          *PackageExporter
 	cdp               *CDPService
 	platform          Platform
 	updates           *UpdateService
@@ -44,6 +45,7 @@ type Controller struct {
 	packages                     []Package
 	disabledPackageIDs           map[string]bool
 	buildingPackageIDs           map[string]bool
+	exportingPackageIDs          map[string]bool
 	packageBuildErrors           map[string]string
 	packageBuildErrorRequestKeys map[string]string
 	packageRuntimeErrors         map[string]string
@@ -108,13 +110,13 @@ func NewController(params InitializeParams, event func(AppSnapshot), dependencie
 		ctx: ctx, cancel: cancel, event: event, store: store, logger: logger,
 		builder:   NewBuilder(store, dependencies.Runner),
 		remote:    NewRemoteManager(store, dependencies.Runner, dependencies.HTTPClient, nil),
-		installer: NewLocalInstaller(store), cdp: cdp, platform: platform,
+		installer: NewLocalInstaller(store), exporter: NewPackageExporter(), cdp: cdp, platform: platform,
 		updates:    NewUpdateService(dependencies.HTTPClient),
 		configPath: filepath.Join(store.StateDirectory, "app-state.json"), skillPath: params.SkillPath,
 		currentVersion: normalizedInstalledVersion(params.CurrentVersion), buildNumber: params.BuildNumber,
 		disableBackground:  dependencies.DisableBackground,
 		status:             AppStatus{Kind: StatusStarting},
-		disabledPackageIDs: map[string]bool{}, buildingPackageIDs: map[string]bool{},
+		disabledPackageIDs: map[string]bool{}, buildingPackageIDs: map[string]bool{}, exportingPackageIDs: map[string]bool{},
 		packageBuildErrors: map[string]string{}, packageBuildErrorRequestKeys: map[string]string{},
 		packageRuntimeErrors: map[string]string{}, packagePayloadErrors: map[string]string{},
 		packageDependencyStatuses: map[string][]DependencyStatus{}, packageDependencyIssues: map[string][]string{},
@@ -224,10 +226,12 @@ func (c *Controller) Snapshot() AppSnapshot {
 	for _, pkg := range c.packages {
 		view := packageView(pkg, c.disabledPackageIDs, installedIDs)
 		remoteUpdate, hasRemoteUpdate := c.remotePackageUpdates[pkg.ID]
+		hasPackageExport := len(c.exportingPackageIDs) > 0
 		view.AvailableActions = PackageAvailableActions{
 			SetEnabled:                 true,
 			SetPriority:                true,
 			OpenDirectory:              true,
+			Export:                     !hasPackageExport && !c.installingLocalPackage && !c.installingRemotePackage,
 			InstallMissingDependencies: view.CanInstallMissingDependencies && c.gitEnvironment != nil && !c.installingPackageIDs[pkg.ID],
 			EnableDependencies:         view.CanEnableDependencies,
 			UpdateManagedPackage:       hasRemoteUpdate && remoteUpdate.Installable() && c.gitEnvironment != nil && !c.installingPackageIDs[pkg.ID],
@@ -246,7 +250,8 @@ func (c *Controller) Snapshot() AppSnapshot {
 		CheckingNode: c.checkingNode, CheckingGit: c.checkingGit,
 		CheckingRemoteUpdates:  c.checkingRemoteUpdates,
 		InstallingLocalPackage: c.installingLocalPackage, InstallingRemotePackage: c.installingRemotePackage,
-		GitAvailable: c.gitEnvironment != nil, LogAvailable: strings.TrimSpace(c.logText) != "",
+		ExportingPackage: len(c.exportingPackageIDs) > 0,
+		GitAvailable:     c.gitEnvironment != nil, LogAvailable: strings.TrimSpace(c.logText) != "",
 		AuthoringPromptAvailable: c.skillPath != "",
 		UpdateChecking:           c.updateChecking, UpdateAvailable: updateSnapshot.UpdateAvailable,
 	})
@@ -254,7 +259,8 @@ func (c *Controller) Snapshot() AppSnapshot {
 		ProtocolVersion: ProtocolVersion, Presentation: presentation, Status: c.status,
 		Enabled: c.config.Enabled, DeveloperMode: c.config.DeveloperMode, Packages: packageViews,
 		DisabledPackageIDs: sortedTrueKeys(c.disabledPackageIDs), BuildingPackageIDs: sortedTrueKeys(c.buildingPackageIDs),
-		PackageBuildErrors: cloneStringMap(c.packageBuildErrors), PackageRuntimeErrors: cloneStringMap(c.packageRuntimeErrors),
+		ExportingPackageIDs: sortedTrueKeys(c.exportingPackageIDs),
+		PackageBuildErrors:  cloneStringMap(c.packageBuildErrors), PackageRuntimeErrors: cloneStringMap(c.packageRuntimeErrors),
 		PackagePayloadErrors:       cloneStringMap(c.packagePayloadErrors),
 		PackageDependencyStatuses:  cloneDependencyStatuses(c.packageDependencyStatuses),
 		PackageDependencyIssues:    cloneStringSlices(c.packageDependencyIssues),
@@ -298,6 +304,8 @@ func (c *Controller) packagePresentation(view PackageView, text map[string]strin
 		result.StatusTitle = text["packages.status.installingRemote"]
 	case c.buildingPackageIDs[packageID]:
 		result.StatusTitle = text["packages.status.building"]
+	case c.exportingPackageIDs[packageID]:
+		result.StatusTitle = text["packages.status.exporting"]
 	case view.ValidationError != nil:
 		result.StatusTitle = text["packages.status.invalid"]
 	case c.remotePackageErrors[packageID] != "":
@@ -329,6 +337,8 @@ func (c *Controller) packagePresentation(view PackageView, text map[string]strin
 	}
 
 	switch {
+	case c.exportingPackageIDs[packageID]:
+		result.StatusDetail = text["packages.detail.exporting"]
 	case view.ValidationError != nil:
 		result.StatusDetail = *view.ValidationError
 	case c.remotePackageErrors[packageID] != "":
@@ -388,7 +398,7 @@ func (c *Controller) packagePresentation(view PackageView, text map[string]strin
 		hasRemoteUpdate && remoteUpdate.Status == RemoteUpdateAvailable,
 		len(dependencyIssues) > 0:
 		result.StatusTone = "warning"
-	case c.installingPackageIDs[packageID] || c.buildingPackageIDs[packageID]:
+	case c.installingPackageIDs[packageID] || c.buildingPackageIDs[packageID] || c.exportingPackageIDs[packageID]:
 		result.StatusTone = "accent"
 	case c.disabledPackageIDs[packageID]:
 		result.StatusTone = "neutral"
@@ -423,7 +433,8 @@ func packageView(pkg Package, disabled, installed map[string]bool) PackageView {
 		}
 	}
 	return PackageView{
-		ID: pkg.ID, DirectoryName: pkg.DirectoryName, Directory: pkg.Directory, Manifest: pkg.Manifest,
+		ID: pkg.ID, DirectoryName: pkg.DirectoryName, Directory: pkg.Directory,
+		ExportFileName: PackageArchiveFileName(pkg), Manifest: pkg.Manifest,
 		SourceFingerprint: pkg.SourceFingerprint, DependencyFingerprint: pkg.DependencyFingerprint,
 		ActiveBuild: pkg.ActiveBuild, ValidationError: pkg.ValidationError, PriorityOverride: pkg.PriorityOverride,
 		Origin: pkg.Origin, DisplayName: pkg.DisplayName(), DisplayVersion: pkg.Version(), Detail: detail,

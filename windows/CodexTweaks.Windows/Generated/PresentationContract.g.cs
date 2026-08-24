@@ -112,6 +112,7 @@ internal static class PresentationTextKey
     internal const string PackagesDetailCompilerUpdate = "packages.detail.compilerUpdate";
     internal const string PackagesDetailDependencyIssues = "packages.detail.dependencyIssues";
     internal const string PackagesDetailDependencyUpdate = "packages.detail.dependencyUpdate";
+    internal const string PackagesDetailExporting = "packages.detail.exporting";
     internal const string PackagesDetailLastBuilt = "packages.detail.lastBuilt";
     internal const string PackagesDetailPinnedChanged = "packages.detail.pinnedChanged";
     internal const string PackagesDetailRemoteAvailable = "packages.detail.remoteAvailable";
@@ -125,6 +126,11 @@ internal static class PresentationTextKey
     internal const string PackagesEnablePackage = "packages.enablePackage";
     internal const string PackagesEnabledSummary = "packages.enabledSummary";
     internal const string PackagesExpanded = "packages.expanded";
+    internal const string PackagesExportFailed = "packages.exportFailed";
+    internal const string PackagesExportSuccess = "packages.exportSuccess";
+    internal const string PackagesExportZip = "packages.exportZip";
+    internal const string PackagesExportZipHelp = "packages.exportZipHelp";
+    internal const string PackagesExporting = "packages.exporting";
     internal const string PackagesFilter = "packages.filter";
     internal const string PackagesFilterAll = "packages.filter.all";
     internal const string PackagesFilterDisabled = "packages.filter.disabled";
@@ -169,6 +175,7 @@ internal static class PresentationTextKey
     internal const string PackagesStatusDependencyBlocked = "packages.status.dependencyBlocked";
     internal const string PackagesStatusDependencyChanged = "packages.status.dependencyChanged";
     internal const string PackagesStatusDisabled = "packages.status.disabled";
+    internal const string PackagesStatusExporting = "packages.status.exporting";
     internal const string PackagesStatusInstallingRemote = "packages.status.installingRemote";
     internal const string PackagesStatusInvalid = "packages.status.invalid";
     internal const string PackagesStatusNewVersion = "packages.status.newVersion";
@@ -188,6 +195,7 @@ internal static class PresentationTextKey
     internal const string PackagesUpdateBuild = "packages.updateBuild";
     internal const string PackagesUpdateToVersion = "packages.updateToVersion";
     internal const string PackagesUserPriority = "packages.userPriority";
+    internal const string PackagesZipFileType = "packages.zipFileType";
     internal const string RemoteClose = "remote.close";
     internal const string RemoteInstall = "remote.install";
     internal const string RemoteRepository = "remote.repository";
@@ -517,8 +525,8 @@ internal static class PresentationDefaults
         [PresentationTextKey.PackagesCheckingRemote] = "正在检查…",
         [PresentationTextKey.PackagesChooseDirectory] = "选择功能包目录",
         [PresentationTextKey.PackagesChooseZip] = "选择 ZIP 文件",
-        [PresentationTextKey.PackagesClearError] = "清除安装错误",
-        [PresentationTextKey.PackagesClearMessage] = "清除安装提示",
+        [PresentationTextKey.PackagesClearError] = "清除操作错误",
+        [PresentationTextKey.PackagesClearMessage] = "清除操作提示",
         [PresentationTextKey.PackagesClearSearch] = "清除搜索与筛选",
         [PresentationTextKey.PackagesCollapsed] = "已折叠",
         [PresentationTextKey.PackagesDependencyConstraint] = "依赖约束",
@@ -551,6 +559,7 @@ internal static class PresentationDefaults
         [PresentationTextKey.PackagesDetailCompilerUpdate] = "当前产物由 esbuild {version} 生成。",
         [PresentationTextKey.PackagesDetailDependencyIssues] = "有 {count} 个依赖问题，展开依赖详情可查看具体状态。",
         [PresentationTextKey.PackagesDetailDependencyUpdate] = "当前编译产物仍在运行；需手动同步依赖或构建配置。",
+        [PresentationTextKey.PackagesDetailExporting] = "正在将功能包源码整理为可再次安装的 ZIP。",
         [PresentationTextKey.PackagesDetailLastBuilt] = "上次编译：{date}",
         [PresentationTextKey.PackagesDetailPinnedChanged] = "远端固定 Tag/Release 指向了新的 commit；为避免静默替换，已阻止普通更新。",
         [PresentationTextKey.PackagesDetailRemoteAvailable] = "{reference} 已更新到 {commit}，点击后下载并编译。",
@@ -564,6 +573,11 @@ internal static class PresentationDefaults
         [PresentationTextKey.PackagesEnablePackage] = "启用 {name}",
         [PresentationTextKey.PackagesEnabledSummary] = "已启用 {enabled} / {total}，已激活 {active}",
         [PresentationTextKey.PackagesExpanded] = "已展开",
+        [PresentationTextKey.PackagesExportFailed] = "导出 {name} 失败：{message}",
+        [PresentationTextKey.PackagesExportSuccess] = "已导出 {name}：{file}",
+        [PresentationTextKey.PackagesExportZip] = "导出为 ZIP",
+        [PresentationTextKey.PackagesExportZipHelp] = "将功能包源码保存为可再次安装的 ZIP",
+        [PresentationTextKey.PackagesExporting] = "正在导出 {name}…",
         [PresentationTextKey.PackagesFilter] = "筛选功能包",
         [PresentationTextKey.PackagesFilterAll] = "全部",
         [PresentationTextKey.PackagesFilterDisabled] = "已停用",
@@ -608,6 +622,7 @@ internal static class PresentationDefaults
         [PresentationTextKey.PackagesStatusDependencyBlocked] = "依赖阻塞",
         [PresentationTextKey.PackagesStatusDependencyChanged] = "依赖或配置更新",
         [PresentationTextKey.PackagesStatusDisabled] = "已停用",
+        [PresentationTextKey.PackagesStatusExporting] = "正在导出",
         [PresentationTextKey.PackagesStatusInstallingRemote] = "正在处理远程包",
         [PresentationTextKey.PackagesStatusInvalid] = "配置无效",
         [PresentationTextKey.PackagesStatusNewVersion] = "发现新版本",
@@ -622,11 +637,12 @@ internal static class PresentationDefaults
         [PresentationTextKey.PackagesStatusUnavailable] = "不可用",
         [PresentationTextKey.PackagesSubtitle] = "每个目录是一个独立包。源码更新不会直接生效，手动编译成功后才会原子切换。",
         [PresentationTextKey.PackagesSyncAndBuild] = "同步并编译",
-        [PresentationTextKey.PackagesTitle] = "按包管理页面增强",
+        [PresentationTextKey.PackagesTitle] = "管理页面增强",
         [PresentationTextKey.PackagesUpdateAndBuild] = "更新并编译",
         [PresentationTextKey.PackagesUpdateBuild] = "更新编译",
         [PresentationTextKey.PackagesUpdateToVersion] = "更新到 v{version}",
         [PresentationTextKey.PackagesUserPriority] = "{name} 用户优先级",
+        [PresentationTextKey.PackagesZipFileType] = "ZIP 压缩包",
         [PresentationTextKey.RemoteClose] = "关闭",
         [PresentationTextKey.RemoteInstall] = "安装",
         [PresentationTextKey.RemoteRepository] = "仓库地址",

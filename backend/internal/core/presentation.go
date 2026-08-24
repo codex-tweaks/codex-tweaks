@@ -85,6 +85,7 @@ type PresentationState struct {
 	CheckingRemoteUpdates    bool
 	InstallingLocalPackage   bool
 	InstallingRemotePackage  bool
+	ExportingPackage         bool
 	GitAvailable             bool
 	LogAvailable             bool
 	AuthoringPromptAvailable bool
@@ -120,8 +121,8 @@ func NewPresentationContractForPlatform(state PresentationState, operatingSystem
 			SetEnabled:                 true,
 			SetDeveloperMode:           true,
 			ReloadPackages:             true,
-			InstallLocalPackage:        !state.InstallingLocalPackage && !state.InstallingRemotePackage,
-			InstallRemotePackage:       state.GitAvailable && !state.InstallingRemotePackage && !state.InstallingLocalPackage,
+			InstallLocalPackage:        !state.InstallingLocalPackage && !state.InstallingRemotePackage && !state.ExportingPackage,
+			InstallRemotePackage:       state.GitAvailable && !state.InstallingRemotePackage && !state.InstallingLocalPackage && !state.ExportingPackage,
 			CheckNodeEnvironment:       !state.CheckingNode,
 			CheckGitEnvironment:        !state.CheckingGit,
 			CheckManagedPackageUpdates: state.GitAvailable && !state.CheckingRemoteUpdates,
@@ -280,7 +281,7 @@ func PresentationText() map[string]string {
 		"overview.openCodexDetail":                    "打开 Codex 后会自动建立连接。",
 		"overview.restartDetail":                      "需要重新启动 Codex 才能开启本地调试端口。",
 		"overview.errorDetail":                        "请查看运行日志了解详细原因。",
-		"packages.title":                              "按包管理页面增强",
+		"packages.title":                              "管理页面增强",
 		"packages.subtitle":                           "每个目录是一个独立包。源码更新不会直接生效，手动编译成功后才会原子切换。",
 		"packages.developerMode":                      "开发者模式",
 		"packages.developerModeDetail":                "开发者模式会自动编译已启用包的源码变化；依赖或版本更新仍需手动确认。",
@@ -301,8 +302,14 @@ func PresentationText() map[string]string {
 		"packages.gitAvailable":                       "{version} 可用",
 		"packages.gitMissing":                         "未找到 Git；本地功能包仍可使用，但不能安装或检查远程包。",
 		"packages.installingLocal":                    "正在安全检查并安装本地功能包…",
-		"packages.clearMessage":                       "清除安装提示",
-		"packages.clearError":                         "清除安装错误",
+		"packages.clearMessage":                       "清除操作提示",
+		"packages.clearError":                         "清除操作错误",
+		"packages.exportZip":                          "导出为 ZIP",
+		"packages.exportZipHelp":                      "将功能包源码保存为可再次安装的 ZIP",
+		"packages.exporting":                          "正在导出 {name}…",
+		"packages.zipFileType":                        "ZIP 压缩包",
+		"packages.exportSuccess":                      "已导出 {name}：{file}",
+		"packages.exportFailed":                       "导出 {name} 失败：{message}",
 		"packages.enablePackage":                      "启用 {name}",
 		"packages.expanded":                           "已展开",
 		"packages.collapsed":                          "已折叠",
@@ -349,6 +356,7 @@ func PresentationText() map[string]string {
 		"packages.status.remoteUpdate":                "远程有更新",
 		"packages.status.installingRemote":            "正在处理远程包",
 		"packages.status.building":                    "正在编译",
+		"packages.status.exporting":                   "正在导出",
 		"packages.status.remoteFailed":                "远程操作失败",
 		"packages.status.pinnedChanged":               "固定引用已变化",
 		"packages.status.dependencyBlocked":           "依赖阻塞",
@@ -370,6 +378,7 @@ func PresentationText() map[string]string {
 		"packages.detail.sourceChanged":               "当前编译产物仍在运行，新源码尚未激活。",
 		"packages.detail.compilerUpdate":              "当前产物由 esbuild {version} 生成。",
 		"packages.detail.lastBuilt":                   "上次编译：{date}",
+		"packages.detail.exporting":                   "正在将功能包源码整理为可再次安装的 ZIP。",
 		"packages.installAndBuild":                    "安装并编译",
 		"packages.updateToVersion":                    "更新到 v{version}",
 		"packages.syncAndBuild":                       "同步并编译",

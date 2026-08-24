@@ -169,6 +169,15 @@ func (s *Server) dispatch(incoming request) (any, error) {
 			return nil, err
 		}
 		return accepted(c.BuildPackage(params.PackageID))
+	case "exportPackage":
+		var params struct {
+			PackageID       string `json:"packageID"`
+			DestinationPath string `json:"destinationPath"`
+		}
+		if err := decodeParams(incoming.Params, &params); err != nil {
+			return nil, err
+		}
+		return accepted(c.ExportPackage(params.PackageID, params.DestinationPath))
 	case "installRemotePackage":
 		var params struct {
 			RepositoryURL string                  `json:"repositoryURL"`

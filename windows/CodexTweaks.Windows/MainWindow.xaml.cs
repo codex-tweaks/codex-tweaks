@@ -436,6 +436,25 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    internal async Task ExportPackageAsync(PackageView package)
+    {
+        var picker = new FileSavePicker
+        {
+            SuggestedFileName = Path.GetFileNameWithoutExtension(package.ExportFileName),
+        };
+        picker.FileTypeChoices.Add(
+            Text(PresentationTextKey.PackagesZipFileType),
+            new List<string> { ".zip" });
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+        var file = await picker.PickSaveFileAsync();
+        if (file is not null)
+        {
+            await RunBackendAsync(
+                "exportPackage",
+                new { packageID = package.Id, destinationPath = file.Path });
+        }
+    }
+
     internal async Task ShowRemoteInstallDialogAsync()
     {
         var repository = new TextBox

@@ -100,7 +100,7 @@ public sealed partial class PackagesPage : Page
                 PresentationTextKey.PackagesGitChecking,
                 PresentationTextKey.PackagesGitAvailable,
                 PresentationTextKey.PackagesGitMissing);
-            RenderFeedback(LocalFeedback, snapshot.LocalOperationMessage, snapshot.LocalOperationError);
+            RenderLocalFeedback(host, snapshot);
             RenderFeedback(RemoteFeedback, snapshot.RemoteOperationMessage, snapshot.RemoteOperationError);
 
             LoadOrderTitle.Text = host.Text(PresentationTextKey.PackagesLoadOrder);
@@ -302,6 +302,25 @@ public sealed partial class PackagesPage : Page
         }
     }
 
+    private void RenderLocalFeedback(MainWindow host, BackendAppSnapshot snapshot)
+    {
+        var exportingPackageId = snapshot.ExportingPackageIds.FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(exportingPackageId))
+        {
+            var displayName = snapshot.Packages
+                .FirstOrDefault(package => package.Id == exportingPackageId)?.DisplayName
+                ?? exportingPackageId;
+            LocalFeedback.Severity = InfoBarSeverity.Informational;
+            LocalFeedback.Title = host.Text(
+                PresentationTextKey.PackagesExporting,
+                ("name", displayName));
+            LocalFeedback.Message = string.Empty;
+            LocalFeedback.IsOpen = true;
+            return;
+        }
+        RenderFeedback(LocalFeedback, snapshot.LocalOperationMessage, snapshot.LocalOperationError);
+    }
+
     private async void DeveloperModeToggle_Toggled(object sender, RoutedEventArgs e)
     {
         if (_rendering
@@ -491,6 +510,14 @@ public sealed partial class PackagesPage : Page
         }
     }
 
+    private async void ExportPackageButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: PackageRowViewModel row })
+        {
+            await Host.ExportPackageAsync(row.Package);
+        }
+    }
+
     private async void BuildPackageButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { DataContext: PackageRowViewModel row })
@@ -533,6 +560,9 @@ internal sealed class PackageRowViewModel : INotifyPropertyChanged
     private bool _canUpdate;
     private string _openDirectoryLabel = string.Empty;
     private bool _canOpenDirectory;
+    private string _exportLabel = string.Empty;
+    private string _exportHelp = string.Empty;
+    private bool _canExport;
     private string _buildLabel = string.Empty;
     private bool _canBuild;
     private string _messagesText = string.Empty;
@@ -573,6 +603,9 @@ internal sealed class PackageRowViewModel : INotifyPropertyChanged
     public bool CanUpdate { get => _canUpdate; private set => SetProperty(ref _canUpdate, value); }
     public string OpenDirectoryLabel { get => _openDirectoryLabel; private set => SetProperty(ref _openDirectoryLabel, value); }
     public bool CanOpenDirectory { get => _canOpenDirectory; private set => SetProperty(ref _canOpenDirectory, value); }
+    public string ExportLabel { get => _exportLabel; private set => SetProperty(ref _exportLabel, value); }
+    public string ExportHelp { get => _exportHelp; private set => SetProperty(ref _exportHelp, value); }
+    public bool CanExport { get => _canExport; private set => SetProperty(ref _canExport, value); }
     public string BuildLabel { get => _buildLabel; private set => SetProperty(ref _buildLabel, value); }
     public bool CanBuild { get => _canBuild; private set => SetProperty(ref _canBuild, value); }
     public string MessagesText { get => _messagesText; private set => SetProperty(ref _messagesText, value); }
@@ -622,6 +655,9 @@ internal sealed class PackageRowViewModel : INotifyPropertyChanged
         CanUpdate = package.AvailableActions.UpdateManagedPackage;
         OpenDirectoryLabel = host.Text(PresentationTextKey.PackagesOpenDirectory);
         CanOpenDirectory = package.AvailableActions.OpenDirectory;
+        ExportLabel = host.Text(PresentationTextKey.PackagesExportZip);
+        ExportHelp = host.Text(PresentationTextKey.PackagesExportZipHelp);
+        CanExport = package.AvailableActions.Export;
         BuildLabel = snapshot.BuildingPackageIds.Contains(package.Id)
             ? host.Text(PresentationTextKey.PackagesBuilding)
             : package.BuildDisposition switch

@@ -52,7 +52,7 @@ func TestControllerUsesGoDefaultsReadsSkillAndDisablesNewPackages(t *testing.T) 
 		t.Fatalf("new package must remain disabled: %#v", afterReload.DisabledPackageIDs)
 	}
 	actions := afterReload.Packages[0].AvailableActions
-	if !actions.SetEnabled || !actions.SetPriority || !actions.OpenDirectory || actions.Build {
+	if !actions.SetEnabled || !actions.SetPriority || !actions.OpenDirectory || !actions.Export || actions.Build {
 		t.Fatalf("unexpected Go-provided package actions: %#v", actions)
 	}
 	presentation := afterReload.Packages[0].Presentation
@@ -186,6 +186,61 @@ func TestControllerLocalInstallEmitsSnapshotContainingPackage(t *testing.T) {
 			return
 		case <-timeout.C:
 			t.Fatal("timed out waiting for successful local install snapshot")
+		}
+	}
+}
+
+func TestControllerExportsPackageAndPublishesOperationState(t *testing.T) {
+	root := t.TempDir()
+	events := make(chan AppSnapshot, 16)
+	controller, err := NewController(
+		InitializeParams{
+			ApplicationSupportDirectory: filepath.Join(root, "support"),
+			CacheDirectory:              filepath.Join(root, "cache"),
+			CurrentVersion:              "0.1.0",
+			BuildNumber:                 "1",
+		},
+		func(snapshot AppSnapshot) { events <- snapshot },
+		ControllerDependencies{DisableBackground: true},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer controller.cancel()
+
+	makeStorePackage(t, controller.store, "export-sample", "export-sample", "1.2.3", 0, nil, "")
+	if err := controller.ReloadPackages(); err != nil {
+		t.Fatal(err)
+	}
+	view := controller.Snapshot().Packages[0]
+	if !view.AvailableActions.Export || view.ExportFileName != "export-sample-v1.2.3.zip" {
+		t.Fatalf("export presentation is incomplete: %#v", view)
+	}
+	destination := filepath.Join(root, view.ExportFileName)
+	if err := controller.ExportPackage(view.ID, destination); err != nil {
+		t.Fatal(err)
+	}
+
+	timeout := time.NewTimer(2 * time.Second)
+	defer timeout.Stop()
+	for {
+		select {
+		case snapshot := <-events:
+			if snapshot.LocalOperationError != nil {
+				t.Fatalf("package export failed: %s", *snapshot.LocalOperationError)
+			}
+			if snapshot.LocalOperationMessage == nil {
+				continue
+			}
+			if len(snapshot.ExportingPackageIDs) != 0 {
+				t.Fatalf("completed export is still marked active: %#v", snapshot.ExportingPackageIDs)
+			}
+			if _, err := os.Stat(destination); err != nil {
+				t.Fatalf("exported ZIP is missing: %v", err)
+			}
+			return
+		case <-timeout.C:
+			t.Fatal("timed out waiting for successful package export snapshot")
 		}
 	}
 }

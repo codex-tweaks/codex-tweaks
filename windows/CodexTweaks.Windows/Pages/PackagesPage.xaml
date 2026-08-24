@@ -313,6 +313,15 @@
                                                 Glyph="&#xE8B7;" />
                                         </Button>
                                         <Button
+                                            AutomationProperties.Name="{Binding ExportLabel}"
+                                            DataContext="{Binding}"
+                                            Click="ExportPackageButton_Click"
+                                            IsEnabled="{Binding CanExport}"
+                                            Style="{StaticResource CodexIconButtonStyle}"
+                                            ToolTipService.ToolTip="{Binding ExportHelp}">
+                                            <SymbolIcon Symbol="Save" Style="{StaticResource CodexSmallIconStyle}" />
+                                        </Button>
+                                        <Button
                                             DataContext="{Binding}"
                                             Click="BuildPackageButton_Click"
                                             Content="{Binding BuildLabel}"

@@ -153,6 +153,7 @@ struct TweakPackage: Codable, Identifiable, Equatable, Sendable {
     let id: String
     let directoryName: String
     let directory: String
+    let exportFileName: String
     let manifest: TweakPackageManifest?
     let sourceFingerprint: String?
     let dependencyFingerprint: String?
@@ -183,7 +184,7 @@ struct TweakPackage: Codable, Identifiable, Equatable, Sendable {
     var buildDisposition: BuildDisposition { backendBuildDisposition }
 
     private enum CodingKeys: String, CodingKey {
-        case id, directoryName, directory, manifest, sourceFingerprint, dependencyFingerprint
+        case id, directoryName, directory, exportFileName, manifest, sourceFingerprint, dependencyFingerprint
         case activeBuild, validationError, priorityOverride, origin, displayName, displayVersion
         case detail, declaredPriority, priority, hasDependencies, packageDependencies
         case runtimePackageDependencies, isManaged, managedLock
@@ -205,6 +206,7 @@ struct TweakPackageAvailableActions: Codable, Equatable, Sendable {
     let setEnabled: Bool
     let setPriority: Bool
     let openDirectory: Bool
+    let export: Bool
     let installMissingDependencies: Bool
     let enableDependencies: Bool
     let updateManagedPackage: Bool

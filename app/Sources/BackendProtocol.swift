@@ -78,6 +78,7 @@ struct BackendAppSnapshot: Codable, Equatable, Sendable {
     let packages: [TweakPackage]
     let disabledPackageIDs: [String]
     let buildingPackageIDs: [String]
+    let exportingPackageIDs: [String]
     let packageBuildErrors: [String: String]
     let packageRuntimeErrors: [String: String]
     let packagePayloadErrors: [String: String]

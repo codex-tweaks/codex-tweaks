@@ -50,6 +50,9 @@ internal sealed class PackageView
     [JsonPropertyName("directory")]
     public string Directory { get; init; } = string.Empty;
 
+    [JsonPropertyName("exportFileName")]
+    public string ExportFileName { get; init; } = string.Empty;
+
     [JsonPropertyName("displayName")]
     public string DisplayName { get; init; } = string.Empty;
 
@@ -121,6 +124,9 @@ internal sealed class PackageAvailableActions
 
     [JsonPropertyName("openDirectory")]
     public bool OpenDirectory { get; init; }
+
+    [JsonPropertyName("export")]
+    public bool Export { get; init; }
 
     [JsonPropertyName("installMissingDependencies")]
     public bool InstallMissingDependencies { get; init; }
@@ -214,6 +220,9 @@ internal sealed class BackendAppSnapshot
 
     [JsonPropertyName("buildingPackageIDs")]
     public List<string> BuildingPackageIds { get; init; } = [];
+
+    [JsonPropertyName("exportingPackageIDs")]
+    public List<string> ExportingPackageIds { get; init; } = [];
 
     [JsonPropertyName("packageBuildErrors")]
     public Dictionary<string, string> PackageBuildErrors { get; init; } = [];

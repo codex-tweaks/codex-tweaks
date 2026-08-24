@@ -20,19 +20,20 @@ internal sealed class TrayIconService : IDisposable
     private readonly TaskbarIcon _notifyIcon = new();
     private readonly XamlUICommand _showWindowCommand = new();
     private readonly XamlUICommand _refreshMenuCommand = new();
-    private readonly MenuFlyoutItem _statusItem = CreateMenuItem(Symbol.Link, false);
+    // Text-only items mirror the macOS menu and avoid WinUI's combined icon/check gutter.
+    private readonly MenuFlyoutItem _statusItem = new() { IsEnabled = false };
     private readonly MenuFlyoutItem _detailItem = new() { IsEnabled = false };
-    private readonly MenuFlyoutItem _showItem = CreateMenuItem(Symbol.Home);
-    private readonly MenuFlyoutItem _openCodexItem = CreateMenuItem(Symbol.Play);
-    private readonly MenuFlyoutItem _restartCodexItem = CreateMenuItem(Symbol.Refresh);
+    private readonly MenuFlyoutItem _showItem = new();
+    private readonly MenuFlyoutItem _openCodexItem = new();
+    private readonly MenuFlyoutItem _restartCodexItem = new();
     private readonly ToggleMenuFlyoutItem _enabledItem = new();
-    private readonly MenuFlyoutItem _reinjectItem = CreateMenuItem(Symbol.Sync);
-    private readonly MenuFlyoutItem _managePackagesItem = CreateMenuItem(Symbol.Library);
-    private readonly MenuFlyoutItem _copySkillItem = CreateMenuItem(Symbol.Copy);
-    private readonly MenuFlyoutItem _viewLogsItem = CreateMenuItem(Symbol.Document);
-    private readonly MenuFlyoutItem _installUpdateItem = CreateMenuItem(Symbol.Download);
-    private readonly MenuFlyoutItem _checkUpdatesItem = CreateMenuItem(Symbol.Refresh);
-    private readonly MenuFlyoutItem _quitItem = CreateMenuItem(Symbol.Clear);
+    private readonly MenuFlyoutItem _reinjectItem = new();
+    private readonly MenuFlyoutItem _managePackagesItem = new();
+    private readonly MenuFlyoutItem _copySkillItem = new();
+    private readonly MenuFlyoutItem _viewLogsItem = new();
+    private readonly MenuFlyoutItem _installUpdateItem = new();
+    private readonly MenuFlyoutItem _checkUpdatesItem = new();
+    private readonly MenuFlyoutItem _quitItem = new();
     private bool _disposed;
 
     internal TrayIconService(MainWindow window, Func<Task> quitAsync)
@@ -331,15 +332,6 @@ internal sealed class TrayIconService : IDisposable
         return value.Length <= maximumLength
             ? value
             : string.Concat(value.AsSpan(0, maximumLength - 1), "…");
-    }
-
-    private static MenuFlyoutItem CreateMenuItem(Symbol symbol, bool isEnabled = true)
-    {
-        return new MenuFlyoutItem
-        {
-            Icon = new SymbolIcon(symbol),
-            IsEnabled = isEnabled,
-        };
     }
 
     private static Icon LoadIcon()

@@ -1,6 +1,6 @@
 ---
 name: develop-codex-tweaks-package
-description: Create or modify Codex Tweaks API v2 feature packages, including lifecycle-safe browser injection, npm dependencies, package dependencies, priorities, and Git-installable package metadata. Use when developing a package that runs through the Codex Tweaks macOS app; do not use for changing the package manager itself unless explicitly requested.
+description: Create or modify Codex Tweaks API v2 feature packages, including lifecycle-safe browser injection, npm dependencies, package dependencies, priorities, and Git-installable package metadata. Use when developing a package that runs through Codex Tweaks on macOS or Windows; do not use for changing the package manager itself unless explicitly requested.
 ---
 
 # Develop Codex Tweaks Packages
@@ -9,7 +9,7 @@ Build one independently loadable feature package for Codex Tweaks while preservi
 
 ## Working boundary
 
-- Local packages live in `~/Library/Application Support/Codex Tweaks/Tweaks/packages/<package>/`.
+- Use the packages directory shown by Codex Tweaks as the source of truth. Its default location is `~/Library/Application Support/Codex Tweaks/Tweaks/packages/<package>/` on macOS and `%LOCALAPPDATA%\Codex Tweaks\Tweaks\packages\<package>\` on Windows.
 - One direct child directory is one package. The package-level switch controls everything inside it.
 - Inspect the target package and relevant Codex page behavior before editing. If the user asks only for review or diagnosis, remain read-only.
 - Keep changes inside the requested package unless the task explicitly requires modifying Codex Tweaks itself or another package.

@@ -62,6 +62,71 @@ func TestControllerUsesGoDefaultsReadsSkillAndDisablesNewPackages(t *testing.T) 
 	if _, err := os.Stat(controller.configPath); err != nil {
 		t.Fatalf("Go state was not persisted: %v", err)
 	}
+
+	if err := controller.SetPackageEnabled("new-package", true); err != nil {
+		t.Fatal(err)
+	}
+	afterEnable := controller.Snapshot()
+	if containsString(afterEnable.DisabledPackageIDs, "new-package") || afterEnable.EnabledPackageCount != 1 {
+		t.Fatalf("enabled package snapshot is inconsistent: %#v", afterEnable.DisabledPackageIDs)
+	}
+	if afterEnable.Packages[0].Presentation.StatusTitle == PresentationText()["packages.status.disabled"] {
+		t.Fatalf("enabled package still has disabled presentation: %#v", afterEnable.Packages[0].Presentation)
+	}
+
+	if err := controller.SetPackageEnabled("new-package", false); err != nil {
+		t.Fatal(err)
+	}
+	afterDisable := controller.Snapshot()
+	if !containsString(afterDisable.DisabledPackageIDs, "new-package") || afterDisable.EnabledPackageCount != 0 {
+		t.Fatalf("disabled package snapshot is inconsistent: %#v", afterDisable.DisabledPackageIDs)
+	}
+}
+
+func TestControllerLocalInstallEmitsSnapshotContainingPackage(t *testing.T) {
+	root := t.TempDir()
+	events := make(chan AppSnapshot, 8)
+	controller, err := NewController(
+		InitializeParams{
+			ApplicationSupportDirectory: filepath.Join(root, "support"),
+			CacheDirectory:              filepath.Join(root, "cache"),
+			CurrentVersion:              "0.1.0",
+			BuildNumber:                 "1",
+		},
+		func(snapshot AppSnapshot) { events <- snapshot },
+		ControllerDependencies{DisableBackground: true},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer controller.cancel()
+
+	source := filepath.Join(root, "local-package")
+	writeInstallerPackage(t, source, "local-install-sample", "1.0.0", nil)
+	controller.InstallLocalPackage(source)
+
+	timeout := time.NewTimer(2 * time.Second)
+	defer timeout.Stop()
+	for {
+		select {
+		case snapshot := <-events:
+			if snapshot.LocalOperationError != nil {
+				t.Fatalf("local install failed: %s", *snapshot.LocalOperationError)
+			}
+			if snapshot.LocalOperationMessage == nil {
+				continue
+			}
+			if len(snapshot.Packages) != 1 || snapshot.Packages[0].ID != "local-install-sample" {
+				t.Fatalf("successful install snapshot does not contain package: %#v", snapshot.Packages)
+			}
+			if !containsString(snapshot.DisabledPackageIDs, "local-install-sample") {
+				t.Fatalf("locally installed package must remain disabled: %#v", snapshot.DisabledPackageIDs)
+			}
+			return
+		case <-timeout.C:
+			t.Fatal("timed out waiting for successful local install snapshot")
+		}
+	}
 }
 
 func TestControllerSnapshotSerializesEmptyDependencyStatusesAsArrays(t *testing.T) {

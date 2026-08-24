@@ -65,6 +65,8 @@ $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) (
 $pfxPath = Join-Path $temporaryRoot 'signing-smoke.pfx'
 $githubEnvironmentPath = Join-Path $temporaryRoot 'github-env'
 $signedExecutablePath = Join-Path $temporaryRoot 'codex-tweaks-backend-signed.exe'
+$tamperedExecutablePath = Join-Path $temporaryRoot 'codex-tweaks-backend-tampered.exe'
+. "$PSScriptRoot/windows-signing-verification.ps1"
 $password = [Convert]::ToBase64String(
     [System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32)
 )
@@ -114,9 +116,6 @@ try {
     Remove-CertificateFromStore `
         ([System.Security.Cryptography.X509Certificates.StoreName]::My) `
         $thumbprint
-    Remove-CertificateFromStore `
-        ([System.Security.Cryptography.X509Certificates.StoreName]::Root) `
-        $thumbprint
 
     $env:WINDOWS_SIGNING_PFX_BASE64 = [Convert]::ToBase64String(
         [System.IO.File]::ReadAllBytes($pfxPath)
@@ -136,14 +135,6 @@ try {
     if ($null -eq $myCertificate) {
         throw 'The production import did not persist the private key in CurrentUser/My.'
     }
-    $rootCertificate = Get-CertificateFromStore `
-        ([System.Security.Cryptography.X509Certificates.StoreName]::Root) `
-        $thumbprint `
-        $false
-    if ($null -eq $rootCertificate) {
-        throw 'The production import did not persist the public certificate in CurrentUser/Root.'
-    }
-
     $githubEnvironment = @(Get-Content $githubEnvironmentPath)
     if ($githubEnvironment -notcontains "WINDOWS_SIGNING_THUMBPRINT=$thumbprint") {
         throw 'The production import did not publish the expected signing thumbprint.'
@@ -172,25 +163,37 @@ try {
         throw "SignTool failed with exit code $LASTEXITCODE."
     }
 
-    $signature = Get-AuthenticodeSignature -FilePath $signedExecutablePath
-    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
-        throw "The smoke-test Authenticode signature is not valid: $($signature.Status)."
+    Assert-AuthenticodeSigner $signedExecutablePath $sha256
+
+    Write-Host '[windows-signing-smoke] Tampering with the signed PE for a negative integrity test.'
+    Copy-Item $signedExecutablePath $tamperedExecutablePath
+    $tamperedBytes = [System.IO.File]::ReadAllBytes($tamperedExecutablePath)
+    if ($tamperedBytes.Length -le 1024) {
+        throw 'The smoke-test PE is unexpectedly small.'
     }
-    $actualSignerSha256 = Normalize-Fingerprint ($signature.SignerCertificate.GetCertHashString(
-        [System.Security.Cryptography.HashAlgorithmName]::SHA256
-    ))
-    if ($actualSignerSha256 -ne $sha256) {
-        throw 'The smoke-test Authenticode signer does not match the generated certificate.'
+    $tamperedBytes[1024] = $tamperedBytes[1024] -bxor 1
+    [System.IO.File]::WriteAllBytes($tamperedExecutablePath, $tamperedBytes)
+    $tamperedSignature = Get-AuthenticodeSignature -FilePath $tamperedExecutablePath
+    Write-Host "[windows-signing-smoke] Tampered Authenticode status: $($tamperedSignature.Status)"
+    if ($tamperedSignature.Status -ne [System.Management.Automation.SignatureStatus]::HashMismatch) {
+        throw "The tampered PE did not produce HashMismatch: $($tamperedSignature.Status)."
     }
-    Write-Host '[windows-signing-smoke] Import, private key, trust, signing, and signer checks passed.'
+    $strictVerifierRejectedTampering = $false
+    try {
+        Assert-AuthenticodeSigner $tamperedExecutablePath $sha256
+    }
+    catch {
+        $strictVerifierRejectedTampering = $true
+    }
+    if (-not $strictVerifierRejectedTampering) {
+        throw 'The production Authenticode verifier accepted the tampered PE.'
+    }
+    Write-Host '[windows-signing-smoke] Import, private key, signing, signer, and tamper checks passed.'
 }
 finally {
     if (-not [string]::IsNullOrWhiteSpace($thumbprint)) {
         Remove-CertificateFromStore `
             ([System.Security.Cryptography.X509Certificates.StoreName]::My) `
-            $thumbprint
-        Remove-CertificateFromStore `
-            ([System.Security.Cryptography.X509Certificates.StoreName]::Root) `
             $thumbprint
     }
     foreach ($name in $environmentNames) {

@@ -107,7 +107,7 @@ Codex Tweaks 每 2 秒重新发现页面与包状态。注入使用产物指纹�
 - Windows x64：下载名称以 `-x86_64.exe` 结尾的安装器，适用于 Intel 与 AMD 64 位电脑。
 - Windows ARM64：下载名称以 `-arm64.exe` 结尾的安装器，适用于 Snapdragon 等 ARM64 电脑。
 
-macOS 打开 DMG 后将 Codex Tweaks 拖移到“应用程序”。发布版使用稳定的自签名证书，但未经 Apple Developer ID 签名和公证；如果系统阻止首次打开，请在“系统设置 → 隐私与安全性”中确认。Windows 安装器默认安装到当前用户目录，不弹出管理员权限；可从“设置 → 应用 → 已安装的应用”卸载。Windows 同样使用稳定的自签名证书，因此 SmartScreen 仍可能要求用户确认运行。Release 中的 Sparkle ZIP、`.nupkg`、`appcast.xml` 和 `releases.*.json` 仅供应用内自动更新使用，普通用户无需手动下载。
+macOS 打开 DMG 后将 Codex Tweaks 拖移到“应用程序”。发布版使用稳定的自签名证书，但未经 Apple Developer ID 签名和公证；如果系统阻止首次打开，请在“系统设置 → 隐私与安全性”中确认。Windows 安装器默认安装到当前用户目录，不弹出管理员权限；可从“设置 → 应用 → 已安装的应用”卸载。Windows 同样使用稳定的自签名证书，因此 SmartScreen 仍可能要求用户确认运行。该证书用于固定发布身份，不会写入 runner 的受信任根证书库；发布校验会精确匹配 signer SHA-256、拒绝文件哈希不一致，并以仅驻留内存的自定义信任链验证自签名证书。Release 中的 Sparkle ZIP、`.nupkg`、`appcast.xml` 和 `releases.*.json` 仅供应用内自动更新使用，普通用户无需手动下载。
 
 macOS 应用使用 Sparkle 读取 `updates` 分支上的 EdDSA 签名 appcast。正式版只接收无 channel 的条目，测试版同时接收 `beta` 条目；开启自动检查后，Sparkle 可在后台下载，并在应用退出时静默安装完整 App，不需要用户重新打开 GitHub 下载 DMG。更新必须同时通过 Sparkle EdDSA 签名和稳定的 macOS 代码签名身份校验。
 

@@ -74,7 +74,6 @@ else {
 }
 $signingDirectory = Join-Path $runnerTemp ("codex-tweaks-signing-" + [guid]::NewGuid().ToString('N'))
 $pfxPath = Join-Path $signingDirectory 'zgccrui-windows-code-signing.pfx'
-$certificatePath = Join-Path $signingDirectory 'zgccrui-windows-code-signing.cer'
 New-Item -ItemType Directory -Force -Path $signingDirectory | Out-Null
 
 Write-SigningStage 'Decoding the encrypted certificate container.'
@@ -144,68 +143,7 @@ finally {
     $myStore.Dispose()
 }
 
-Write-SigningStage 'Exporting the public certificate for trust-store import.'
-[System.IO.File]::WriteAllBytes(
-    $certificatePath,
-    $certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
-)
-
-Write-SigningStage 'Adding the public certificate to CurrentUser/Root with non-interactive certutil.'
-$certutilPath = (Get-Command certutil.exe -ErrorAction Stop).Source
-$certificatePathArgument = '"' + $certificatePath.Replace('"', '\"') + '"'
-$certutilProcess = Start-Process `
-    -FilePath $certutilPath `
-    -ArgumentList @('-user', '-f', '-silent', '-addstore', 'Root', $certificatePathArgument) `
-    -NoNewWindow `
-    -PassThru `
-    -Wait
-try {
-    if ($certutilProcess.ExitCode -ne 0) {
-        throw "certutil failed to add the Windows signing certificate to CurrentUser/Root with exit code $($certutilProcess.ExitCode)."
-    }
-}
-finally {
-    $certutilProcess.Dispose()
-}
-
-Write-SigningStage 'Verifying the trusted public certificate in CurrentUser/Root.'
-$rootStore = [System.Security.Cryptography.X509Certificates.X509Store]::new(
-    [System.Security.Cryptography.X509Certificates.StoreName]::Root,
-    [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser
-)
-try {
-    $rootStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
-    $trustedCertificates = $rootStore.Certificates.Find(
-        [System.Security.Cryptography.X509Certificates.X509FindType]::FindByThumbprint,
-        $thumbprint,
-        $false
-    )
-    if ($trustedCertificates.Count -eq 0) {
-        throw 'The Windows signing certificate was not persisted in CurrentUser/Root.'
-    }
-}
-finally {
-    $rootStore.Close()
-    $rootStore.Dispose()
-}
-
-Write-SigningStage 'Verifying the offline trust chain.'
-$chain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
-try {
-    $chain.ChainPolicy.RevocationMode = `
-        [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
-    $chain.ChainPolicy.VerificationFlags = `
-        [System.Security.Cryptography.X509Certificates.X509VerificationFlags]::NoFlag
-    if (-not $chain.Build($storedCertificate)) {
-        $chainErrors = @($chain.ChainStatus | ForEach-Object Status) -join ', '
-        throw "The Windows signing certificate is not trusted after import: $chainErrors"
-    }
-}
-finally {
-    $chain.Dispose()
-}
-
 Add-Content -Path $env:GITHUB_ENV -Value "WINDOWS_SIGNING_THUMBPRINT=$thumbprint"
 Add-Content -Path $env:GITHUB_ENV -Value "VPK_SIGN_PARAMS=/sha1 $thumbprint /s My /fd SHA256"
 
-Write-SigningStage 'Signing identity import, private-key persistence, fingerprint, and trust checks passed.'
+Write-SigningStage 'Signing identity import, private-key persistence, and fingerprint checks passed.'

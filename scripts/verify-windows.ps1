@@ -185,11 +185,19 @@ foreach ($rid in $RuntimeIdentifiers) {
     $frontend = Join-Path $publish 'CodexTweaks.Windows.exe'
     $backend = Join-Path $publish 'codex-tweaks-backend.exe'
     $xamlResources = Join-Path $publish 'CodexTweaks.Windows.pri'
+    $appIcon = Join-Path $publish 'Assets/CodexTweaks.ico'
+    $appLogo = Join-Path $publish 'Assets/CodexTweaks.png'
 
     Assert-PeMachine $frontend $expectedMachine
     Assert-PeMachine $backend $expectedMachine
     if (-not (Test-Path $xamlResources -PathType Leaf)) {
         throw "WinUI XAML resource index is missing: $rid"
+    }
+    if (-not (Test-Path $appIcon -PathType Leaf)) {
+        throw "Windows application icon is missing: $rid"
+    }
+    if (-not (Test-Path $appLogo -PathType Leaf)) {
+        throw "Windows application logo is missing: $rid"
     }
     if (-not (Test-Path (Join-Path $publish 'Tweaks/packages') -PathType Container)) {
         throw "Bundled tweak packages are missing: $rid"

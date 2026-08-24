@@ -42,6 +42,18 @@
     <AssemblyMetadata Include="CodexTweaksBuildNumber" Value="$(CodexTweaksBuildNumber)" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Remove="Assets\CodexTweaks.ico;Assets\CodexTweaks.png" />
+    <Content Include="Assets\CodexTweaks.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="Assets\CodexTweaks.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
   <Target Name="CopyXamlPriToPublishDirectory" AfterTargets="Publish">
     <PropertyGroup>
       <XamlPriFile>$(TargetDir)$(AssemblyName).pri</XamlPriFile>

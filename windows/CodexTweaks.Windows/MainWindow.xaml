@@ -22,12 +22,12 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <FontIcon
-                Width="16"
-                Height="16"
-                FontSize="14"
-                Glyph="&#xE943;"
-                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+            <Image
+                Width="18"
+                Height="18"
+                AutomationProperties.AccessibilityView="Raw"
+                Source="ms-appx:///Assets/CodexTweaks.png"
+                Stretch="UniformToFill" />
             <TextBlock
                 x:Name="AppTitleText"
                 Grid.Column="1"

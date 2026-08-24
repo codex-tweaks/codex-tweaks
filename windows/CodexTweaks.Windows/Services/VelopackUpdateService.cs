@@ -9,8 +9,9 @@ internal sealed record VelopackUpdateResult(bool Installed, string? Version, str
 
 internal sealed class VelopackUpdateService
 {
-    private UpdateManager? _manager;
-    private UpdateInfo? _pending;
+    private sealed record PendingUpdate(UpdateManager Manager, UpdateInfo Update);
+
+    private PendingUpdate? _pending;
 
     internal async Task<VelopackUpdateResult> CheckAsync(
         string channel,
@@ -26,20 +27,20 @@ internal sealed class VelopackUpdateService
                 ExplicitChannel = $"win-{ridArchitecture}-{channel}",
                 AllowVersionDowngrade = true,
             };
-            _manager = string.IsNullOrWhiteSpace(localSource)
+            var manager = string.IsNullOrWhiteSpace(localSource)
                 ? new UpdateManager(
                     new GithubSource(repositoryUrl, null, channel == "beta"),
                     options)
                 : new UpdateManager(localSource, options);
-            _pending = await _manager.CheckForUpdatesAsync();
+            var update = await manager.CheckForUpdatesAsync();
+            _pending = update is null ? null : new PendingUpdate(manager, update);
             return new VelopackUpdateResult(
                 true,
-                _pending?.TargetFullRelease.Version.ToString(),
+                update?.TargetFullRelease.Version.ToString(),
                 null);
         }
         catch (NotInstalledException)
         {
-            _manager = null;
             _pending = null;
             return new VelopackUpdateResult(false, null, null);
         }
@@ -52,19 +53,18 @@ internal sealed class VelopackUpdateService
 
     internal async Task DownloadAsync(Action<int> progress)
     {
-        var manager = _manager ?? throw new InvalidOperationException(
-            PresentationFallback.Text(PresentationTextKey.UpdateCheckFirst));
-        var update = _pending ?? throw new InvalidOperationException(
+        var pending = _pending ?? throw new InvalidOperationException(
             PresentationFallback.Text(PresentationTextKey.UpdateNoneAvailable));
-        await manager.DownloadUpdatesAsync(update, progress, CancellationToken.None);
+        await pending.Manager.DownloadUpdatesAsync(
+            pending.Update,
+            progress,
+            CancellationToken.None);
     }
 
     internal void ApplyAndRestart()
     {
-        var manager = _manager ?? throw new InvalidOperationException(
-            PresentationFallback.Text(PresentationTextKey.UpdateCheckFirst));
-        var update = _pending ?? throw new InvalidOperationException(
+        var pending = _pending ?? throw new InvalidOperationException(
             PresentationFallback.Text(PresentationTextKey.UpdateNoneAvailable));
-        manager.ApplyUpdatesAndRestart(update);
+        pending.Manager.ApplyUpdatesAndRestart(pending.Update);
     }
 }

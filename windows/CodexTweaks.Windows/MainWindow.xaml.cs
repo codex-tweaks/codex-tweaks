@@ -33,6 +33,7 @@ public sealed partial class MainWindow : Window
     private Task? _shutdownTask;
     private string _section = InitialSection();
     private bool _started;
+    private bool _checkingUpdate;
     private bool _applyingUpdate;
     private bool _promptingUpdate;
     private bool _selectingNavigation;
@@ -97,6 +98,8 @@ public sealed partial class MainWindow : Window
 
     internal VelopackUpdateResult? VelopackResult => _velopackResult;
 
+    internal bool CheckingUpdate => _checkingUpdate || _snapshot?.Update.Checking == true;
+
     internal bool ApplyingUpdate => _applyingUpdate;
 
     private void ConfigureWindow()
@@ -158,7 +161,7 @@ public sealed partial class MainWindow : Window
             ApplySnapshot(snapshot);
             if (snapshot.Update.AutoCheck)
             {
-                await CheckVelopackAsync(promptForUpdate: true);
+                await CheckUpdatesAsync(refreshBackend: false);
             }
         }
         catch (Exception exception)
@@ -570,16 +573,39 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    internal async Task CheckUpdatesAsync()
+    internal Task CheckUpdatesAsync() => CheckUpdatesAsync(refreshBackend: true);
+
+    private async Task CheckUpdatesAsync(bool refreshBackend)
     {
+        if (_checkingUpdate || _applyingUpdate)
+        {
+            return;
+        }
+
+        _checkingUpdate = true;
         try
         {
-            await _backend.SendAsync("checkAppUpdate", new { prompt = false });
-            await CheckVelopackAsync(promptForUpdate: true);
+            RenderCurrentPage();
+            NotifyTrayStateChanged();
+            if (refreshBackend)
+            {
+                await _backend.SendAsync("checkAppUpdate", new { prompt = false });
+            }
+            _velopackResult = await _velopack.CheckAsync(
+                Snapshot.Update.Channel,
+                Snapshot.Presentation.Platform.Architecture,
+                Snapshot.Presentation.Platform.RepositoryURL);
+            await PromptForUpdateAsync();
         }
         catch (Exception exception)
         {
             ShowError(Text(PresentationTextKey.UpdateCheckFailed, ("message", exception.Message)));
+        }
+        finally
+        {
+            _checkingUpdate = false;
+            RenderCurrentPage();
+            NotifyTrayStateChanged();
         }
     }
 
@@ -645,20 +671,6 @@ public sealed partial class MainWindow : Window
             ShowError(Text(PresentationTextKey.UpdateInstallFailed, ("message", exception.Message)));
             RenderCurrentPage();
             NotifyTrayStateChanged();
-        }
-    }
-
-    private async Task CheckVelopackAsync(bool promptForUpdate)
-    {
-        _velopackResult = await _velopack.CheckAsync(
-            Snapshot.Update.Channel,
-            Snapshot.Presentation.Platform.Architecture,
-            Snapshot.Presentation.Platform.RepositoryURL);
-        RenderCurrentPage();
-        NotifyTrayStateChanged();
-        if (promptForUpdate)
-        {
-            await PromptForUpdateAsync();
         }
     }
 

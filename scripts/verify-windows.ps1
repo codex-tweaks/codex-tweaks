@@ -21,37 +21,11 @@ Set-StrictMode -Version Latest
 
 $root = Split-Path -Parent $PSScriptRoot
 $artifactRoot = Join-Path $root 'artifacts/windows'
+. "$PSScriptRoot/windows-signing-verification.ps1"
 
-function Normalize-Fingerprint([string]$Value) {
-    return ($Value.ToUpperInvariant() -replace '[^0-9A-F]', '')
-}
-
-$expectedSigningSha256 = Normalize-Fingerprint $ExpectedSigningCertificateSha256
+$expectedSigningSha256 = Normalize-WindowsSigningFingerprint $ExpectedSigningCertificateSha256
 if (-not [string]::IsNullOrWhiteSpace($expectedSigningSha256) -and $expectedSigningSha256.Length -ne 64) {
     throw 'ExpectedSigningCertificateSha256 must be a complete SHA-256 fingerprint.'
-}
-
-function Assert-AuthenticodeSigner([string]$Path, [string]$ExpectedSha256) {
-    if ([string]::IsNullOrWhiteSpace($ExpectedSha256)) {
-        return
-    }
-    if (-not (Test-Path $Path -PathType Leaf)) {
-        throw "Missing signed Windows artifact: $Path"
-    }
-
-    $signature = Get-AuthenticodeSignature -FilePath $Path
-    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
-        throw "Authenticode signature is not valid for $Path`: $($signature.Status) $($signature.StatusMessage)"
-    }
-    if ($null -eq $signature.SignerCertificate) {
-        throw "Authenticode signer certificate is missing for $Path"
-    }
-    $actualSha256 = Normalize-Fingerprint ($signature.SignerCertificate.GetCertHashString(
-        [System.Security.Cryptography.HashAlgorithmName]::SHA256
-    ))
-    if ($actualSha256 -ne $ExpectedSha256) {
-        throw "Authenticode signer mismatch for $Path. Expected $ExpectedSha256; actual $actualSha256."
-    }
 }
 
 function Assert-PackageAuthenticodeSignatures(

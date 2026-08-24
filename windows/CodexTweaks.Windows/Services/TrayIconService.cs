@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using CodexTweaks.Windows.Generated;
 using H.NotifyIcon;
@@ -13,7 +14,12 @@ internal sealed class TrayIconService : IDisposable
 {
     private const int MaximumTooltipLength = 127;
     private const int MaximumBalloonTextLength = 255;
-    private const double InitialMenuWidthDips = 340.0;
+    private const int HideWindowCommand = 0;
+
+    private static readonly PropertyInfo? ContextMenuWindowProperty =
+        typeof(TaskbarIcon).GetProperty(
+            "ContextMenuWindow",
+            BindingFlags.Instance | BindingFlags.NonPublic);
 
     private readonly MainWindow _window;
     private readonly Func<Task> _quitAsync;
@@ -36,8 +42,6 @@ internal sealed class TrayIconService : IDisposable
     private readonly MenuFlyoutItem _installUpdateItem = new();
     private readonly MenuFlyoutItem _checkUpdatesItem = new();
     private readonly MenuFlyoutItem _quitItem = new();
-    private bool _initialMenuWidthPrepared;
-    private bool _initialMenuWidthResetPending;
     private bool _disposed;
 
     internal TrayIconService(MainWindow window, Func<Task> quitAsync)
@@ -53,6 +57,7 @@ internal sealed class TrayIconService : IDisposable
             _window.TrayStateChanged += Window_TrayStateChanged;
             Refresh();
             _notifyIcon.ForceCreate(enablesEfficiencyMode: false);
+            WarmUpContextMenu();
         }
         catch
         {
@@ -179,53 +184,31 @@ internal sealed class TrayIconService : IDisposable
         ExecuteRequestedEventArgs args)
     {
         Refresh();
-        PrepareInitialMenuWidth();
     }
 
-    private void PrepareInitialMenuWidth()
+    private void WarmUpContextMenu()
     {
-        if (_initialMenuWidthPrepared || _initialMenuWidthResetPending)
+        try
         {
-            return;
-        }
-
-        _initialMenuWidthResetPending = true;
-
-        // H.NotifyIcon 2.3.2 measures SecondWindow flyouts before their XamlRoot
-        // provides a DPI scale on first open. Give that synchronous measurement
-        // a physical-width floor, then restore WinUI's native auto sizing.
-        _statusItem.MinWidth = InitialMenuWidthDips * GetCursorRasterizationScale();
-        if (_dispatcherQueue.TryEnqueue(
-                DispatcherQueuePriority.Low,
-                CompleteInitialMenuWidth))
-        {
-            return;
-        }
-
-        _statusItem.MinWidth = 0;
-        _initialMenuWidthResetPending = false;
-    }
-
-    private void CompleteInitialMenuWidth()
-    {
-        _statusItem.MinWidth = 0;
-        _initialMenuWidthResetPending = false;
-        _initialMenuWidthPrepared = true;
-    }
-
-    private static double GetCursorRasterizationScale()
-    {
-        var dpi = GetDpiForSystem();
-        if (GetCursorPos(out var cursorPosition))
-        {
-            var cursorWindow = WindowFromPoint(cursorPosition);
-            if (cursorWindow != nint.Zero)
+            // H.NotifyIcon 2.5 preloads its private SecondWindow host before the
+            // first measurement. Backport that behavior while this app remains
+            // on the library's .NET 8-compatible release line.
+            if (ContextMenuWindowProperty?.GetValue(_notifyIcon)
+                is not Microsoft.UI.Xaml.Window contextMenuWindow)
             {
-                dpi = GetDpiForWindow(cursorWindow);
+                App.Log("Tray context menu warm-up was unavailable.");
+                return;
             }
-        }
 
-        return Math.Max(1.0, dpi / 96.0);
+            contextMenuWindow.Activate();
+            var windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(contextMenuWindow);
+            _ = ShowWindow(windowHandle, HideWindowCommand);
+            App.Log("Tray context menu warm-up completed.");
+        }
+        catch (Exception exception)
+        {
+            App.Log($"Tray context menu warm-up failed: {exception}");
+        }
     }
 
     private void Window_TrayStateChanged()
@@ -403,16 +386,7 @@ internal sealed class TrayIconService : IDisposable
     }
 
     [DllImport("user32.dll")]
-    private static extern bool GetCursorPos(out Point point);
-
-    [DllImport("user32.dll")]
-    private static extern nint WindowFromPoint(Point point);
-
-    [DllImport("user32.dll")]
-    private static extern uint GetDpiForWindow(nint windowHandle);
-
-    [DllImport("user32.dll")]
-    private static extern uint GetDpiForSystem();
+    private static extern bool ShowWindow(nint windowHandle, int command);
 
     public void Dispose()
     {

@@ -58,7 +58,6 @@ jobs:
             dist/Codex-Tweaks-${{ env.RELEASE_TAG }}.dmg
             dist/Codex-Tweaks-${{ env.RELEASE_TAG }}-arm64.dmg
             dist/Codex-Tweaks-${{ env.RELEASE_TAG }}-x86_64.dmg
-            dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 7
 
@@ -159,30 +158,21 @@ jobs:
           name: release-windows-${{ env.RELEASE_TAG }}
           path: release-assets/windows
 
-      - name: Check existing release
-        id: release
+      - name: Generate bilingual download guide
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          error_file="$RUNNER_TEMP/release-check-error"
-          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > /dev/null 2> "$error_file"; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          elif grep -q "HTTP 404" "$error_file"; then
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          else
-            cat "$error_file" >&2
-            exit 1
-          fi
+          RELEASE_ASSET_ROOT: release-assets
+          RELEASE_BODY_PATH: release-assets/release-body.md
+        run: ./scripts/generate-release-body.sh
 
       - name: Publish release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           name: ${{ env.RELEASE_TAG }}
+          body_path: release-assets/release-body.md
           files: |
             release-assets/macos/*
             release-assets/windows/*
           fail_on_unmatched_files: true
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
-          generate_release_notes: ${{ steps.release.outputs.exists != 'true' }}
+          generate_release_notes: true

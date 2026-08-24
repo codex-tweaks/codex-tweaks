@@ -25,13 +25,18 @@ try {
     & dotnet tool restore
     if ($LASTEXITCODE -ne 0) { throw 'Unable to restore the pinned Velopack CLI.' }
 
+    $releaseAssets = @()
     foreach ($rid in $RuntimeIdentifiers) {
         $architecture = if ($rid -eq 'win-arm64') { 'arm64' } else { 'x64' }
+        $downloadArchitecture = if ($rid -eq 'win-arm64') { 'arm64' } else { 'x86_64' }
         $packId = "com.crzhichen.CodexTweaks.$architecture"
         $publish = Join-Path $artifactRoot "$rid/publish"
         $releases = Join-Path $artifactRoot "$rid/releases"
         if (-not (Test-Path (Join-Path $publish 'CodexTweaks.Windows.exe'))) {
             throw "Missing $rid publish output. Run scripts/build-windows.ps1 first."
+        }
+        if (Test-Path $releases) {
+            Remove-Item -Recurse -Force $releases
         }
         New-Item -ItemType Directory -Force -Path $releases | Out-Null
 
@@ -61,11 +66,21 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Velopack packaging failed: $rid" }
         $channelName = "win-$architecture-$Channel"
         $generatedSetup = Join-Path $releases "$packId-$channelName-Setup.exe"
-        $versionedSetup = Join-Path $releases "$packId-$Version-$channelName-Setup.exe"
+        $versionedSetup = Join-Path $releases "Codex-Tweaks-v${Version}-windows-Setup-${downloadArchitecture}.exe"
         if (-not (Test-Path $generatedSetup)) {
             throw "Velopack did not create the expected installer: $generatedSetup"
         }
         Move-Item -Force $generatedSetup $versionedSetup
+
+        $fullPackages = @(Get-ChildItem $releases -Filter '*-full.nupkg' -File)
+        if ($fullPackages.Count -ne 1) {
+            throw "Expected exactly one Velopack full package for $rid, found $($fullPackages.Count)."
+        }
+        $feed = Join-Path $releases "releases.$channelName.json"
+        if (-not (Test-Path $feed -PathType Leaf)) {
+            throw "Missing Velopack channel feed: $feed"
+        }
+        $releaseAssets += @($versionedSetup, $fullPackages[0].FullName, $feed)
         Write-Host "Packaged $rid / $Channel -> $releases"
     }
 
@@ -73,23 +88,14 @@ try {
         Remove-Item -Recurse -Force $stagedRelease
     }
     New-Item -ItemType Directory -Force -Path $stagedRelease | Out-Null
-    foreach ($rid in $RuntimeIdentifiers) {
-        $releases = Join-Path $artifactRoot "$rid/releases"
-        foreach ($file in Get-ChildItem $releases -File) {
-            $destination = Join-Path $stagedRelease $file.Name
-            if (Test-Path $destination) {
-                throw "Duplicate staged release asset: $($file.Name)"
-            }
-            Copy-Item $file.FullName $destination
+    foreach ($assetPath in $releaseAssets) {
+        $fileName = Split-Path -Leaf $assetPath
+        $destination = Join-Path $stagedRelease $fileName
+        if (Test-Path $destination) {
+            throw "Duplicate staged release asset: $fileName"
         }
+        Copy-Item $assetPath $destination
     }
-    $checksums = Get-ChildItem $stagedRelease -File | Sort-Object Name | ForEach-Object {
-        $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-        "$hash  $($_.Name)"
-    }
-    $checksumPath = Join-Path $stagedRelease 'SHA256SUMS-Windows'
-    $utf8NoBOM = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllLines($checksumPath, [string[]]$checksums, $utf8NoBOM)
     Write-Host "Staged Windows release assets -> $stagedRelease"
 }
 finally {

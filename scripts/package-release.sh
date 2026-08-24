@@ -89,13 +89,4 @@ create_dmg "$PRODUCT_NAME" "Codex-Tweaks-${RELEASE_TAG}.dmg"
 create_dmg "${PRODUCT_NAME}-arm64" "Codex-Tweaks-${RELEASE_TAG}-arm64.dmg"
 create_dmg "${PRODUCT_NAME}-x86_64" "Codex-Tweaks-${RELEASE_TAG}-x86_64.dmg"
 
-(
-  cd "$DIST_DIR"
-  shasum -a 256 \
-    "Codex-Tweaks-${RELEASE_TAG}.dmg" \
-    "Codex-Tweaks-${RELEASE_TAG}-arm64.dmg" \
-    "Codex-Tweaks-${RELEASE_TAG}-x86_64.dmg" \
-    > SHA256SUMS
-)
-
 echo "Release ${RELEASE_TAG} 构建完成（版本 ${MARKETING_VERSION}，构建号 ${BUILD_NUMBER}）"

@@ -103,9 +103,4 @@ for dmg in \
   hdiutil verify "$dmg"
 done
 
-(
-  cd "$DIST_DIR"
-  shasum -a 256 -c SHA256SUMS
-)
-
 echo "Release ${RELEASE_TAG} 的全部产物校验通过"

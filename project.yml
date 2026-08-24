@@ -16,6 +16,12 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
     CODEX_TWEAKS_RELEASE_VERSION: "$(MARKETING_VERSION)"
+    SPARKLE_PUBLIC_ED_KEY: "DwmQV4Y5oLUhQg3qPRw3RCd3cYTjYhAm31smb5mA0T4="
+
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.9.6
 
 targets:
   CodexTweaks:
@@ -29,6 +35,8 @@ targets:
         type: folder
       - path: Skills
         type: folder
+    dependencies:
+      - package: Sparkle
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zgccrui.CodexTweaks
@@ -44,11 +52,6 @@ targets:
         script: |
           "$SRCROOT/scripts/build-go-backend.sh"
         basedOnDependencyAnalysis: false
-    scheme:
-      testTargets:
-        - CodexTweaksTests
-      gatherCoverageData: true
-
   CodexTweaksTests:
     type: bundle.unit-test
     platform: macOS
@@ -61,3 +64,24 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.zgccrui.CodexTweaksTests
         GENERATE_INFOPLIST_FILE: YES
         MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+schemes:
+  CodexTweaks:
+    build:
+      targets:
+        CodexTweaks: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: true
+      environmentVariables:
+        DYLD_FRAMEWORK_PATH: "$(BUILT_PRODUCTS_DIR)/Codex Tweaks.app/Contents/Frameworks"
+      targets:
+        - CodexTweaksTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

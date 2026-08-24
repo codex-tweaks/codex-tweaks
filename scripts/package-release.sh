@@ -22,6 +22,22 @@ if [[ ! "$BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
 fi
 
 PRODUCT_NAME="Codex Tweaks"
+CODE_SIGN_IDENTITY="${MACOS_CODE_SIGN_IDENTITY:--}"
+
+SIGNING_SETTINGS=("CODE_SIGN_IDENTITY=${CODE_SIGN_IDENTITY}")
+if [[ "$CODE_SIGN_IDENTITY" != "-" ]]; then
+  if [[ -z "${MACOS_SIGNING_KEYCHAIN:-}" ]]; then
+    echo "使用稳定 macOS 签名时必须提供 MACOS_SIGNING_KEYCHAIN。" >&2
+    exit 1
+  fi
+  SIGNING_SETTINGS+=(
+    "MACOS_SIGNING_KEYCHAIN=${MACOS_SIGNING_KEYCHAIN}"
+    "OTHER_CODE_SIGN_FLAGS=--keychain ${MACOS_SIGNING_KEYCHAIN} --timestamp=none"
+  )
+fi
+if [[ -n "${SPARKLE_PUBLIC_ED_KEY:-}" ]]; then
+  SIGNING_SETTINGS+=("SPARKLE_PUBLIC_ED_KEY=${SPARKLE_PUBLIC_ED_KEY}")
+fi
 
 mkdir -p "$DIST_DIR"
 rm -rf \
@@ -48,12 +64,13 @@ build_app() {
     -configuration Release \
     -destination "generic/platform=macOS" \
     -derivedDataPath "$derived_data" \
+    -packageAuthorizationProvider netrc \
     ARCHS="$archs" \
     ONLY_ACTIVE_ARCH=NO \
-    CODE_SIGN_IDENTITY="-" \
     MARKETING_VERSION="$MARKETING_VERSION" \
     CODEX_TWEAKS_RELEASE_VERSION="$RELEASE_VERSION" \
     CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+    "${SIGNING_SETTINGS[@]}" \
     build
 
   ditto \
@@ -77,6 +94,15 @@ create_dmg() (
     -s "$settings_file" \
     "$PRODUCT_NAME" \
     "${DIST_DIR}/${dmg_name}"
+
+  if [[ "$CODE_SIGN_IDENTITY" != "-" ]]; then
+    codesign \
+      --force \
+      --sign "$CODE_SIGN_IDENTITY" \
+      --keychain "$MACOS_SIGNING_KEYCHAIN" \
+      --timestamp=none \
+      "${DIST_DIR}/${dmg_name}"
+  fi
 
   echo "已创建 ${DIST_DIR}/${dmg_name}"
 )

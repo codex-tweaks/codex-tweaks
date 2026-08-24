@@ -62,22 +62,17 @@ struct MenuBarContent: View {
 
         if updateChecker.updateAvailable {
             Button(model.text(
-                .updateDownload,
+                .updateInstall,
                 ["version": updateChecker.latestVersionString]
             )) {
-                if let url = updateChecker.downloadURL {
-                    NSWorkspace.shared.open(url)
-                }
+                updateChecker.installUpdate()
             }
+            .disabled(!model.actions.installAppUpdate)
         }
 
         Button(model.text(updateChecker.checking ? .updateChecking : .updateCheck)) {
             Task {
                 await updateChecker.check(prompt: true)
-                if updateChecker.pendingUpdate != nil {
-                    NSApplication.shared.activate(ignoringOtherApps: true)
-                    openWindow(id: "main")
-                }
             }
         }
         .disabled(!model.actions.checkAppUpdate)

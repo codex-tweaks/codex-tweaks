@@ -11,7 +11,9 @@ param(
     [ValidateSet('win-x64', 'win-arm64')]
     [string[]]$RuntimeIdentifiers = @('win-x64', 'win-arm64'),
 
-    [switch]$RequirePackages
+    [switch]$RequirePackages,
+
+    [string]$ExpectedSigningCertificateSha256 = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -19,6 +21,65 @@ Set-StrictMode -Version Latest
 
 $root = Split-Path -Parent $PSScriptRoot
 $artifactRoot = Join-Path $root 'artifacts/windows'
+
+function Normalize-Fingerprint([string]$Value) {
+    return ($Value.ToUpperInvariant() -replace '[^0-9A-F]', '')
+}
+
+$expectedSigningSha256 = Normalize-Fingerprint $ExpectedSigningCertificateSha256
+if (-not [string]::IsNullOrWhiteSpace($expectedSigningSha256) -and $expectedSigningSha256.Length -ne 64) {
+    throw 'ExpectedSigningCertificateSha256 must be a complete SHA-256 fingerprint.'
+}
+
+function Assert-AuthenticodeSigner([string]$Path, [string]$ExpectedSha256) {
+    if ([string]::IsNullOrWhiteSpace($ExpectedSha256)) {
+        return
+    }
+    if (-not (Test-Path $Path -PathType Leaf)) {
+        throw "Missing signed Windows artifact: $Path"
+    }
+
+    $signature = Get-AuthenticodeSignature -FilePath $Path
+    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
+        throw "Authenticode signature is not valid for $Path`: $($signature.Status) $($signature.StatusMessage)"
+    }
+    if ($null -eq $signature.SignerCertificate) {
+        throw "Authenticode signer certificate is missing for $Path"
+    }
+    $actualSha256 = Normalize-Fingerprint ($signature.SignerCertificate.GetCertHashString(
+        [System.Security.Cryptography.HashAlgorithmName]::SHA256
+    ))
+    if ($actualSha256 -ne $ExpectedSha256) {
+        throw "Authenticode signer mismatch for $Path. Expected $ExpectedSha256; actual $actualSha256."
+    }
+}
+
+function Assert-PackageAuthenticodeSignatures(
+    [string]$PackagePath,
+    [string]$ExpectedSha256
+) {
+    if ([string]::IsNullOrWhiteSpace($ExpectedSha256)) {
+        return
+    }
+
+    $extractRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("codex-tweaks-nupkg-" + [guid]::NewGuid())
+    New-Item -ItemType Directory -Force -Path $extractRoot | Out-Null
+    try {
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($PackagePath, $extractRoot)
+        foreach ($executableName in @('CodexTweaks.Windows.exe', 'codex-tweaks-backend.exe')) {
+            $matches = @(Get-ChildItem $extractRoot -Recurse -File -Filter $executableName)
+            if ($matches.Count -ne 1) {
+                throw "Expected exactly one $executableName in $PackagePath; found $($matches.Count)."
+            }
+            Assert-AuthenticodeSigner $matches[0].FullName $ExpectedSha256
+        }
+    }
+    finally {
+        if (Test-Path $extractRoot) {
+            Remove-Item -Recurse -Force $extractRoot
+        }
+    }
+}
 
 function Get-PeMachine([string]$Path) {
     $stream = [System.IO.File]::OpenRead($Path)
@@ -188,6 +249,8 @@ foreach ($rid in $RuntimeIdentifiers) {
         if ($feeds.Count -ne 1) {
             throw "Missing Velopack channel feed releases.$channelName.json"
         }
+        Assert-AuthenticodeSigner $setup $expectedSigningSha256
+        Assert-PackageAuthenticodeSignatures $fullPackages[0].FullName $expectedSigningSha256
         $expectedReleaseAssets += @(
             (Split-Path -Leaf $setup),
             $fullPackages[0].Name,

@@ -42,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         Task { @MainActor in
+            SparkleUpdateController.shared.start()
             AppModel.shared.start()
         }
     }

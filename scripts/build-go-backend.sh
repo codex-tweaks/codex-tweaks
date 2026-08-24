@@ -67,4 +67,12 @@ else
 fi
 
 chmod 755 "$DESTINATION"
-/usr/bin/codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY:--}" --timestamp=none "$DESTINATION"
+SIGNING_ARGUMENTS=(
+  --force
+  --sign "${EXPANDED_CODE_SIGN_IDENTITY:--}"
+  --timestamp=none
+)
+if [[ -n "${MACOS_SIGNING_KEYCHAIN:-}" ]] && [[ "${EXPANDED_CODE_SIGN_IDENTITY:--}" != "-" ]]; then
+  SIGNING_ARGUMENTS+=(--keychain "$MACOS_SIGNING_KEYCHAIN")
+fi
+/usr/bin/codesign "${SIGNING_ARGUMENTS[@]}" "$DESTINATION"

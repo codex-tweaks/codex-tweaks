@@ -36,6 +36,7 @@ final class UpdateChecker: ObservableObject {
                 "setUpdateChannel",
                 params: UpdateChannelParameter(channel: channel.backendValue)
             )
+            synchronizeSparkle()
         }
     }
 
@@ -46,6 +47,7 @@ final class UpdateChecker: ObservableObject {
                 "setUpdateAutoCheck",
                 params: UpdateAutoCheckParameter(enabled: autoCheck)
             )
+            synchronizeSparkle()
         }
     }
 
@@ -53,14 +55,11 @@ final class UpdateChecker: ObservableObject {
     @Published private(set) var latestRelease: GitHubRelease?
     @Published private(set) var lastError: String?
     @Published private(set) var lastCheckDate: Date?
-    @Published private(set) var pendingUpdate: GitHubRelease?
     @Published private(set) var currentVersion = "-"
     @Published private(set) var buildNumber = "-"
     @Published private(set) var hasNewerVersion = false
     @Published private(set) var updateAvailable = false
     @Published private(set) var latestVersionString = "-"
-    @Published private(set) var latestVersionIsSkipped = false
-    @Published private(set) var downloadURL: URL?
 
     private var isApplyingSnapshot = false
 
@@ -69,26 +68,16 @@ final class UpdateChecker: ObservableObject {
     func check(prompt: Bool = false) async {
         AppModel.shared.sendUpdateCommand(
             "checkAppUpdate",
-            params: UpdateCheckParameter(prompt: prompt)
+            params: UpdateCheckParameter(prompt: false)
         )
+        if prompt {
+            SparkleUpdateController.shared.checkForUpdates()
+        }
     }
 
-    func dismissUpdate() {
-        AppModel.shared.sendUpdateCommand("dismissUpdate")
+    func installUpdate() {
+        SparkleUpdateController.shared.checkForUpdates()
     }
-
-    func skipUpdate(_ release: GitHubRelease) {
-        AppModel.shared.sendUpdateCommand(
-            "skipUpdate",
-            params: SkipUpdateParameter(tagName: release.tagName)
-        )
-    }
-
-    func unskipAndPrompt() {
-        AppModel.shared.sendUpdateCommand("unskipAndPromptUpdate")
-    }
-
-    func downloadURL(for _: GitHubRelease) -> URL? { downloadURL }
 
     func apply(_ snapshot: BackendUpdateSnapshot) {
         isApplyingSnapshot = true
@@ -99,14 +88,19 @@ final class UpdateChecker: ObservableObject {
         latestRelease = snapshot.latestRelease
         lastError = snapshot.lastError
         lastCheckDate = snapshot.lastCheckAt
-        pendingUpdate = snapshot.pendingUpdate
         currentVersion = snapshot.currentVersion
         buildNumber = snapshot.buildNumber
         hasNewerVersion = snapshot.hasNewerVersion
-        updateAvailable = snapshot.updateAvailable
+        updateAvailable = snapshot.hasNewerVersion
         latestVersionString = snapshot.latestVersionString
-        latestVersionIsSkipped = snapshot.latestVersionIsSkipped
-        downloadURL = snapshot.downloadURL
+        synchronizeSparkle()
+    }
+
+    private func synchronizeSparkle() {
+        SparkleUpdateController.shared.synchronize(
+            channel: channel,
+            automaticallyChecks: autoCheck
+        )
     }
 }
 
@@ -120,8 +114,4 @@ private struct UpdateAutoCheckParameter: Encodable, Sendable {
 
 private struct UpdateCheckParameter: Encodable, Sendable {
     let prompt: Bool
-}
-
-private struct SkipUpdateParameter: Encodable, Sendable {
-    let tagName: String
 }

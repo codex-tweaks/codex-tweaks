@@ -15,17 +15,21 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+  group: release
   cancel-in-progress: false
 
 jobs:
   macos:
     name: Build macOS release
     runs-on: macos-26
+    environment: release
     timeout-minutes: 35
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
       BUILD_NUMBER: ${{ github.run_number }}
+      MACOS_SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
+      MACOS_SIGNING_CERT_SHA256: ${{ vars.MACOS_SIGNING_CERT_SHA256 }}
+      SPARKLE_PUBLIC_ED_KEY: ${{ vars.MACOS_SPARKLE_EDDSA_PUBLIC_KEY }}
     steps:
       - name: Checkout release tag
         uses: actions/checkout@v7
@@ -47,8 +51,19 @@ jobs:
       - name: Test macOS
         run: mise run test
 
+      - name: Import and verify macOS signing identity
+        env:
+          MACOS_SIGNING_P12_BASE64: ${{ secrets.MACOS_SIGNING_P12_BASE64 }}
+          CODE_SIGNING_EXPORT_PASSWORD: ${{ secrets.CODE_SIGNING_EXPORT_PASSWORD }}
+        run: ./scripts/import-macos-signing-identity.sh
+
       - name: Build and verify macOS release artifacts
         run: mise run release
+
+      - name: Create signed Sparkle update and appcast
+        env:
+          SPARKLE_EDDSA_PRIVATE_KEY: ${{ secrets.MACOS_SPARKLE_EDDSA_PRIVATE_KEY }}
+        run: mise run release:sparkle
 
       - name: Upload macOS release artifacts
         uses: actions/upload-artifact@v7
@@ -58,16 +73,20 @@ jobs:
             dist/Codex-Tweaks-${{ env.RELEASE_TAG }}.dmg
             dist/Codex-Tweaks-${{ env.RELEASE_TAG }}-arm64.dmg
             dist/Codex-Tweaks-${{ env.RELEASE_TAG }}-x86_64.dmg
+            dist/Codex-Tweaks-${{ env.RELEASE_TAG }}-sparkle.zip
+            dist/appcast.xml
           if-no-files-found: error
           retention-days: 1
 
   windows:
     name: Build Windows release
     runs-on: windows-2025
+    environment: release
     timeout-minutes: 40
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
       BUILD_NUMBER: ${{ github.run_number }}
+      WINDOWS_SIGNING_CERT_SHA256: ${{ vars.WINDOWS_SIGNING_CERT_SHA256 }}
     steps:
       - name: Checkout release tag
         uses: actions/checkout@v7
@@ -112,6 +131,13 @@ jobs:
             Pop-Location
           }
 
+      - name: Import and verify Windows signing identity
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
+          CODE_SIGNING_EXPORT_PASSWORD: ${{ secrets.CODE_SIGNING_EXPORT_PASSWORD }}
+        run: ./scripts/import-windows-signing-certificate.ps1
+
       - name: Build, package, and verify Windows release
         shell: pwsh
         run: |
@@ -119,7 +145,11 @@ jobs:
           $channel = if ($env:RELEASE_TAG.Contains('-')) { 'beta' } else { 'stable' }
           ./scripts/build-windows.ps1 -Version $version -BuildNumber $env:BUILD_NUMBER
           ./scripts/package-windows.ps1 -Version $version -Channel $channel
-          ./scripts/verify-windows.ps1 -Version $version -Channel $channel -RequirePackages
+          ./scripts/verify-windows.ps1 `
+            -Version $version `
+            -Channel $channel `
+            -RequirePackages `
+            -ExpectedSigningCertificateSha256 $env:WINDOWS_SIGNING_CERT_SHA256
 
       - name: Upload Windows release artifacts
         uses: actions/upload-artifact@v7
@@ -176,6 +206,44 @@ jobs:
           fail_on_unmatched_files: true
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           generate_release_notes: true
+
+      - name: Publish signed Sparkle appcast
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          appcast_path='release-assets/macos/appcast.xml'
+          test -s "$appcast_path"
+
+          if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/updates" >/dev/null 2>&1; then
+            release_commit="$(git rev-list -n 1 "refs/tags/$RELEASE_TAG")"
+            gh api \
+              --method POST \
+              "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref='refs/heads/updates' \
+              -f sha="$release_commit" \
+              >/dev/null
+          fi
+
+          existing_sha="$(
+            gh api \
+              "repos/$GITHUB_REPOSITORY/contents/appcast.xml?ref=updates" \
+              --jq '.sha' \
+              2>/dev/null \
+              || true
+          )"
+          encoded_appcast="$(base64 < "$appcast_path" | tr -d '\n')"
+          api_arguments=(
+            --method PUT
+            "repos/$GITHUB_REPOSITORY/contents/appcast.xml"
+            -f "message=chore(release): update Sparkle appcast for $RELEASE_TAG"
+            -f "content=$encoded_appcast"
+            -f branch=updates
+          )
+          if [[ -n "$existing_sha" ]]; then
+            api_arguments+=(-f "sha=$existing_sha")
+          fi
+          gh api "${api_arguments[@]}" >/dev/null
 
   cleanup:
     name: Delete temporary release artifacts

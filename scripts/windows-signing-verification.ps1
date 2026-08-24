@@ -5,6 +5,49 @@ function Normalize-WindowsSigningFingerprint([string]$Value) {
     return ($Value.ToUpperInvariant() -replace '[^0-9A-F]', '')
 }
 
+function Assert-PinnedSelfSignedChain(
+    [System.Security.Cryptography.X509Certificates.X509Certificate2]$SignerCertificate,
+    [string]$Path
+) {
+    $systemChain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
+    try {
+        $systemChain.ChainPolicy.RevocationMode = `
+            [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
+        $systemChain.ChainPolicy.VerificationFlags = `
+            [System.Security.Cryptography.X509Certificates.X509VerificationFlags]::NoFlag
+        $systemChainBuilt = $systemChain.Build($SignerCertificate)
+        $systemChainStatuses = @($systemChain.ChainStatus | ForEach-Object Status)
+        Write-Host "[windows-signing-verify] System chain statuses: $($systemChainStatuses -join ', ')"
+        if ($systemChainBuilt `
+            -or $systemChainStatuses.Count -ne 1 `
+            -or $systemChainStatuses[0] -ne `
+                [System.Security.Cryptography.X509Certificates.X509ChainStatusFlags]::UntrustedRoot) {
+            throw "Authenticode reported an untrusted signature, but the system chain failure was not exactly UntrustedRoot for $Path."
+        }
+    }
+    finally {
+        $systemChain.Dispose()
+    }
+
+    $customChain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
+    try {
+        $customChain.ChainPolicy.TrustMode = `
+            [System.Security.Cryptography.X509Certificates.X509ChainTrustMode]::CustomRootTrust
+        [void]$customChain.ChainPolicy.CustomTrustStore.Add($SignerCertificate)
+        $customChain.ChainPolicy.RevocationMode = `
+            [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
+        $customChain.ChainPolicy.VerificationFlags = `
+            [System.Security.Cryptography.X509Certificates.X509VerificationFlags]::NoFlag
+        if (-not $customChain.Build($SignerCertificate)) {
+            $chainErrors = @($customChain.ChainStatus | ForEach-Object Status) -join ', '
+            throw "The pinned self-signed Authenticode chain is invalid for $Path`: $chainErrors"
+        }
+    }
+    finally {
+        $customChain.Dispose()
+    }
+}
+
 function Assert-AuthenticodeSigner([string]$Path, [string]$ExpectedSha256) {
     if ([string]::IsNullOrWhiteSpace($ExpectedSha256)) {
         return
@@ -33,23 +76,11 @@ function Assert-AuthenticodeSigner([string]$Path, [string]$ExpectedSha256) {
             return
         }
         ([System.Management.Automation.SignatureStatus]::NotTrusted) {
-            $chain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
-            try {
-                $chain.ChainPolicy.TrustMode = `
-                    [System.Security.Cryptography.X509Certificates.X509ChainTrustMode]::CustomRootTrust
-                [void]$chain.ChainPolicy.CustomTrustStore.Add($signature.SignerCertificate)
-                $chain.ChainPolicy.RevocationMode = `
-                    [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
-                $chain.ChainPolicy.VerificationFlags = `
-                    [System.Security.Cryptography.X509Certificates.X509VerificationFlags]::NoFlag
-                if (-not $chain.Build($signature.SignerCertificate)) {
-                    $chainErrors = @($chain.ChainStatus | ForEach-Object Status) -join ', '
-                    throw "The pinned self-signed Authenticode chain is invalid for $Path`: $chainErrors"
-                }
-            }
-            finally {
-                $chain.Dispose()
-            }
+            Assert-PinnedSelfSignedChain $signature.SignerCertificate $Path
+            return
+        }
+        ([System.Management.Automation.SignatureStatus]::UnknownError) {
+            Assert-PinnedSelfSignedChain $signature.SignerCertificate $Path
             return
         }
         default {

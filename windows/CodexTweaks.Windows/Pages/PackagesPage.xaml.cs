@@ -493,9 +493,8 @@ public sealed partial class PackagesPage : Page
 
     private async void BuildPackageButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { DataContext: PackageRowViewModel row } button)
+        if (sender is Button { DataContext: PackageRowViewModel row })
         {
-            button.IsEnabled = false;
             await Host.RunBackendAsync("buildPackage", new { packageID = row.Id });
         }
     }
@@ -623,11 +622,21 @@ internal sealed class PackageRowViewModel : INotifyPropertyChanged
         CanUpdate = package.AvailableActions.UpdateManagedPackage;
         OpenDirectoryLabel = host.Text(PresentationTextKey.PackagesOpenDirectory);
         CanOpenDirectory = package.AvailableActions.OpenDirectory;
-        BuildLabel = host.Text(snapshot.BuildingPackageIds.Contains(package.Id)
-            ? PresentationTextKey.PackagesBuilding
-            : package.BuildDisposition == "current"
-                ? PresentationTextKey.PackagesRebuild
-                : PresentationTextKey.PackagesBuild);
+        BuildLabel = snapshot.BuildingPackageIds.Contains(package.Id)
+            ? host.Text(PresentationTextKey.PackagesBuilding)
+            : package.BuildDisposition switch
+            {
+                "notBuilt" => host.Text(package.HasDependencies
+                    ? PresentationTextKey.PackagesInstallAndBuild
+                    : PresentationTextKey.PackagesBuild),
+                "versionUpdate" => host.Text(
+                    PresentationTextKey.PackagesUpdateToVersion,
+                    ("version", package.DisplayVersion)),
+                "dependencyUpdate" => host.Text(PresentationTextKey.PackagesSyncAndBuild),
+                "sourceChanged" or "compilerUpdate" => host.Text(PresentationTextKey.PackagesUpdateBuild),
+                "current" => host.Text(PresentationTextKey.PackagesRebuild),
+                _ => host.Text(PresentationTextKey.PackagesCannotBuild),
+            };
         CanBuild = package.AvailableActions.Build;
         MessagesText = string.Join(Environment.NewLine, host.PackageMessages(package));
         MessagesVisibility = string.IsNullOrWhiteSpace(MessagesText)

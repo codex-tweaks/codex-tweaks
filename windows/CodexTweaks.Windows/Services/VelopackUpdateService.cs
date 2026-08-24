@@ -50,13 +50,21 @@ internal sealed class VelopackUpdateService
         }
     }
 
-    internal async Task DownloadAndApplyAsync()
+    internal async Task DownloadAsync(Action<int> progress)
     {
         var manager = _manager ?? throw new InvalidOperationException(
             PresentationFallback.Text(PresentationTextKey.UpdateCheckFirst));
         var update = _pending ?? throw new InvalidOperationException(
             PresentationFallback.Text(PresentationTextKey.UpdateNoneAvailable));
-        await manager.DownloadUpdatesAsync(update);
+        await manager.DownloadUpdatesAsync(update, progress, CancellationToken.None);
+    }
+
+    internal void ApplyAndRestart()
+    {
+        var manager = _manager ?? throw new InvalidOperationException(
+            PresentationFallback.Text(PresentationTextKey.UpdateCheckFirst));
+        var update = _pending ?? throw new InvalidOperationException(
+            PresentationFallback.Text(PresentationTextKey.UpdateNoneAvailable));
         manager.ApplyUpdatesAndRestart(update);
     }
 }

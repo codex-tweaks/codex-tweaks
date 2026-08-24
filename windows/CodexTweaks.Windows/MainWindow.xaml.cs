@@ -31,6 +31,7 @@ public sealed partial class MainWindow : Window
     private string _section = InitialSection();
     private bool _started;
     private bool _applyingUpdate;
+    private bool _promptingUpdate;
     private bool _selectingNavigation;
 
     public MainWindow()
@@ -120,11 +121,7 @@ public sealed partial class MainWindow : Window
             ApplySnapshot(snapshot);
             if (snapshot.Update.AutoCheck)
             {
-                _velopackResult = await _velopack.CheckAsync(
-                    snapshot.Update.Channel,
-                    snapshot.Presentation.Platform.Architecture,
-                    snapshot.Presentation.Platform.RepositoryURL);
-                RenderCurrentPage();
+                await CheckVelopackAsync(promptForUpdate: true);
             }
         }
         catch (Exception exception)
@@ -465,11 +462,7 @@ public sealed partial class MainWindow : Window
         try
         {
             await _backend.SendAsync("checkAppUpdate", new { prompt = false });
-            _velopackResult = await _velopack.CheckAsync(
-                Snapshot.Update.Channel,
-                Snapshot.Presentation.Platform.Architecture,
-                Snapshot.Presentation.Platform.RepositoryURL);
-            RenderCurrentPage();
+            await CheckVelopackAsync(promptForUpdate: true);
         }
         catch (Exception exception)
         {
@@ -479,17 +472,111 @@ public sealed partial class MainWindow : Window
 
     internal async Task InstallUpdateAsync()
     {
+        if (_applyingUpdate)
+        {
+            return;
+        }
+
         _applyingUpdate = true;
         RenderCurrentPage();
+        var progressBar = new ProgressBar
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Value = 0,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        var progressText = new TextBlock
+        {
+            Text = Text(PresentationTextKey.UpdateDownloadProgress, ("progress", "0")),
+            TextWrapping = TextWrapping.Wrap,
+        };
+        var content = new StackPanel { Spacing = Tokens.ControlSpacing };
+        content.Children.Add(progressText);
+        content.Children.Add(progressBar);
+        var progressDialog = new ContentDialog
+        {
+            XamlRoot = RootGrid.XamlRoot,
+            Title = Text(PresentationTextKey.UpdateApplyProgress),
+            Content = content,
+        };
+
         try
         {
-            await _velopack.DownloadAndApplyAsync();
+            _ = progressDialog.ShowAsync();
+            await Task.Yield();
+            await _velopack.DownloadAsync(progress =>
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    var normalized = Math.Clamp(progress, 0, 100);
+                    progressBar.Value = normalized;
+                    progressText.Text = Text(
+                        PresentationTextKey.UpdateDownloadProgress,
+                        ("progress", normalized.ToString(CultureInfo.InvariantCulture)));
+                }));
+            progressBar.Value = 100;
+            progressBar.IsIndeterminate = true;
+            progressText.Text = Text(PresentationTextKey.UpdateInstallingProgress);
+            await Task.Yield();
+            _velopack.ApplyAndRestart();
+            progressDialog.Hide();
+            _applyingUpdate = false;
+            RenderCurrentPage();
         }
         catch (Exception exception)
         {
+            progressDialog.Hide();
             _applyingUpdate = false;
             ShowError(Text(PresentationTextKey.UpdateInstallFailed, ("message", exception.Message)));
             RenderCurrentPage();
+        }
+    }
+
+    private async Task CheckVelopackAsync(bool promptForUpdate)
+    {
+        _velopackResult = await _velopack.CheckAsync(
+            Snapshot.Update.Channel,
+            Snapshot.Presentation.Platform.Architecture,
+            Snapshot.Presentation.Platform.RepositoryURL);
+        RenderCurrentPage();
+        if (promptForUpdate)
+        {
+            await PromptForUpdateAsync();
+        }
+    }
+
+    private async Task PromptForUpdateAsync()
+    {
+        if (_promptingUpdate
+            || _applyingUpdate
+            || _velopackResult is not { Installed: true, Version: { Length: > 0 } version })
+        {
+            return;
+        }
+
+        _promptingUpdate = true;
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                XamlRoot = RootGrid.XamlRoot,
+                Title = Text(PresentationTextKey.UpdateAvailable),
+                Content = Text(
+                    PresentationTextKey.UpdatePromptMessage,
+                    ("current", Snapshot.Update.CurrentVersion),
+                    ("latest", version)),
+                PrimaryButtonText = Text(PresentationTextKey.UpdateInstall, ("version", version)),
+                CloseButtonText = Text(PresentationTextKey.UpdateLater),
+                DefaultButton = ContentDialogButton.Close,
+            };
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            {
+                await InstallUpdateAsync();
+            }
+        }
+        finally
+        {
+            _promptingUpdate = false;
         }
     }
 

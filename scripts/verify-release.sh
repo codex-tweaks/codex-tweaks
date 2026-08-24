@@ -91,6 +91,9 @@ verify_app() {
   local actual_version
   local actual_release_version
   local actual_build
+  local automatic_checks
+  local allows_automatic_updates
+  local automatically_downloads_updates
   local backend_minos_values
   local minos_values
 
@@ -142,6 +145,16 @@ verify_app() {
     return 1
   fi
 
+  automatic_checks="$(/usr/libexec/PlistBuddy -c 'Print :SUEnableAutomaticChecks' "$app_path/Contents/Info.plist")"
+  allows_automatic_updates="$(/usr/libexec/PlistBuddy -c 'Print :SUAllowsAutomaticUpdates' "$app_path/Contents/Info.plist")"
+  automatically_downloads_updates="$(/usr/libexec/PlistBuddy -c 'Print :SUAutomaticallyUpdate' "$app_path/Contents/Info.plist")"
+  if [[ "$automatic_checks" != true ]] \
+    || [[ "$allows_automatic_updates" != false ]] \
+    || [[ "$automatically_downloads_updates" != false ]]; then
+    echo "${app_path} 更新策略错误：应默认检查、发现后询问且不后台下载" >&2
+    return 1
+  fi
+
   codesign --verify --strict --verbose=2 "$backend"
   codesign --verify --deep --strict --verbose=2 "$app_path"
   verify_signing_certificate "$backend"
@@ -162,9 +175,9 @@ for dmg in \
     exit 1
   fi
   hdiutil verify "$dmg"
-  if [[ -n "$EXPECTED_SIGNING_CERT_SHA256" ]]; then
-    codesign --verify --strict --verbose=2 "$dmg"
-    verify_signing_certificate "$dmg"
+  if codesign --display "$dmg" >/dev/null 2>&1; then
+    echo "DMG 容器应保持未签名；稳定自签名仅用于内部 App：$dmg" >&2
+    exit 1
   fi
 done
 

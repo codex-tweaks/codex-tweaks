@@ -2,15 +2,32 @@ import Foundation
 import Sparkle
 
 @MainActor
+private final class ConfirmedSparkleUserDriver: SPUStandardUserDriver {
+    // Sparkle exposes this callback through its Objective-C protocol instead of
+    // the concrete class header, so the exact selector is declared explicitly.
+    @objc(showReadyToInstallAndRelaunch:)
+    func showReadyToInstallAndRelaunch(
+        _ reply: @escaping (SPUUserUpdateChoice) -> Void
+    ) {
+        reply(.install)
+    }
+}
+
+@MainActor
 final class SparkleUpdateController: NSObject, SPUUpdaterDelegate {
     static let shared = SparkleUpdateController()
 
     private var channel: UpdateChecker.Channel = .stable
     private var hasStarted = false
-    private lazy var updaterController = SPUStandardUpdaterController(
-        startingUpdater: true,
-        updaterDelegate: self,
-        userDriverDelegate: nil
+    private lazy var userDriver = ConfirmedSparkleUserDriver(
+        hostBundle: .main,
+        delegate: nil
+    )
+    private lazy var updater = SPUUpdater(
+        hostBundle: .main,
+        applicationBundle: .main,
+        userDriver: userDriver,
+        delegate: self
     )
 
     private override init() {
@@ -19,8 +36,12 @@ final class SparkleUpdateController: NSObject, SPUUpdaterDelegate {
 
     func start() {
         guard !hasStarted, !Self.isRunningTests else { return }
-        hasStarted = true
-        _ = updaterController
+        do {
+            try updater.start()
+            hasStarted = true
+        } catch {
+            NSLog("Sparkle updater failed to start: %@", error.localizedDescription)
+        }
     }
 
     func synchronize(channel: UpdateChecker.Channel, automaticallyChecks: Bool) {
@@ -30,12 +51,11 @@ final class SparkleUpdateController: NSObject, SPUUpdaterDelegate {
         start()
         guard hasStarted else { return }
 
-        let updater = updaterController.updater
         if updater.automaticallyChecksForUpdates != automaticallyChecks {
             updater.automaticallyChecksForUpdates = automaticallyChecks
         }
-        if updater.automaticallyDownloadsUpdates != automaticallyChecks {
-            updater.automaticallyDownloadsUpdates = automaticallyChecks
+        if updater.automaticallyDownloadsUpdates {
+            updater.automaticallyDownloadsUpdates = false
         }
         if channelChanged {
             updater.resetUpdateCycleAfterShortDelay()
@@ -44,8 +64,8 @@ final class SparkleUpdateController: NSObject, SPUUpdaterDelegate {
 
     func checkForUpdates() {
         start()
-        guard hasStarted, updaterController.updater.canCheckForUpdates else { return }
-        updaterController.updater.checkForUpdates()
+        guard hasStarted, updater.canCheckForUpdates else { return }
+        updater.checkForUpdates()
     }
 
     func allowedChannels(for updater: SPUUpdater) -> Set<String> {

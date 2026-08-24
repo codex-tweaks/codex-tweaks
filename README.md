@@ -52,7 +52,7 @@ Windows 版本是 self-contained、unpackaged 的 WinUI 3 应用，Go sidecar、
 | 开发者模式 | 自动编译已启用包的源码变化，但不自动下载新依赖或切换包版本 |
 | 故障隔离 | 一个包编译或运行失败时，其他包继续加载；错误回显在对应包上 |
 | 开发 Skill | 项目内置功能包开发 Skill；“复制给 AI”直接读取同一份 `SKILL.md`，避免两套说明漂移 |
-| 软件更新 | macOS 使用 Sparkle 签名 feed 后台下载并在退出时静默安装完整 App；Windows 使用 Velopack 正式版/测试版通道原子替换前端与 Go sidecar |
+| 软件更新 | macOS 与 Windows 默认自动检查；发现新版本后先询问，确认后显示下载进度并自动安装、重启完整应用 |
 | 内置示例 | 只提供 `ct-sample`：在右下角显示 `codex_tweaks 已注入` 状态 |
 
 ## 工作方式
@@ -107,11 +107,11 @@ Codex Tweaks 每 2 秒重新发现页面与包状态。注入使用产物指纹�
 - Windows x64：下载名称以 `-x86_64.exe` 结尾的安装器，适用于 Intel 与 AMD 64 位电脑。
 - Windows ARM64：下载名称以 `-arm64.exe` 结尾的安装器，适用于 Snapdragon 等 ARM64 电脑。
 
-macOS 打开 DMG 后将 Codex Tweaks 拖移到“应用程序”。发布版使用稳定的自签名证书，但未经 Apple Developer ID 签名和公证；如果系统阻止首次打开，请在“系统设置 → 隐私与安全性”中确认。Windows 安装器默认安装到当前用户目录，不弹出管理员权限；可从“设置 → 应用 → 已安装的应用”卸载。Windows 同样使用稳定的自签名证书，因此 SmartScreen 仍可能要求用户确认运行。该证书用于固定发布身份，不会写入 runner 的受信任根证书库；发布校验会精确匹配 signer SHA-256、拒绝文件哈希不一致，并以仅驻留内存的自定义信任链验证自签名证书。Release 中的 Sparkle ZIP、`.nupkg`、`appcast.xml` 和 `releases.*.json` 仅供应用内自动更新使用，普通用户无需手动下载。
+macOS 打开未签名的 DMG 后将 Codex Tweaks 拖移到“应用程序”。DMG 内的 App 使用稳定的自签名证书，但未经 Apple Developer ID 签名和公证；如果系统阻止首次打开，请在“系统设置 → 隐私与安全性”中确认。Windows 安装器默认安装到当前用户目录，不弹出管理员权限；可从“设置 → 应用 → 已安装的应用”卸载。Windows 同样使用稳定的自签名证书，因此 SmartScreen 仍可能要求用户确认运行。该证书用于固定发布身份，不会写入 runner 的受信任根证书库；发布校验会精确匹配 signer SHA-256、拒绝文件哈希不一致，并以仅驻留内存的自定义信任链验证自签名证书。Release 中的 Sparkle ZIP、`.nupkg`、`appcast.xml` 和 `releases.*.json` 仅供应用内自动更新使用，普通用户无需手动下载。
 
-macOS 应用使用 Sparkle 读取 `updates` 分支上的 EdDSA 签名 appcast。正式版只接收无 channel 的条目，测试版同时接收 `beta` 条目；开启自动检查后，Sparkle 可在后台下载，并在应用退出时静默安装完整 App，不需要用户重新打开 GitHub 下载 DMG。更新必须同时通过 Sparkle EdDSA 签名和稳定的 macOS 代码签名身份校验。
+macOS 应用使用 Sparkle 读取 `updates` 分支上的 EdDSA 签名 appcast。正式版只接收无 channel 的条目，测试版同时接收 `beta` 条目；默认自动检查，发现新版本后先询问用户。确认后 Sparkle 显示下载与解压进度，准备完成后直接安装并重启，不再进行第二次应用内确认，也不需要用户重新打开 GitHub 下载 DMG。更新必须同时通过 Sparkle EdDSA 签名和稳定的 macOS 代码签名身份校验。
 
-Windows 应用会根据用户选择的正式版或测试版通道读取同一 GitHub Release 中的 Velopack feed，下载后整体替换 WinUI 前端、Go sidecar 和全部随包资源并重启。Velopack 使用已导入证书的 SHA-1 thumbprint 调用 SignTool；打包脚本仍兼容 `VPK_AZURE_TRUSTED_SIGN_FILE` 与 `VPK_SIGN_TEMPLATE`，以后迁移到受信任签名服务时无需修改更新协议。
+Windows 应用会根据用户选择的正式版或测试版通道读取同一 GitHub Release 中的 Velopack feed；默认自动检查，发现新版本后先询问用户。确认后界面显示百分比下载进度，下载完成即由 Velopack 整体替换 WinUI 前端、Go sidecar 和全部随包资源并重启，不再进行第二次应用内确认。Velopack 使用已导入证书的 SHA-1 thumbprint 调用 SignTool；打包脚本仍兼容 `VPK_AZURE_TRUSTED_SIGN_FILE` 与 `VPK_SIGN_TEMPLATE`，以后迁移到受信任签名服务时无需修改更新协议。
 
 ### 从源码构建
 
@@ -334,7 +334,7 @@ Release 工作流使用 GitHub Environment `release`，需要以下配置：
 | Variable | `WINDOWS_SIGNING_CERT_SHA256` | Windows 证书 SHA-256 指纹 |
 | Variable | `MACOS_SPARKLE_EDDSA_PUBLIC_KEY` | 写入 App 的 Sparkle Ed25519 公钥 |
 
-工作流在签名前比较证书名称和 SHA-256 指纹，在产物完成后再次从 App、sidecar、DMG、Windows Setup 和 `.nupkg` 内可执行文件提取签名证书校验。GitHub Release 资产成功上传后才更新 `updates/appcast.xml`，避免客户端收到指向不存在 ZIP 的 feed。自签名证书只提供稳定身份，不会获得 Apple Gatekeeper、Apple 公证或 Windows SmartScreen 的公共信任。
+工作流在签名前比较证书名称和 SHA-256 指纹，在产物完成后再次从 App、sidecar、Windows Setup 和 `.nupkg` 内可执行文件提取签名证书校验；DMG 保持未签名并单独校验镜像完整性。GitHub Release 资产成功上传后才更新 `updates/appcast.xml`，避免客户端收到指向不存在 ZIP 的 feed。自签名证书只提供稳定身份，不会获得 Apple Gatekeeper、Apple 公证或 Windows SmartScreen 的公共信任。
 
 ## 验证范围
 

@@ -235,8 +235,10 @@ internal static class PresentationTextKey
     internal const string UpdateCurrent = "update.current";
     internal const string UpdateCurrentVersion = "update.currentVersion";
     internal const string UpdateDownload = "update.download";
+    internal const string UpdateDownloadProgress = "update.downloadProgress";
     internal const string UpdateInstall = "update.install";
     internal const string UpdateInstallFailed = "update.installFailed";
+    internal const string UpdateInstallingProgress = "update.installingProgress";
     internal const string UpdateLastCheck = "update.lastCheck";
     internal const string UpdateLater = "update.later";
     internal const string UpdateLatestVersion = "update.latestVersion";
@@ -658,7 +660,7 @@ internal static class PresentationDefaults
         [PresentationTextKey.StatusWaitingForPageDetail] = "调试端口可用，尚未发现 app:// 页面",
         [PresentationTextKey.StatusWaitingForPageTitle] = "正在等待 Codex 页面",
         [PresentationTextKey.UpdateApplyProgress] = "正在下载并安装完整更新…",
-        [PresentationTextKey.UpdateAutoCheck] = "自动检查并下载更新，退出应用时静默安装",
+        [PresentationTextKey.UpdateAutoCheck] = "自动检查更新；发现新版本时询问，确认后下载并安装",
         [PresentationTextKey.UpdateAvailable] = "有新版本",
         [PresentationTextKey.UpdateChannel] = "更新通道",
         [PresentationTextKey.UpdateChannelBeta] = "测试版",
@@ -672,8 +674,10 @@ internal static class PresentationDefaults
         [PresentationTextKey.UpdateCurrent] = "已是最新",
         [PresentationTextKey.UpdateCurrentVersion] = "当前版本",
         [PresentationTextKey.UpdateDownload] = "下载 {version}",
+        [PresentationTextKey.UpdateDownloadProgress] = "正在下载更新：{progress}%",
         [PresentationTextKey.UpdateInstall] = "安装 {version}",
         [PresentationTextKey.UpdateInstallFailed] = "安装更新失败：{message}",
+        [PresentationTextKey.UpdateInstallingProgress] = "下载完成，正在安装并重启…",
         [PresentationTextKey.UpdateLastCheck] = "上次检查",
         [PresentationTextKey.UpdateLater] = "稍后",
         [PresentationTextKey.UpdateLatestVersion] = "通道最新版本",
@@ -681,7 +685,7 @@ internal static class PresentationDefaults
         [PresentationTextKey.UpdateNoRelease] = "当前通道还没有可用的 GitHub Release。",
         [PresentationTextKey.UpdateNoneAvailable] = "当前没有可安装的更新。",
         [PresentationTextKey.UpdateNotInstalled] = "当前是便携构建；请先使用 Setup.exe 安装后再使用自动更新。",
-        [PresentationTextKey.UpdatePromptMessage] = "当前版本为 {current}，新版本 {latest} 已可下载。",
+        [PresentationTextKey.UpdatePromptMessage] = "当前版本为 {current}，新版本 {latest} 已可用。是否现在下载并安装？",
         [PresentationTextKey.UpdateRepository] = "项目主页",
         [PresentationTextKey.UpdateRestoreReminder] = "恢复提醒",
         [PresentationTextKey.UpdateSkip] = "跳过此版本",

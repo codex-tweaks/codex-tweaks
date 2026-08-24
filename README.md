@@ -101,8 +101,13 @@ Codex Tweaks 每 2 秒重新发现页面与包状态。注入使用产物指纹�
 
 从 [GitHub Releases](https://github.com/cr-zhichen/codex-tweaks/releases) 下载对应平台与架构的文件：
 
-- macOS：打开 universal、arm64 或 x86_64 DMG，将 Codex Tweaks 拖移到“应用程序”。当前使用 ad-hoc 签名且未经 Apple 公证；如果系统阻止首次打开，请在“系统设置 → 隐私与安全性”中确认。
-- Windows：运行名称中包含 `win-x64` 或 `win-arm64` 的 `Setup.exe`。Velopack 默认安装到当前用户目录，不弹出管理员权限；可从“设置 → 应用 → 已安装的应用”卸载。测试版允许未签名发布，因此 Windows SmartScreen 可能要求用户确认运行。
+- macOS universal：下载不带架构后缀的 DMG，同时支持 Apple Silicon 与 Intel Mac，默认推荐。
+- macOS Apple Silicon：下载名称以 `-arm64.dmg` 结尾的较小安装包。
+- macOS Intel：下载名称以 `-x86_64.dmg` 结尾的较小安装包。
+- Windows x64：下载名称以 `-x86_64.exe` 结尾的安装器，适用于 Intel 与 AMD 64 位电脑。
+- Windows ARM64：下载名称以 `-arm64.exe` 结尾的安装器，适用于 Snapdragon 等 ARM64 电脑。
+
+macOS 打开 DMG 后将 Codex Tweaks 拖移到“应用程序”。当前使用 ad-hoc 签名且未经 Apple 公证；如果系统阻止首次打开，请在“系统设置 → 隐私与安全性”中确认。Windows 安装器默认安装到当前用户目录，不弹出管理员权限；可从“设置 → 应用 → 已安装的应用”卸载。测试版允许未签名发布，因此 Windows SmartScreen 可能要求用户确认运行。Release 中的 `.nupkg` 和 `releases.*.json` 仅供应用内自动更新使用，普通用户无需手动下载。
 
 Windows 应用会根据用户选择的正式版或测试版通道读取同一 GitHub Release 中的 Velopack feed，下载后整体替换 WinUI 前端、Go sidecar 和全部随包资源并重启。打包脚本预留 `VPK_AZURE_TRUSTED_SIGN_FILE` 与 `VPK_SIGN_TEMPLATE`：接入 Azure Trusted Signing 或其他托管签名命令后，无需修改应用或更新协议。
 
@@ -124,7 +129,7 @@ Windows 开发需要 Go 与 .NET 8 SDK。以下命令生成 x64、ARM64 两套 s
 ./scripts/verify-windows.ps1 -Version 3.0.0-beta.1 -Channel beta -RequirePackages
 ```
 
-构建输出位于 `artifacts/windows/win-x64`、`artifacts/windows/win-arm64`，待发布文件统一暂存到 `artifacts/windows/release`。
+构建输出位于 `artifacts/windows/win-x64`、`artifacts/windows/win-arm64`。每个架构只把安装器、完整更新包和当前通道 feed 三个必需文件暂存到 `artifacts/windows/release`。
 
 ## 功能包格式
 
@@ -312,7 +317,7 @@ mise run clean           # 清理 build/ 与 dist/
 
 CI 在 `main`、Pull Request 和手动触发时并行验证两套原生应用：macOS 运行 Go race tests、Swift tests 和 Release App 构建；Windows 在 Windows runner 上运行 Go 原生测试、x64/ARM64 self-contained WinUI 发布、Velopack 打包、PE 架构校验和本机架构 sidecar RPC 冒烟测试。
 
-推送 `v*` 标签后，Release 工作流会并行构建三套 macOS DMG 与两套 Windows Velopack 发行包，全部通过后才创建或更新同一个 GitHub Release。带预发布后缀的标签进入 `beta` feed，普通 SemVer 标签进入 `stable` feed。
+推送 `v*` 标签后，Release 工作流会并行构建 universal、arm64、x86_64 三套 macOS DMG 与两套 Windows Velopack 发行包，全部通过后才创建或更新同一个 GitHub Release，并在自动生成的发行说明前加入中英文系统下载链接。带预发布后缀的标签进入 `beta` feed，普通 SemVer 标签进入 `stable` feed。
 
 ## 验证范围
 

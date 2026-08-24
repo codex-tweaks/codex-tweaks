@@ -141,8 +141,10 @@ function Invoke-BackendSmoke([string]$Backend, [string]$Publish, [string]$Expect
     }
 }
 
+$expectedReleaseAssets = @()
 foreach ($rid in $RuntimeIdentifiers) {
     $architecture = if ($rid -eq 'win-arm64') { 'arm64' } else { 'x64' }
+    $downloadArchitecture = if ($rid -eq 'win-arm64') { 'arm64' } else { 'x86_64' }
     $expectedMachine = if ($rid -eq 'win-arm64') { [uint16]0xAA64 } else { [uint16]0x8664 }
     $publish = Join-Path $artifactRoot "$rid/publish"
     $frontend = Join-Path $publish 'CodexTweaks.Windows.exe'
@@ -172,20 +174,39 @@ foreach ($rid in $RuntimeIdentifiers) {
     }
 
     if ($RequirePackages) {
-        $packId = "com.crzhichen.CodexTweaks.$architecture"
         $channelName = "win-$architecture-$Channel"
         $releases = Join-Path $artifactRoot "$rid/releases"
-        $setup = Join-Path $releases "$packId-$Version-$channelName-Setup.exe"
+        $setup = Join-Path $releases "Codex-Tweaks-v${Version}-windows-Setup-${downloadArchitecture}.exe"
         if (-not (Test-Path $setup -PathType Leaf)) {
             throw "Missing versioned Velopack installer: $setup"
         }
-        if (@(Get-ChildItem $releases -Filter '*-full.nupkg' -File).Count -eq 0) {
-            throw "Missing Velopack full package: $rid"
+        $fullPackages = @(Get-ChildItem $releases -Filter '*-full.nupkg' -File)
+        if ($fullPackages.Count -ne 1) {
+            throw "Expected exactly one Velopack full package for $rid, found $($fullPackages.Count)."
         }
-        if (@(Get-ChildItem $releases -Filter "releases.$channelName.json" -File).Count -ne 1) {
+        $feeds = @(Get-ChildItem $releases -Filter "releases.$channelName.json" -File)
+        if ($feeds.Count -ne 1) {
             throw "Missing Velopack channel feed releases.$channelName.json"
         }
+        $expectedReleaseAssets += @(
+            (Split-Path -Leaf $setup),
+            $fullPackages[0].Name,
+            $feeds[0].Name
+        )
     }
 
     Write-Host "Verified $rid publish output."
+}
+
+if ($RequirePackages) {
+    $stagedRelease = Join-Path $artifactRoot 'release'
+    if (-not (Test-Path $stagedRelease -PathType Container)) {
+        throw "Missing staged Windows release directory: $stagedRelease"
+    }
+    $expected = @($expectedReleaseAssets | Sort-Object)
+    $actual = @(Get-ChildItem $stagedRelease -File | ForEach-Object Name | Sort-Object)
+    if (($actual -join "`n") -ne ($expected -join "`n")) {
+        throw "Unexpected staged Windows assets. Expected: $($expected -join ', '); actual: $($actual -join ', ')"
+    }
+    Write-Host "Verified exact staged Windows release asset set ($($actual.Count) files)."
 }

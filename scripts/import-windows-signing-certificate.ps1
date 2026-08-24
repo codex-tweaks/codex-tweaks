@@ -59,7 +59,7 @@ if (-not $Worker) {
         $process.Dispose()
     }
     Write-SigningStage 'Isolated import completed.'
-    exit 0
+    return
 }
 
 function Normalize-Fingerprint([string]$Value) {
@@ -74,6 +74,7 @@ else {
 }
 $signingDirectory = Join-Path $runnerTemp ("codex-tweaks-signing-" + [guid]::NewGuid().ToString('N'))
 $pfxPath = Join-Path $signingDirectory 'zgccrui-windows-code-signing.pfx'
+$certificatePath = Join-Path $signingDirectory 'zgccrui-windows-code-signing.cer'
 New-Item -ItemType Directory -Force -Path $signingDirectory | Out-Null
 
 Write-SigningStage 'Decoding the encrypted certificate container.'
@@ -143,17 +144,45 @@ finally {
     $myStore.Dispose()
 }
 
-Write-SigningStage 'Adding the public certificate to CurrentUser/Root without certificate cmdlets.'
-$publicCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
+Write-SigningStage 'Exporting the public certificate for trust-store import.'
+[System.IO.File]::WriteAllBytes(
+    $certificatePath,
     $certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
 )
+
+Write-SigningStage 'Adding the public certificate to CurrentUser/Root with non-interactive certutil.'
+$certutilPath = (Get-Command certutil.exe -ErrorAction Stop).Source
+$certificatePathArgument = '"' + $certificatePath.Replace('"', '\"') + '"'
+$certutilProcess = Start-Process `
+    -FilePath $certutilPath `
+    -ArgumentList @('-user', '-f', '-addstore', 'Root', $certificatePathArgument) `
+    -NoNewWindow `
+    -PassThru `
+    -Wait
+try {
+    if ($certutilProcess.ExitCode -ne 0) {
+        throw "certutil failed to add the Windows signing certificate to CurrentUser/Root with exit code $($certutilProcess.ExitCode)."
+    }
+}
+finally {
+    $certutilProcess.Dispose()
+}
+
+Write-SigningStage 'Verifying the trusted public certificate in CurrentUser/Root.'
 $rootStore = [System.Security.Cryptography.X509Certificates.X509Store]::new(
     [System.Security.Cryptography.X509Certificates.StoreName]::Root,
     [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser
 )
 try {
-    $rootStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-    $rootStore.Add($publicCertificate)
+    $rootStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
+    $trustedCertificates = $rootStore.Certificates.Find(
+        [System.Security.Cryptography.X509Certificates.X509FindType]::FindByThumbprint,
+        $thumbprint,
+        $false
+    )
+    if ($trustedCertificates.Count -eq 0) {
+        throw 'The Windows signing certificate was not persisted in CurrentUser/Root.'
+    }
 }
 finally {
     $rootStore.Close()

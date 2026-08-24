@@ -73,6 +73,10 @@ jobs:
         shell: pwsh
         run: ./scripts/build-windows.ps1 -Version $env:CI_VERSION -BuildNumber $env:GITHUB_RUN_NUMBER
 
+      - name: Smoke test non-interactive Windows signing import
+        shell: pwsh
+        run: ./scripts/test-windows-signing-certificate-import.ps1
+
       - name: Package unsigned per-user installers
         shell: pwsh
         run: ./scripts/package-windows.ps1 -Version $env:CI_VERSION -Channel beta

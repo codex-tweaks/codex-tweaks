@@ -58,20 +58,27 @@ type PackageDependency struct {
 }
 
 type PackageConfiguration struct {
-	APIVersion          int                          `json:"apiVersion"`
-	Entry               string                       `json:"entry"`
-	Priority            int                          `json:"priority"`
-	PackageDependencies map[string]PackageDependency `json:"packageDependencies"`
+	APIVersion          int                              `json:"apiVersion"`
+	Entry               string                           `json:"entry"`
+	Priority            int                              `json:"priority"`
+	PackageDependencies map[string]PackageDependency     `json:"packageDependencies"`
+	Capabilities        map[string]CapabilityRequirement `json:"capabilities,omitempty"`
 }
 
 func (c *PackageConfiguration) UnmarshalJSON(data []byte) error {
 	type configuration PackageConfiguration
-	value := configuration{APIVersion: APIVersion, PackageDependencies: map[string]PackageDependency{}}
+	value := configuration{
+		APIVersion: APIVersion, PackageDependencies: map[string]PackageDependency{},
+		Capabilities: map[string]CapabilityRequirement{},
+	}
 	if err := json.Unmarshal(data, &value); err != nil {
 		return err
 	}
 	if value.PackageDependencies == nil {
 		value.PackageDependencies = map[string]PackageDependency{}
+	}
+	if value.Capabilities == nil {
+		value.Capabilities = map[string]CapabilityRequirement{}
 	}
 	*c = PackageConfiguration(value)
 	return nil
@@ -121,26 +128,33 @@ func (t *CodableTime) UnmarshalJSON(data []byte) error {
 }
 
 type PackageBuildRecord struct {
-	PackageID             string            `json:"packageID"`
-	PackageVersion        string            `json:"packageVersion"`
-	PackageDependencies   map[string]string `json:"packageDependencies"`
-	SourceFingerprint     string            `json:"sourceFingerprint"`
-	DependencyFingerprint string            `json:"dependencyFingerprint"`
-	CompilerVersion       string            `json:"compilerVersion"`
-	NodeVersion           string            `json:"nodeVersion"`
-	BuildDirectoryName    string            `json:"buildDirectoryName"`
-	HasCSS                bool              `json:"hasCSS"`
-	BuiltAt               CodableTime       `json:"builtAt"`
+	PackageID             string                           `json:"packageID"`
+	PackageVersion        string                           `json:"packageVersion"`
+	PackageDependencies   map[string]string                `json:"packageDependencies"`
+	Capabilities          map[string]CapabilityRequirement `json:"capabilities,omitempty"`
+	SourceFingerprint     string                           `json:"sourceFingerprint"`
+	DependencyFingerprint string                           `json:"dependencyFingerprint"`
+	CompilerVersion       string                           `json:"compilerVersion"`
+	NodeVersion           string                           `json:"nodeVersion"`
+	BuildDirectoryName    string                           `json:"buildDirectoryName"`
+	HasCSS                bool                             `json:"hasCSS"`
+	BuiltAt               CodableTime                      `json:"builtAt"`
 }
 
 func (r *PackageBuildRecord) UnmarshalJSON(data []byte) error {
 	type record PackageBuildRecord
-	value := record{PackageDependencies: map[string]string{}}
+	value := record{
+		PackageDependencies: map[string]string{},
+		Capabilities:        map[string]CapabilityRequirement{},
+	}
 	if err := json.Unmarshal(data, &value); err != nil {
 		return err
 	}
 	if value.PackageDependencies == nil {
 		value.PackageDependencies = map[string]string{}
+	}
+	if value.Capabilities == nil {
+		value.Capabilities = map[string]CapabilityRequirement{}
 	}
 	*r = PackageBuildRecord(value)
 	return nil
@@ -364,13 +378,14 @@ func ReconcileEnablement(discovered, known, disabled map[string]bool, hasKnownBa
 }
 
 type CompiledPackage struct {
-	ID               string   `json:"id"`
-	Name             string   `json:"name"`
-	Version          string   `json:"version"`
-	BuildFingerprint string   `json:"buildFingerprint"`
-	DependencyIDs    []string `json:"dependencyIDs"`
-	CSS              string   `json:"css"`
-	JavaScript       string   `json:"javascript"`
+	ID               string                       `json:"id"`
+	Name             string                       `json:"name"`
+	Version          string                       `json:"version"`
+	BuildFingerprint string                       `json:"buildFingerprint"`
+	DependencyIDs    []string                     `json:"dependencyIDs"`
+	Capabilities     map[string]GrantedCapability `json:"capabilities,omitempty"`
+	CSS              string                       `json:"css"`
+	JavaScript       string                       `json:"javascript"`
 }
 
 type Payload struct {

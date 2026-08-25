@@ -257,7 +257,8 @@ func (c *Controller) Snapshot() AppSnapshot {
 	})
 	return AppSnapshot{
 		ProtocolVersion: ProtocolVersion, Presentation: presentation, Status: c.status,
-		Enabled: c.config.Enabled, DeveloperMode: c.config.DeveloperMode, Packages: packageViews,
+		Enabled: c.config.Enabled, DeveloperMode: c.config.DeveloperMode,
+		AvailableCapabilities: AvailableCapabilities(), Packages: packageViews,
 		DisabledPackageIDs: sortedTrueKeys(c.disabledPackageIDs), BuildingPackageIDs: sortedTrueKeys(c.buildingPackageIDs),
 		ExportingPackageIDs: sortedTrueKeys(c.exportingPackageIDs),
 		PackageBuildErrors:  cloneStringMap(c.packageBuildErrors), PackageRuntimeErrors: cloneStringMap(c.packageRuntimeErrors),

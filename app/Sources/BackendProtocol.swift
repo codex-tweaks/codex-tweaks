@@ -69,12 +69,81 @@ struct BackendAppStatus: Codable, Equatable, Sendable {
     let message: String?
 }
 
+struct BackendCapabilityUsageDescriptor: Codable, Equatable, Sendable {
+    let useWhen: [String]
+    let constraints: [String]
+    let manifestExample: String
+    let runtimeExample: String
+}
+
+struct BackendCapabilityManifestDescriptor: Codable, Equatable, Sendable {
+    let requirementJSONPointer: String
+    let fields: [BackendCapabilityFieldDescriptor]
+}
+
+struct BackendCapabilityRuntimeDescriptor: Codable, Equatable, Sendable {
+    let scope: String
+    let requiredAccess: String
+    let optionalAccess: String
+    let properties: [BackendCapabilityFieldDescriptor]
+    let methods: [BackendCapabilityMethodDescriptor]
+}
+
+struct BackendCapabilityMethodDescriptor: Codable, Equatable, Sendable {
+    let name: String
+    let isAsync: Bool
+    let signature: String
+    let description: String
+    let inputs: [BackendCapabilityFieldDescriptor]
+    let outputs: [BackendCapabilityFieldDescriptor]
+    let errors: [BackendCapabilityErrorDescriptor]
+
+    private enum CodingKeys: String, CodingKey {
+        case name
+        case isAsync = "async"
+        case signature, description, inputs, outputs, errors
+    }
+}
+
+struct BackendCapabilityFieldDescriptor: Codable, Equatable, Sendable {
+    let path: String
+    let type: String
+    let itemType: String?
+    let format: String?
+    let required: Bool
+    let description: String
+    let values: [String]?
+    let defaultJSON: String?
+    let minimum: Int?
+    let maximum: Int?
+    let minimumItems: Int?
+    let maximumItems: Int?
+    let minimumLength: Int?
+    let maximumLength: Int?
+}
+
+struct BackendCapabilityErrorDescriptor: Codable, Equatable, Sendable {
+    let code: String
+    let description: String
+}
+
+struct BackendCapabilityDescriptor: Codable, Equatable, Sendable {
+    let descriptorVersion: Int
+    let id: String
+    let version: String
+    let summary: String
+    let usage: BackendCapabilityUsageDescriptor
+    let manifest: BackendCapabilityManifestDescriptor
+    let runtime: BackendCapabilityRuntimeDescriptor
+}
+
 struct BackendAppSnapshot: Codable, Equatable, Sendable {
     let protocolVersion: Int
     let presentation: BackendPresentationContract
     let status: BackendAppStatus
     let enabled: Bool
     let developerMode: Bool
+    let availableCapabilities: [BackendCapabilityDescriptor]
     let packages: [TweakPackage]
     let disabledPackageIDs: [String]
     let buildingPackageIDs: [String]

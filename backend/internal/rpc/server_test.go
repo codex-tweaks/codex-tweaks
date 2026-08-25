@@ -48,7 +48,8 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 	}
 	input := strings.NewReader(
 		string(initializeRequest) + "\n" +
-			"{\"id\":2,\"method\":\"shutdown\"}\n",
+			"{\"id\":2,\"method\":\"getState\"}\n" +
+			"{\"id\":3,\"method\":\"shutdown\"}\n",
 	)
 	var output bytes.Buffer
 	server := NewServerWithDependencies(
@@ -67,6 +68,13 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 		} `json:"result"`
 	}
 	foundInitialize := false
+	var state struct {
+		ID     int `json:"id"`
+		Result struct {
+			AvailableCapabilities []core.CapabilityDescriptor `json:"availableCapabilities"`
+		} `json:"result"`
+	}
+	foundState := false
 	for _, line := range strings.Split(strings.TrimSpace(output.String()), "\n") {
 		var header struct {
 			ID *int `json:"id"`
@@ -80,9 +88,19 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 			}
 			foundInitialize = true
 		}
+		if header.ID != nil && *header.ID == 2 {
+			if err := json.Unmarshal([]byte(line), &state); err != nil {
+				t.Fatalf("decode getState: %v", err)
+			}
+			foundState = true
+		}
 	}
 	if !foundInitialize || initialize.Result.ProtocolVersion != core.ProtocolVersion {
 		t.Fatalf("initialize response not found in %q", output.String())
+	}
+	if !foundState || len(state.Result.AvailableCapabilities) == 0 ||
+		state.Result.AvailableCapabilities[0].Usage.RuntimeExample == "" {
+		t.Fatalf("getState did not expose usable availableCapabilities: %q", output.String())
 	}
 }
 

@@ -115,6 +115,7 @@ func (b *Builder) Build(ctx context.Context, pkg Package, installDependencies, a
 	record := PackageBuildRecord{
 		PackageID: pkg.Manifest.Name, PackageVersion: pkg.Manifest.Version,
 		PackageDependencies: packageDependencyVersions(pkg.Manifest.CodexTweaks.PackageDependencies),
+		Capabilities:        cloneCapabilityRequirements(pkg.Manifest.CodexTweaks.Capabilities),
 		SourceFingerprint:   *pkg.SourceFingerprint, DependencyFingerprint: *pkg.DependencyFingerprint,
 		CompilerVersion: CompilerVersion, NodeVersion: node.Version, BuildDirectoryName: buildDirectoryName,
 		HasCSS: isRegularNonSymlink(filepath.Join(finalDirectory, "bundle.css")), BuiltAt: NewCodableTime(time.Now()),

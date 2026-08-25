@@ -195,6 +195,150 @@ internal sealed class BackendUpdateSnapshot
     public bool LatestVersionIsSkipped { get; init; }
 }
 
+internal sealed class CapabilityUsageDescriptor
+{
+    [JsonPropertyName("useWhen")]
+    public List<string> UseWhen { get; init; } = [];
+
+    [JsonPropertyName("constraints")]
+    public List<string> Constraints { get; init; } = [];
+
+    [JsonPropertyName("manifestExample")]
+    public string ManifestExample { get; init; } = string.Empty;
+
+    [JsonPropertyName("runtimeExample")]
+    public string RuntimeExample { get; init; } = string.Empty;
+}
+
+internal sealed class CapabilityManifestDescriptor
+{
+    [JsonPropertyName("requirementJSONPointer")]
+    public string RequirementJsonPointer { get; init; } = string.Empty;
+
+    [JsonPropertyName("fields")]
+    public List<CapabilityFieldDescriptor> Fields { get; init; } = [];
+}
+
+internal sealed class CapabilityRuntimeDescriptor
+{
+    [JsonPropertyName("scope")]
+    public string Scope { get; init; } = string.Empty;
+
+    [JsonPropertyName("requiredAccess")]
+    public string RequiredAccess { get; init; } = string.Empty;
+
+    [JsonPropertyName("optionalAccess")]
+    public string OptionalAccess { get; init; } = string.Empty;
+
+    [JsonPropertyName("properties")]
+    public List<CapabilityFieldDescriptor> Properties { get; init; } = [];
+
+    [JsonPropertyName("methods")]
+    public List<CapabilityMethodDescriptor> Methods { get; init; } = [];
+}
+
+internal sealed class CapabilityMethodDescriptor
+{
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = string.Empty;
+
+    [JsonPropertyName("async")]
+    public bool Async { get; init; }
+
+    [JsonPropertyName("signature")]
+    public string Signature { get; init; } = string.Empty;
+
+    [JsonPropertyName("description")]
+    public string Description { get; init; } = string.Empty;
+
+    [JsonPropertyName("inputs")]
+    public List<CapabilityFieldDescriptor> Inputs { get; init; } = [];
+
+    [JsonPropertyName("outputs")]
+    public List<CapabilityFieldDescriptor> Outputs { get; init; } = [];
+
+    [JsonPropertyName("errors")]
+    public List<CapabilityErrorDescriptor> Errors { get; init; } = [];
+}
+
+internal sealed class CapabilityFieldDescriptor
+{
+    [JsonPropertyName("path")]
+    public string Path { get; init; } = string.Empty;
+
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = string.Empty;
+
+    [JsonPropertyName("itemType")]
+    public string? ItemType { get; init; }
+
+    [JsonPropertyName("format")]
+    public string? Format { get; init; }
+
+    [JsonPropertyName("required")]
+    public bool Required { get; init; }
+
+    [JsonPropertyName("description")]
+    public string Description { get; init; } = string.Empty;
+
+    [JsonPropertyName("values")]
+    public List<string>? Values { get; init; }
+
+    [JsonPropertyName("defaultJSON")]
+    public string? DefaultJson { get; init; }
+
+    [JsonPropertyName("minimum")]
+    public int? Minimum { get; init; }
+
+    [JsonPropertyName("maximum")]
+    public int? Maximum { get; init; }
+
+    [JsonPropertyName("minimumItems")]
+    public int? MinimumItems { get; init; }
+
+    [JsonPropertyName("maximumItems")]
+    public int? MaximumItems { get; init; }
+
+    [JsonPropertyName("minimumLength")]
+    public int? MinimumLength { get; init; }
+
+    [JsonPropertyName("maximumLength")]
+    public int? MaximumLength { get; init; }
+}
+
+internal sealed class CapabilityErrorDescriptor
+{
+    [JsonPropertyName("code")]
+    public string Code { get; init; } = string.Empty;
+
+    [JsonPropertyName("description")]
+    public string Description { get; init; } = string.Empty;
+}
+
+internal sealed class CapabilityDescriptor
+{
+    [JsonPropertyName("descriptorVersion")]
+    public int DescriptorVersion { get; init; }
+
+    [JsonPropertyName("id")]
+    public string Id { get; init; } = string.Empty;
+
+    [JsonPropertyName("version")]
+    public string Version { get; init; } = string.Empty;
+
+    [JsonPropertyName("summary")]
+    public string Summary { get; init; } = string.Empty;
+
+    [JsonPropertyName("usage")]
+    public CapabilityUsageDescriptor Usage { get; init; } = new();
+
+    [JsonPropertyName("manifest")]
+    public CapabilityManifestDescriptor Manifest { get; init; } = new();
+
+    [JsonPropertyName("runtime")]
+    public CapabilityRuntimeDescriptor Runtime { get; init; } = new();
+}
+
 internal sealed class BackendAppSnapshot
 {
     [JsonPropertyName("protocolVersion")]
@@ -211,6 +355,9 @@ internal sealed class BackendAppSnapshot
 
     [JsonPropertyName("developerMode")]
     public bool DeveloperMode { get; init; }
+
+    [JsonPropertyName("availableCapabilities")]
+    public List<CapabilityDescriptor> AvailableCapabilities { get; init; } = [];
 
     [JsonPropertyName("packages")]
     public List<PackageView> Packages { get; init; } = [];

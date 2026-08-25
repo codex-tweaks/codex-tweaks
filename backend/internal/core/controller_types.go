@@ -118,6 +118,7 @@ type AppSnapshot struct {
 	Status                     AppStatus                     `json:"status"`
 	Enabled                    bool                          `json:"enabled"`
 	DeveloperMode              bool                          `json:"developerMode"`
+	AvailableCapabilities      []CapabilityDescriptor        `json:"availableCapabilities"`
 	Packages                   []PackageView                 `json:"packages"`
 	DisabledPackageIDs         []string                      `json:"disabledPackageIDs"`
 	BuildingPackageIDs         []string                      `json:"buildingPackageIDs"`

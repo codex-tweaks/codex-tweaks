@@ -115,6 +115,62 @@ func TestStorePriorityOverrideIsSeparateAndNormalized(t *testing.T) {
 	}
 }
 
+func TestStoreCarriesCapabilitiesWithoutChangingPackageAPIVersion(t *testing.T) {
+	store, _ := newTestStore(t)
+	directory := makeStorePackage(t, store, "capable", "capable", "1.0.0", 0, nil, "")
+	manifest := PackageManifest{}
+	manifestPath := filepath.Join(directory, "package.json")
+	if err := readJSON(manifestPath, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	manifest.CodexTweaks.Capabilities = map[string]CapabilityRequirement{
+		NetworkCapabilityID: {
+			Version:     "^1.0.0",
+			Permissions: json.RawMessage(`{"origins":["https://example.com"]}`),
+		},
+	}
+	data, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(manifestPath, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	packages, err := store.LoadPackages()
+	if err != nil || len(packages) != 1 || packages[0].ValidationError != nil {
+		t.Fatalf("capability manifest failed: %v %#v", err, packages)
+	}
+	if packages[0].Manifest.CodexTweaks.APIVersion != APIVersion {
+		t.Fatalf("package API version changed: %d", packages[0].Manifest.CodexTweaks.APIVersion)
+	}
+	activateTestBuild(t, store, packages[0], "capable-js", "")
+	packages, _ = store.LoadPackages()
+	payload := store.LoadPayload(packages, map[string]bool{})
+	grant, ok := payload.Payload.Packages[0].Capabilities[NetworkCapabilityID]
+	if !ok || grant.Version != NetworkCapabilityVersion {
+		t.Fatalf("capability grant missing from payload: %#v", payload)
+	}
+
+	initialFingerprint := *packages[0].SourceFingerprint
+	initialDependencyFingerprint := *packages[0].DependencyFingerprint
+	manifest.CodexTweaks.Capabilities[NetworkCapabilityID] = CapabilityRequirement{
+		Version:     "^1.0.0",
+		Permissions: json.RawMessage(`{"origins":["https://changed.example"]}`),
+	}
+	data, _ = json.MarshalIndent(manifest, "", "  ")
+	if err := os.WriteFile(manifestPath, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	packages, _ = store.LoadPackages()
+	if *packages[0].SourceFingerprint == initialFingerprint ||
+		packages[0].BuildDisposition(CompilerVersion) != BuildSourceChanged {
+		t.Fatalf("capability change did not invalidate build: %#v", packages[0])
+	}
+	if *packages[0].DependencyFingerprint != initialDependencyFingerprint {
+		t.Fatalf("capability change was classified as a dependency update: %#v", packages[0])
+	}
+}
+
 func newTestStore(t *testing.T) (*Store, string) {
 	t.Helper()
 	root := t.TempDir()
@@ -172,7 +228,7 @@ func activateTestBuild(t *testing.T, store *Store, pkg Package, javascript, css 
 			t.Fatal(err)
 		}
 	}
-	record := PackageBuildRecord{PackageID: pkg.ID, PackageVersion: pkg.Manifest.Version, PackageDependencies: map[string]string{}, SourceFingerprint: *pkg.SourceFingerprint, DependencyFingerprint: *pkg.DependencyFingerprint, CompilerVersion: CompilerVersion, NodeVersion: "v24", BuildDirectoryName: "test-build", HasCSS: css != "", BuiltAt: NewCodableTime(time.Now())}
+	record := PackageBuildRecord{PackageID: pkg.ID, PackageVersion: pkg.Manifest.Version, PackageDependencies: map[string]string{}, Capabilities: cloneCapabilityRequirements(pkg.Manifest.CodexTweaks.Capabilities), SourceFingerprint: *pkg.SourceFingerprint, DependencyFingerprint: *pkg.DependencyFingerprint, CompilerVersion: CompilerVersion, NodeVersion: "v24", BuildDirectoryName: "test-build", HasCSS: css != "", BuiltAt: NewCodableTime(time.Now())}
 	if err := store.ActivateBuild(record); err != nil {
 		t.Fatal(err)
 	}

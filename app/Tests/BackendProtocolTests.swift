@@ -115,6 +115,42 @@ final class BackendProtocolTests: XCTestCase {
               "status": {"kind": "connected", "targetCount": 1},
               "enabled": true,
               "developerMode": false,
+              "availableCapabilities": [{
+                "descriptorVersion": 1,
+                "id": "network",
+                "version": "1.0.0",
+                "summary": "Host-scoped HTTPS requests.",
+                "usage": {
+                  "useWhen": ["Renderer fetch is unavailable."],
+                  "constraints": ["Only granted public HTTPS origins."],
+                  "manifestExample": "{}",
+                  "runtimeExample": "api.capabilities.require(\\"network\\")"
+                },
+                "manifest": {
+                  "requirementJSONPointer": "/codexTweaks/capabilities/network",
+                  "fields": [{
+                    "path": "version",
+                    "type": "string",
+                    "required": true,
+                    "description": "Independent version requirement."
+                  }]
+                },
+                "runtime": {
+                  "scope": "all-renderers",
+                  "requiredAccess": "api.capabilities.require(\\"network\\")",
+                  "optionalAccess": "api.capabilities.get(\\"network\\")",
+                  "properties": [],
+                  "methods": [{
+                    "name": "request",
+                    "async": true,
+                    "signature": "request(options) => Promise<response>",
+                    "description": "Performs one request.",
+                    "inputs": [],
+                    "outputs": [],
+                    "errors": []
+                  }]
+                }
+              }],
               "packages": [],
               "disabledPackageIDs": [],
               "buildingPackageIDs": [],
@@ -156,6 +192,12 @@ final class BackendProtocolTests: XCTestCase {
         XCTAssertEqual(snapshot.protocolVersion, 3)
         XCTAssertEqual(snapshot.presentation.version, 1)
         XCTAssertEqual(snapshot.status.targetCount, 1)
+        XCTAssertEqual(snapshot.availableCapabilities.first?.id, "network")
+        XCTAssertEqual(snapshot.availableCapabilities.first?.runtime.methods.first?.isAsync, true)
+        XCTAssertEqual(
+            snapshot.availableCapabilities.first?.manifest.requirementJSONPointer,
+            "/codexTweaks/capabilities/network"
+        )
         XCTAssertEqual(snapshot.update.channel, .stable)
     }
 

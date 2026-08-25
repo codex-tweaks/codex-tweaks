@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
@@ -189,7 +190,7 @@ func (s *Store) InspectPackage(directory string, origin PackageOrigin, priorityO
 	if expectedPackageID != "" && manifest.Name != expectedPackageID {
 		return invalid(fmt.Errorf("远程功能包标识不匹配：期望 %s，实际为 %s。", expectedPackageID, manifest.Name))
 	}
-	sourceFingerprint, err := fingerprintPackage(directory)
+	sourceFingerprint, err := fingerprintPackage(manifest, directory)
 	if err != nil {
 		return invalid(err)
 	}
@@ -236,6 +237,9 @@ func validateManifest(manifest PackageManifest, packageDirectory string) error {
 			}
 		}
 	}
+	if _, err := ResolveCapabilityRequirements(manifest.CodexTweaks.Capabilities); err != nil {
+		return err
+	}
 	root, err := filepath.EvalSymlinks(packageDirectory)
 	if err != nil {
 		return fmt.Errorf("入口文件不存在或超出包目录：%s", manifest.CodexTweaks.Entry)
@@ -251,7 +255,7 @@ func validateManifest(manifest PackageManifest, packageDirectory string) error {
 	return nil
 }
 
-func fingerprintPackage(packageDirectory string) (string, error) {
+func fingerprintPackage(manifest PackageManifest, packageDirectory string) (string, error) {
 	type sourceFile struct{ relative, path string }
 	files := []sourceFile{}
 	err := filepath.WalkDir(packageDirectory, func(path string, entry fs.DirEntry, walkErr error) error {
@@ -288,6 +292,14 @@ func fingerprintPackage(packageDirectory string) (string, error) {
 		state.Update([]byte(file.relative))
 		state.Separator()
 		state.Update(contents)
+		state.Separator()
+	}
+	if len(manifest.CodexTweaks.Capabilities) > 0 {
+		capabilities, err := json.Marshal(manifest.CodexTweaks.Capabilities)
+		if err != nil {
+			return "", err
+		}
+		state.Update(capabilities)
 		state.Separator()
 	}
 	return state.Value(), nil
@@ -455,15 +467,24 @@ func (s *Store) LoadPayload(packages []Package, disabledPackageIDs map[string]bo
 				continue
 			}
 		}
+		capabilities, err := resolvePackageCapabilities(pkg.ID, pkg.ActiveBuild.Record.Capabilities)
+		if err != nil {
+			errorsByPackage[pkg.ID] = err.Error()
+			continue
+		}
 		compiled = append(compiled, CompiledPackage{
 			ID: pkg.ID, Name: pkg.Manifest.Name, Version: pkg.ActiveBuild.Record.PackageVersion,
 			BuildFingerprint: pkg.ActiveBuild.Record.SourceFingerprint + "-" + pkg.ActiveBuild.Record.DependencyFingerprint + "-" + pkg.ActiveBuild.Record.CompilerVersion,
-			DependencyIDs:    sortedStringKeys(pkg.ActiveBuild.Record.PackageDependencies), CSS: string(css), JavaScript: string(javascript),
+			DependencyIDs:    sortedStringKeys(pkg.ActiveBuild.Record.PackageDependencies), Capabilities: capabilities,
+			CSS: string(css), JavaScript: string(javascript),
 		})
 	}
 	materials := make([]string, 0, len(compiled))
 	for _, pkg := range compiled {
-		materials = append(materials, strings.Join([]string{pkg.ID, pkg.Version, pkg.BuildFingerprint, pkg.CSS, pkg.JavaScript}, "\x00"))
+		capabilities, _ := json.Marshal(pkg.Capabilities)
+		materials = append(materials, strings.Join([]string{
+			pkg.ID, pkg.Version, pkg.BuildFingerprint, string(capabilities), pkg.CSS, pkg.JavaScript,
+		}, "\x00"))
 	}
 	return PayloadLoadResult{Payload: Payload{Packages: compiled, Version: FingerprintString(strings.Join(materials, "\x00"))}, PackageErrors: errorsByPackage}
 }

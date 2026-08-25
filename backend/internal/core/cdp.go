@@ -63,6 +63,8 @@ type CDPService struct {
 	logger        *Logger
 	mu            sync.Mutex
 	nextCommandID int
+	broker        *CapabilityBroker
+	sessions      map[string]*capabilitySession
 }
 
 func NewCDPService(logger *Logger) *CDPService {
@@ -71,6 +73,7 @@ func NewCDPService(logger *Logger) *CDPService {
 		httpClient: &http.Client{Timeout: 5 * time.Second},
 		dialer:     &websocket.Dialer{HandshakeTimeout: 5 * time.Second, Proxy: http.ProxyFromEnvironment},
 		logger:     logger, nextCommandID: 1,
+		broker: NewCapabilityBroker(), sessions: map[string]*capabilitySession{},
 	}
 }
 
@@ -79,11 +82,18 @@ func (s *CDPService) Inject(ctx context.Context, payload Payload, forceGeneratio
 	defer s.mu.Unlock()
 	targets, err := s.discoverTargets(ctx)
 	if err != nil {
+		s.closeAllCapabilitySessionsLocked()
 		return CDPInjectionResult{}, err
 	}
-	script := InjectionScript(payload, forceGeneration)
+	s.reconcileCapabilitySessionsLocked(targets)
 	result := CDPInjectionResult{TargetCount: len(targets), PackageErrors: map[string]string{}}
 	for _, target := range targets {
+		bridgeSessionID, capabilityTokens, settingsAdapter, err := s.capabilityBridgeForTargetLocked(ctx, target, payload)
+		if err != nil {
+			s.logError(fmt.Sprintf("目标 %s 无法建立能力通道：%v", target.ID, err))
+			continue
+		}
+		script := injectionScriptWithCapabilities(payload, forceGeneration, bridgeSessionID, capabilityTokens, settingsAdapter)
 		value, err := s.evaluate(ctx, script, *target.WebSocketDebuggerURL)
 		if err != nil {
 			s.logError(fmt.Sprintf("目标 %s 注入失败：%v", target.ID, err))
@@ -106,6 +116,7 @@ func (s *CDPService) Inject(ctx context.Context, payload Payload, forceGeneratio
 func (s *CDPService) CleanupAllTargets(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	defer s.closeAllCapabilitySessionsLocked()
 	targets, err := s.discoverTargets(ctx)
 	if err != nil {
 		return err

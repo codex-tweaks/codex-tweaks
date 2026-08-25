@@ -1,6 +1,4 @@
 using System.Drawing;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using CodexTweaks.Windows.Generated;
 using H.NotifyIcon;
 using H.NotifyIcon.Core;
@@ -14,12 +12,6 @@ internal sealed class TrayIconService : IDisposable
 {
     private const int MaximumTooltipLength = 127;
     private const int MaximumBalloonTextLength = 255;
-    private const int HideWindowCommand = 0;
-
-    private static readonly PropertyInfo? ContextMenuWindowProperty =
-        typeof(TaskbarIcon).GetProperty(
-            "ContextMenuWindow",
-            BindingFlags.Instance | BindingFlags.NonPublic);
 
     private readonly MainWindow _window;
     private readonly Func<Task> _quitAsync;
@@ -57,7 +49,6 @@ internal sealed class TrayIconService : IDisposable
             _window.TrayStateChanged += Window_TrayStateChanged;
             Refresh();
             _notifyIcon.ForceCreate(enablesEfficiencyMode: false);
-            WarmUpContextMenu();
         }
         catch
         {
@@ -184,31 +175,6 @@ internal sealed class TrayIconService : IDisposable
         ExecuteRequestedEventArgs args)
     {
         Refresh();
-    }
-
-    private void WarmUpContextMenu()
-    {
-        try
-        {
-            // H.NotifyIcon 2.5 preloads its private SecondWindow host before the
-            // first measurement. Backport that behavior while this app remains
-            // on the library's .NET 8-compatible release line.
-            if (ContextMenuWindowProperty?.GetValue(_notifyIcon)
-                is not Microsoft.UI.Xaml.Window contextMenuWindow)
-            {
-                App.Log("Tray context menu warm-up was unavailable.");
-                return;
-            }
-
-            contextMenuWindow.Activate();
-            var windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(contextMenuWindow);
-            _ = ShowWindow(windowHandle, HideWindowCommand);
-            App.Log("Tray context menu warm-up completed.");
-        }
-        catch (Exception exception)
-        {
-            App.Log($"Tray context menu warm-up failed: {exception}");
-        }
     }
 
     private void Window_TrayStateChanged()
@@ -384,9 +350,6 @@ internal sealed class TrayIconService : IDisposable
 
         return (Icon)SystemIcons.Application.Clone();
     }
-
-    [DllImport("user32.dll")]
-    private static extern bool ShowWindow(nint windowHandle, int command);
 
     public void Dispose()
     {

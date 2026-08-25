@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const ProtocolVersion = 3
+const ProtocolVersion = 4
 
 type Controller struct {
 	mu                  sync.Mutex
@@ -70,6 +70,7 @@ type Controller struct {
 	logText                      string
 
 	forceGeneration            int
+	restartingCodexUI          bool
 	developerBuildAttemptKeys  map[string]string
 	disabledCleanupCompleted   bool
 	hasAttemptedInitialLaunch  bool
@@ -248,6 +249,7 @@ func (c *Controller) Snapshot() AppSnapshot {
 	presentation := NewPresentationContract(PresentationState{
 		Status: c.status, Enabled: c.config.Enabled,
 		CheckingNode: c.checkingNode, CheckingGit: c.checkingGit,
+		RestartingCodexUI:      c.restartingCodexUI,
 		CheckingRemoteUpdates:  c.checkingRemoteUpdates,
 		InstallingLocalPackage: c.installingLocalPackage, InstallingRemotePackage: c.installingRemotePackage,
 		ExportingPackage: len(c.exportingPackageIDs) > 0,

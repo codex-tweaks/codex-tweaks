@@ -110,7 +110,7 @@ final class BackendProtocolTests: XCTestCase {
             BackendAppSnapshot.self,
             """
             {
-              "protocolVersion": 3,
+              "protocolVersion": 4,
               "presentation": \(presentationJSON),
               "status": {"kind": "connected", "targetCount": 1},
               "enabled": true,
@@ -189,7 +189,7 @@ final class BackendProtocolTests: XCTestCase {
             }
             """
         )
-        XCTAssertEqual(snapshot.protocolVersion, 3)
+        XCTAssertEqual(snapshot.protocolVersion, 4)
         XCTAssertEqual(snapshot.presentation.version, 1)
         XCTAssertEqual(snapshot.status.targetCount, 1)
         XCTAssertEqual(snapshot.availableCapabilities.first?.id, "network")
@@ -206,6 +206,10 @@ final class BackendProtocolTests: XCTestCase {
         XCTAssertEqual(contract.text[PresentationTextKey.appName.rawValue], "Codex Tweaks")
         XCTAssertEqual(contract.tokens.accentColor, "#0A84FF")
         XCTAssertEqual(contract.platform.cdpEndpoint, "127.0.0.1:9335")
+        XCTAssertEqual(
+            contract.text[PresentationTextKey.overviewRestartCodexUI.rawValue],
+            "重启 Codex 界面"
+        )
         XCTAssertEqual(
             contract.platform.repositoryURL,
             "https://github.com/cr-zhichen/codex-tweaks"

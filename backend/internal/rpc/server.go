@@ -239,6 +239,8 @@ func (s *Server) dispatch(incoming request) (any, error) {
 	case "restartCodex":
 		c.RestartCodex()
 		return accepted(nil)
+	case "restartCodexUI":
+		return accepted(c.RestartCodexUI())
 	case "reinject":
 		c.Reinject()
 		return accepted(nil)

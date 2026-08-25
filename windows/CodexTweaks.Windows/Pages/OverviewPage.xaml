@@ -90,6 +90,32 @@
                             Toggled="EnableToggle_Toggled" />
                     </Grid>
                     <Border Style="{StaticResource CodexDividerStyle}" />
+                    <Grid ColumnSpacing="20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="3">
+                            <TextBlock
+                                x:Name="RestartCodexUITitle"
+                                Style="{StaticResource CodexBodyTextStyle}"
+                                FontWeight="SemiBold" />
+                            <TextBlock
+                                x:Name="RestartCodexUIDetail"
+                                Style="{StaticResource CodexCaptionTextStyle}" />
+                        </StackPanel>
+                        <Button
+                            x:Name="RestartCodexUIButton"
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Click="RestartCodexUIButton_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <SymbolIcon Symbol="Refresh" Style="{StaticResource CodexSmallIconStyle}" />
+                                <TextBlock x:Name="RestartCodexUIButtonText" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    <Border Style="{StaticResource CodexDividerStyle}" />
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />

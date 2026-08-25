@@ -15,7 +15,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var ErrCDPEndpointUnavailable = errors.New("Codex 未开启本地 CDP 端口")
+var (
+	ErrCDPEndpointUnavailable = errors.New("Codex 未开启本地 CDP 端口")
+	ErrNoCodexUITargets       = errors.New("没有发现可重启的 Codex 界面")
+)
 
 type CDPTarget struct {
 	ID                   string  `json:"id"`
@@ -54,6 +57,13 @@ type CDPInjectionResult struct {
 }
 
 func (r CDPInjectionResult) FailureCount() int { return r.TargetCount - r.SuccessCount }
+
+type CDPReloadResult struct {
+	TargetCount  int `json:"targetCount"`
+	SuccessCount int `json:"successCount"`
+}
+
+func (r CDPReloadResult) FailureCount() int { return r.TargetCount - r.SuccessCount }
 
 type CDPService struct {
 	Endpoint      string
@@ -129,6 +139,53 @@ func (s *CDPService) CleanupAllTargets(ctx context.Context) error {
 	return nil
 }
 
+func (s *CDPService) ReloadAllTargets(ctx context.Context) (CDPReloadResult, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	targets, err := s.discoverTargets(ctx)
+	if err != nil {
+		return CDPReloadResult{}, err
+	}
+	result := CDPReloadResult{TargetCount: len(targets)}
+	if len(targets) == 0 {
+		return result, ErrNoCodexUITargets
+	}
+
+	// Reloading invalidates every bridge token and page-scoped binding. Close the
+	// old sessions before navigation so no stale capability channel survives.
+	s.closeAllCapabilitySessionsLocked()
+	var firstError error
+	for _, target := range targets {
+		debuggerURL := *target.WebSocketDebuggerURL
+		// An injected package can pin the renderer in a long-running JavaScript
+		// task. Best-effort termination gives Page.reload a chance to run without
+		// making it a prerequisite for Chromium versions that reject the command.
+		_, _ = s.execute(ctx, "Runtime.terminateExecution", map[string]any{}, debuggerURL)
+		if _, err := s.execute(
+			ctx,
+			"Page.reload",
+			map[string]any{"ignoreCache": true},
+			debuggerURL,
+		); err != nil {
+			s.logError(fmt.Sprintf("目标 %s 界面重启失败：%v", target.ID, err))
+			if firstError == nil {
+				firstError = err
+			}
+			continue
+		}
+		result.SuccessCount++
+	}
+	if firstError != nil {
+		return result, fmt.Errorf(
+			"Codex 界面重启不完整（成功 %d/%d）：%w",
+			result.SuccessCount,
+			result.TargetCount,
+			firstError,
+		)
+	}
+	return result, nil
+}
+
 func (s *CDPService) discoverTargets(ctx context.Context) ([]CDPTarget, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, s.Endpoint, nil)
 	if err != nil {
@@ -160,6 +217,41 @@ func (s *CDPService) discoverTargets(ctx context.Context) ([]CDPTarget, error) {
 }
 
 func (s *CDPService) evaluate(ctx context.Context, expression, debuggerURL string) (map[string]any, error) {
+	response, err := s.execute(
+		ctx,
+		"Runtime.evaluate",
+		map[string]any{
+			"expression": expression, "returnByValue": true, "awaitPromise": true, "userGesture": false,
+		},
+		debuggerURL,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if exception, ok := response["exceptionDetails"].(map[string]any); ok {
+		description := ""
+		if exceptionValue, ok := exception["exception"].(map[string]any); ok {
+			description, _ = exceptionValue["description"].(string)
+		}
+		if description == "" {
+			description, _ = exception["text"].(string)
+		}
+		if description == "" {
+			description = "注入脚本执行失败"
+		}
+		return nil, errors.New("CDP 拒绝执行：" + description)
+	}
+	remoteObject, _ := response["result"].(map[string]any)
+	value, _ := remoteObject["value"].(map[string]any)
+	return value, nil
+}
+
+func (s *CDPService) execute(
+	ctx context.Context,
+	method string,
+	params map[string]any,
+	debuggerURL string,
+) (map[string]any, error) {
 	header := http.Header{}
 	header.Set("Origin", s.AllowedOrigin)
 	connection, _, err := s.dialer.DialContext(ctx, debuggerURL, header)
@@ -173,8 +265,7 @@ func (s *CDPService) evaluate(ctx context.Context, expression, debuggerURL strin
 	commandID := s.nextCommandID
 	s.nextCommandID++
 	command := map[string]any{
-		"id": commandID, "method": "Runtime.evaluate",
-		"params": map[string]any{"expression": expression, "returnByValue": true, "awaitPromise": true, "userGesture": false},
+		"id": commandID, "method": method, "params": params,
 	}
 	if err := connection.WriteJSON(command); err != nil {
 		return nil, err
@@ -200,22 +291,7 @@ func (s *CDPService) evaluate(ctx context.Context, expression, debuggerURL strin
 			return nil, errors.New("CDP 拒绝执行：" + message)
 		}
 		result, _ := response["result"].(map[string]any)
-		if exception, ok := result["exceptionDetails"].(map[string]any); ok {
-			description := ""
-			if exceptionValue, ok := exception["exception"].(map[string]any); ok {
-				description, _ = exceptionValue["description"].(string)
-			}
-			if description == "" {
-				description, _ = exception["text"].(string)
-			}
-			if description == "" {
-				description = "注入脚本执行失败"
-			}
-			return nil, errors.New("CDP 拒绝执行：" + description)
-		}
-		remoteObject, _ := result["result"].(map[string]any)
-		value, _ := remoteObject["value"].(map[string]any)
-		return value, nil
+		return result, nil
 	}
 }
 

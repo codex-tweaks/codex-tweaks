@@ -67,6 +67,10 @@ public sealed partial class OverviewPage : Page
             RestartButton.Visibility = snapshot.Presentation.Actions.RestartCodex
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+            RestartCodexUITitle.Text = host.Text(PresentationTextKey.OverviewRestartCodexUI);
+            RestartCodexUIDetail.Text = host.Text(PresentationTextKey.OverviewRestartCodexUIDetail);
+            RestartCodexUIButtonText.Text = host.Text(PresentationTextKey.OverviewRestartCodexUI);
+            RestartCodexUIButton.IsEnabled = snapshot.Presentation.Actions.RestartCodexUI;
             ReinjectButtonText.Text = host.Text(PresentationTextKey.OverviewReinject);
             ReinjectButton.IsEnabled = snapshot.Presentation.Actions.Reinject;
             ManagePackagesButtonText.Text = host.Text(PresentationTextKey.OverviewManagePackages);
@@ -112,6 +116,9 @@ public sealed partial class OverviewPage : Page
 
     private async void RestartButton_Click(object sender, RoutedEventArgs e) =>
         await RunButtonAsync(RestartButton, Host.ConfirmRestartAsync);
+
+    private async void RestartCodexUIButton_Click(object sender, RoutedEventArgs e) =>
+        await RunButtonAsync(RestartCodexUIButton, Host.ConfirmRestartCodexUIAsync);
 
     private async void ReinjectButton_Click(object sender, RoutedEventArgs e) =>
         await RunButtonAsync(ReinjectButton, () => Host.RunBackendAsync("reinject"));

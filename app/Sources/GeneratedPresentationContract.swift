@@ -17,6 +17,8 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case commonCopy = "common.copy"
     case commonOk = "common.ok"
     case commonOpen = "common.open"
+    case dialogRestartCodexUIMessage = "dialog.restartCodexUIMessage"
+    case dialogRestartCodexUITitle = "dialog.restartCodexUITitle"
     case dialogRestartMessage = "dialog.restartMessage"
     case dialogRestartTitle = "dialog.restartTitle"
     case logsClear = "logs.clear"
@@ -62,6 +64,8 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case overviewReinject = "overview.reinject"
     case overviewResources = "overview.resources"
     case overviewRestartAndConnect = "overview.restartAndConnect"
+    case overviewRestartCodexUI = "overview.restartCodexUI"
+    case overviewRestartCodexUIDetail = "overview.restartCodexUIDetail"
     case overviewRestartDetail = "overview.restartDetail"
     case overviewSubtitle = "overview.subtitle"
     case overviewTitle = "overview.title"
@@ -288,6 +292,7 @@ struct BackendPresentationTokens: Codable, Equatable, Sendable {
 struct BackendAvailableActions: Codable, Equatable, Sendable {
     let openCodex: Bool
     let restartCodex: Bool
+    let restartCodexUI: Bool
     let reinject: Bool
     let openPackagesDirectory: Bool
     let openLogFile: Bool
@@ -349,6 +354,8 @@ enum GeneratedPresentationDefaults {
         .commonCopy: "复制",
         .commonOk: "好",
         .commonOpen: "打开",
+        .dialogRestartCodexUIMessage: "这会重新加载所有已连接的 Codex 界面，但不会退出 Codex 主进程。未提交的输入可能丢失。",
+        .dialogRestartCodexUITitle: "重启 Codex 界面？",
         .dialogRestartMessage: "Codex 只有在启动时才能开启 CDP。重启后 Codex Tweaks 会自动恢复注入。",
         .dialogRestartTitle: "重新启动 Codex？",
         .logsClear: "清除日志",
@@ -394,6 +401,8 @@ enum GeneratedPresentationDefaults {
         .overviewReinject: "重新注入",
         .overviewResources: "资源目录",
         .overviewRestartAndConnect: "重启并连接",
+        .overviewRestartCodexUI: "重启 Codex 界面",
+        .overviewRestartCodexUIDetail: "只重新加载界面，不退出 Codex；界面被功能包卡住时可用来恢复。",
         .overviewRestartDetail: "需要重新启动 Codex 才能开启本地调试端口。",
         .overviewSubtitle: "连接状态、注入控制与常用入口集中在一个窗口中。",
         .overviewTitle: "管理 Codex 的本地界面增强",
@@ -594,5 +603,5 @@ enum GeneratedPresentationDefaults {
         .updateVersionBuild: "版本 {version}（构建 {build}）",
         .updateViewRelease: "查看 Release",
     ]
-    static let contract = BackendPresentationContract(version: 1, locale: "zh-CN", text: Dictionary(uniqueKeysWithValues: text.map { ($0.key.rawValue, $0.value) }), tokens: BackendPresentationTokens(windowMinWidth: 820, windowMinHeight: 560, windowDefaultWidth: 920, windowDefaultHeight: 640, navigationWidth: 220, contentMaxWidth: 1120, pagePadding: 32, sectionSpacing: 28, cardPadding: 20, cardCornerRadius: 14, controlSpacing: 12, compactSpacing: 7, statusIconSize: 36, animationFastMS: 120, animationStandardMS: 220, accentColor: "#0A84FF", successColor: "#30D158", warningColor: "#FF9F0A", dangerColor: "#FF453A"), actions: BackendAvailableActions(openCodex: true, restartCodex: false, reinject: false, openPackagesDirectory: true, openLogFile: true, openRepository: true, setEnabled: true, setDeveloperMode: true, reloadPackages: true, installLocalPackage: true, installRemotePackage: false, checkNodeEnvironment: true, checkGitEnvironment: true, checkManagedPackageUpdates: false, refreshLog: true, clearLog: false, readAuthoringPrompt: false, checkAppUpdate: true, setUpdatePreferences: true, installAppUpdate: false), status: BackendStatusPresentation(title: "正在启动", detail: "Codex Tweaks 正在建立本地连接。", tone: "accent"), platform: BackendPlatformPresentation(operatingSystem: "darwin", architecture: "universal", cdpEndpoint: "127.0.0.1:9335", repositoryURL: "https://github.com/cr-zhichen/codex-tweaks", updateInstallStrategy: "sparkle"))
+    static let contract = BackendPresentationContract(version: 1, locale: "zh-CN", text: Dictionary(uniqueKeysWithValues: text.map { ($0.key.rawValue, $0.value) }), tokens: BackendPresentationTokens(windowMinWidth: 820, windowMinHeight: 560, windowDefaultWidth: 920, windowDefaultHeight: 640, navigationWidth: 220, contentMaxWidth: 1120, pagePadding: 32, sectionSpacing: 28, cardPadding: 20, cardCornerRadius: 14, controlSpacing: 12, compactSpacing: 7, statusIconSize: 36, animationFastMS: 120, animationStandardMS: 220, accentColor: "#0A84FF", successColor: "#30D158", warningColor: "#FF9F0A", dangerColor: "#FF453A"), actions: BackendAvailableActions(openCodex: true, restartCodex: false, restartCodexUI: false, reinject: false, openPackagesDirectory: true, openLogFile: true, openRepository: true, setEnabled: true, setDeveloperMode: true, reloadPackages: true, installLocalPackage: true, installRemotePackage: false, checkNodeEnvironment: true, checkGitEnvironment: true, checkManagedPackageUpdates: false, refreshLog: true, clearLog: false, readAuthoringPrompt: false, checkAppUpdate: true, setUpdatePreferences: true, installAppUpdate: false), status: BackendStatusPresentation(title: "正在启动", detail: "Codex Tweaks 正在建立本地连接。", tone: "accent"), platform: BackendPlatformPresentation(operatingSystem: "darwin", architecture: "universal", cdpEndpoint: "127.0.0.1:9335", repositoryURL: "https://github.com/cr-zhichen/codex-tweaks", updateInstallStrategy: "sparkle"))
 }

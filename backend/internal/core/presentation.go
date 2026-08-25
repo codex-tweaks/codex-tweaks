@@ -33,6 +33,7 @@ type PresentationTokens struct {
 type AvailableActions struct {
 	OpenCodex                  bool `json:"openCodex"`
 	RestartCodex               bool `json:"restartCodex"`
+	RestartCodexUI             bool `json:"restartCodexUI"`
 	Reinject                   bool `json:"reinject"`
 	OpenPackagesDirectory      bool `json:"openPackagesDirectory"`
 	OpenLogFile                bool `json:"openLogFile"`
@@ -80,6 +81,7 @@ type PresentationContract struct {
 type PresentationState struct {
 	Status                   AppStatus
 	Enabled                  bool
+	RestartingCodexUI        bool
 	CheckingNode             bool
 	CheckingGit              bool
 	CheckingRemoteUpdates    bool
@@ -100,6 +102,7 @@ func NewPresentationContract(state PresentationState) PresentationContract {
 func NewPresentationContractForPlatform(state PresentationState, operatingSystem, architecture string) PresentationContract {
 	text := PresentationText()
 	cdpAvailable := state.Status.Kind == StatusWaitingForPage || state.Status.Kind == StatusConnected || state.Status.Kind == StatusDisabled
+	uiRestartAvailable := state.Status.Kind == StatusConnected || state.Status.Kind == StatusDisabled || state.Status.Kind == StatusError
 	strategy := "openDownload"
 	if operatingSystem == "darwin" {
 		strategy = "sparkle"
@@ -114,7 +117,8 @@ func NewPresentationContractForPlatform(state PresentationState, operatingSystem
 		Actions: AvailableActions{
 			OpenCodex:                  true,
 			RestartCodex:               state.Status.Kind == StatusRestartRequired,
-			Reinject:                   state.Enabled && cdpAvailable,
+			RestartCodexUI:             uiRestartAvailable && !state.RestartingCodexUI,
+			Reinject:                   state.Enabled && cdpAvailable && !state.RestartingCodexUI,
 			OpenPackagesDirectory:      true,
 			OpenLogFile:                true,
 			OpenRepository:             true,
@@ -255,6 +259,8 @@ func PresentationText() map[string]string {
 		"overview.enable":                             "启用界面增强",
 		"overview.enableDetail":                       "停用后会清理已注入的样式、组件和事件监听器。",
 		"overview.reinject":                           "重新注入",
+		"overview.restartCodexUI":                     "重启 Codex 界面",
+		"overview.restartCodexUIDetail":               "只重新加载界面，不退出 Codex；界面被功能包卡住时可用来恢复。",
 		"overview.managePackages":                     "管理功能包",
 		"overview.viewLogs":                           "查看日志",
 		"overview.aiAuthoring":                        "交给 AI 编写",
@@ -482,5 +488,7 @@ func PresentationText() map[string]string {
 		"menu.quit":                                   "退出 Codex Tweaks",
 		"dialog.restartTitle":                         "重新启动 Codex？",
 		"dialog.restartMessage":                       "Codex 只有在启动时才能开启 CDP。重启后 Codex Tweaks 会自动恢复注入。",
+		"dialog.restartCodexUITitle":                  "重启 Codex 界面？",
+		"dialog.restartCodexUIMessage":                "这会重新加载所有已连接的 Codex 界面，但不会退出 Codex 主进程。未提交的输入可能丢失。",
 	}
 }

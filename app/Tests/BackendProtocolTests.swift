@@ -60,8 +60,10 @@ final class BackendProtocolTests: XCTestCase {
                 "type": "module",
                 "dependencies": {},
                 "codexTweaks": {
-                  "apiVersion": 2,
-                  "entry": "src/index.js",
+                  "apiVersion": 3,
+                  "entrypoints": {
+                    "renderer": "src/index.js"
+                  },
                   "priority": 100,
                   "packageDependencies": {}
                 }
@@ -90,7 +92,8 @@ final class BackendProtocolTests: XCTestCase {
                 "installMissingDependencies": false,
                 "enableDependencies": false,
                 "updateManagedPackage": false,
-                "build": true
+                "build": true,
+                "authorizeNode": false
               },
               "presentation": {
                 "statusTitle": "尚未编译",
@@ -110,47 +113,12 @@ final class BackendProtocolTests: XCTestCase {
             BackendAppSnapshot.self,
             """
             {
-              "protocolVersion": 4,
+              "protocolVersion": 5,
               "presentation": \(presentationJSON),
               "status": {"kind": "connected", "targetCount": 1},
               "enabled": true,
               "developerMode": false,
-              "availableCapabilities": [{
-                "descriptorVersion": 1,
-                "id": "network",
-                "version": "1.0.0",
-                "summary": "Host-scoped HTTPS requests.",
-                "usage": {
-                  "useWhen": ["Renderer fetch is unavailable."],
-                  "constraints": ["Only granted public HTTPS origins."],
-                  "manifestExample": "{}",
-                  "runtimeExample": "api.capabilities.require(\\"network\\")"
-                },
-                "manifest": {
-                  "requirementJSONPointer": "/codexTweaks/capabilities/network",
-                  "fields": [{
-                    "path": "version",
-                    "type": "string",
-                    "required": true,
-                    "description": "Independent version requirement."
-                  }]
-                },
-                "runtime": {
-                  "scope": "all-renderers",
-                  "requiredAccess": "api.capabilities.require(\\"network\\")",
-                  "optionalAccess": "api.capabilities.get(\\"network\\")",
-                  "properties": [],
-                  "methods": [{
-                    "name": "request",
-                    "async": true,
-                    "signature": "request(options) => Promise<response>",
-                    "description": "Performs one request.",
-                    "inputs": [],
-                    "outputs": [],
-                    "errors": []
-                  }]
-                }
-              }],
+              "developerAllowUnknownNode": false,
               "packages": [],
               "disabledPackageIDs": [],
               "buildingPackageIDs": [],
@@ -189,15 +157,10 @@ final class BackendProtocolTests: XCTestCase {
             }
             """
         )
-        XCTAssertEqual(snapshot.protocolVersion, 4)
+        XCTAssertEqual(snapshot.protocolVersion, 5)
         XCTAssertEqual(snapshot.presentation.version, 1)
         XCTAssertEqual(snapshot.status.targetCount, 1)
-        XCTAssertEqual(snapshot.availableCapabilities.first?.id, "network")
-        XCTAssertEqual(snapshot.availableCapabilities.first?.runtime.methods.first?.isAsync, true)
-        XCTAssertEqual(
-            snapshot.availableCapabilities.first?.manifest.requirementJSONPointer,
-            "/codexTweaks/capabilities/network"
-        )
+        XCTAssertFalse(snapshot.developerAllowUnknownNode)
         XCTAssertEqual(snapshot.update.channel, .stable)
     }
 

@@ -74,6 +74,17 @@ type PackageView struct {
 	CanEnableDependencies         bool                         `json:"canEnableDependencies"`
 	AvailableActions              PackageAvailableActions      `json:"availableActions"`
 	Presentation                  PackagePresentation          `json:"presentation"`
+	Node                          *PackageNodeView             `json:"node,omitempty"`
+}
+
+type PackageNodeView struct {
+	AuthorizationID      string `json:"authorizationID"`
+	Reason               string `json:"reason"`
+	Status               string `json:"status"`
+	Authorized           bool   `json:"authorized"`
+	ExplicitlyAuthorized bool   `json:"explicitlyAuthorized"`
+	AutomaticallyAllowed bool   `json:"automaticallyAllowed"`
+	Running              bool   `json:"running"`
 }
 
 type PackagePresentation struct {
@@ -93,6 +104,7 @@ type PackageAvailableActions struct {
 	EnableDependencies         bool `json:"enableDependencies"`
 	UpdateManagedPackage       bool `json:"updateManagedPackage"`
 	Build                      bool `json:"build"`
+	AuthorizeNode              bool `json:"authorizeNode"`
 }
 
 type UpdateSnapshot struct {
@@ -118,7 +130,7 @@ type AppSnapshot struct {
 	Status                     AppStatus                     `json:"status"`
 	Enabled                    bool                          `json:"enabled"`
 	DeveloperMode              bool                          `json:"developerMode"`
-	AvailableCapabilities      []CapabilityDescriptor        `json:"availableCapabilities"`
+	DeveloperAllowUnknownNode  bool                          `json:"developerAllowUnknownNode"`
 	Packages                   []PackageView                 `json:"packages"`
 	DisabledPackageIDs         []string                      `json:"disabledPackageIDs"`
 	BuildingPackageIDs         []string                      `json:"buildingPackageIDs"`

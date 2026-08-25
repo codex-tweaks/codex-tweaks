@@ -71,7 +71,8 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 	var state struct {
 		ID     int `json:"id"`
 		Result struct {
-			AvailableCapabilities []core.CapabilityDescriptor `json:"availableCapabilities"`
+			ProtocolVersion           int  `json:"protocolVersion"`
+			DeveloperAllowUnknownNode bool `json:"developerAllowUnknownNode"`
 		} `json:"result"`
 	}
 	foundState := false
@@ -98,9 +99,8 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 	if !foundInitialize || initialize.Result.ProtocolVersion != core.ProtocolVersion {
 		t.Fatalf("initialize response not found in %q", output.String())
 	}
-	if !foundState || len(state.Result.AvailableCapabilities) == 0 ||
-		state.Result.AvailableCapabilities[0].Usage.RuntimeExample == "" {
-		t.Fatalf("getState did not expose usable availableCapabilities: %q", output.String())
+	if !foundState || state.Result.ProtocolVersion != core.ProtocolVersion || state.Result.DeveloperAllowUnknownNode {
+		t.Fatalf("getState did not expose the v5 non-persistent Node default: %q", output.String())
 	}
 }
 

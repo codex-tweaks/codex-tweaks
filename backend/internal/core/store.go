@@ -1,17 +1,20 @@
 package core
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
-	"hash/fnv"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 type Store struct {
@@ -19,6 +22,7 @@ type Store struct {
 	PackagesDirectory        string
 	StateDirectory           string
 	PackageSettingsPath      string
+	NodeAuthorizationsPath   string
 	ManagedPackagesDirectory string
 	ManagedSourcesDirectory  string
 	ManagedRegistryPath      string
@@ -50,6 +54,7 @@ func NewStore(applicationSupport, caches, bundledPackages string) (*Store, error
 		PackagesDirectory:        filepath.Join(tweaks, "packages"),
 		StateDirectory:           state,
 		PackageSettingsPath:      filepath.Join(state, "package-settings.json"),
+		NodeAuthorizationsPath:   filepath.Join(state, "node-authorizations.json"),
 		ManagedPackagesDirectory: managed,
 		ManagedSourcesDirectory:  filepath.Join(managed, "sources"),
 		ManagedRegistryPath:      filepath.Join(managed, "registry.json"),
@@ -184,7 +189,11 @@ func (s *Store) InspectPackage(directory string, origin PackageOrigin, priorityO
 	if err := readJSON(manifestPath, &manifest); err != nil {
 		return invalid(err)
 	}
-	if err := validateManifest(manifest, directory); err != nil {
+	if err := validateManifest(&manifest, directory); err != nil {
+		return invalid(err)
+	}
+	manifestFingerprint, err := fingerprintManifest(manifestPath)
+	if err != nil {
 		return invalid(err)
 	}
 	if expectedPackageID != "" && manifest.Name != expectedPackageID {
@@ -201,12 +210,13 @@ func (s *Store) InspectPackage(directory string, origin PackageOrigin, priorityO
 	activeBuild, _ := s.loadActiveBuild(manifest.Name)
 	return Package{
 		ID: manifest.Name, DirectoryName: directoryName, Directory: directory, Manifest: &manifest,
-		SourceFingerprint: &sourceFingerprint, DependencyFingerprint: &dependencyFingerprint,
+		ManifestFingerprint: &manifestFingerprint,
+		SourceFingerprint:   &sourceFingerprint, DependencyFingerprint: &dependencyFingerprint,
 		ActiveBuild: activeBuild, PriorityOverride: priorityOverride, Origin: origin,
 	}
 }
 
-func validateManifest(manifest PackageManifest, packageDirectory string) error {
+func validateManifest(manifest *PackageManifest, packageDirectory string) error {
 	if strings.TrimSpace(manifest.Name) == "" || strings.ContainsRune(manifest.Name, 0) || strings.Contains(manifest.Name, "..") {
 		return errors.New("package.json 中的 name 无效。")
 	}
@@ -237,22 +247,61 @@ func validateManifest(manifest PackageManifest, packageDirectory string) error {
 			}
 		}
 	}
-	if _, err := ResolveCapabilityRequirements(manifest.CodexTweaks.Capabilities); err != nil {
+	nodeEntry := manifest.CodexTweaks.Entrypoints.Node
+	nodePermission := manifest.CodexTweaks.Permissions.Node
+	if (nodeEntry == nil) != (nodePermission == nil) {
+		return errors.New("entrypoints.node 与 permissions.node 必须同时声明。")
+	}
+	if nodePermission != nil {
+		nodePermission.Reason = strings.TrimSpace(nodePermission.Reason)
+		if utf8.RuneCountInString(nodePermission.Reason) < 1 || utf8.RuneCountInString(nodePermission.Reason) > 1000 {
+			return errors.New("permissions.node.reason 必须为 1 到 1000 个字符。")
+		}
+		for _, value := range nodePermission.Reason {
+			if unicode.Is(unicode.Cf, value) || unicode.IsControl(value) && value != '\n' && value != '\r' && value != '\t' {
+				return errors.New("permissions.node.reason 包含不支持的控制或格式字符。")
+			}
+		}
+	}
+	if err := normalizePackageUI(&manifest.CodexTweaks.UI); err != nil {
 		return err
 	}
 	root, err := filepath.EvalSymlinks(packageDirectory)
 	if err != nil {
-		return fmt.Errorf("入口文件不存在或超出包目录：%s", manifest.CodexTweaks.Entry)
+		return fmt.Errorf("Renderer 入口文件不存在或超出包目录：%s", manifest.CodexTweaks.Entrypoints.Renderer)
 	}
-	entryPath := filepath.Join(packageDirectory, filepath.FromSlash(manifest.CodexTweaks.Entry))
-	if !isRegularNonSymlink(entryPath) {
-		return fmt.Errorf("入口文件不存在或超出包目录：%s", manifest.CodexTweaks.Entry)
+	if err := validatePackageEntry(packageDirectory, root, manifest.CodexTweaks.Entrypoints.Renderer, "Renderer"); err != nil {
+		return err
 	}
-	resolvedEntry, err := filepath.EvalSymlinks(entryPath)
-	if err != nil || !pathIsWithin(resolvedEntry, root) || resolvedEntry == root {
-		return fmt.Errorf("入口文件不存在或超出包目录：%s", manifest.CodexTweaks.Entry)
+	if nodeEntry != nil {
+		trimmed := strings.TrimSpace(*nodeEntry)
+		manifest.CodexTweaks.Entrypoints.Node = &trimmed
+		if err := validatePackageEntry(packageDirectory, root, trimmed, "Node"); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func validatePackageEntry(packageDirectory, resolvedRoot, entry, label string) error {
+	entry = strings.TrimSpace(entry)
+	entryPath := filepath.Join(packageDirectory, filepath.FromSlash(entry))
+	if entry == "" || !isRegularNonSymlink(entryPath) {
+		return fmt.Errorf("%s 入口文件不存在或超出包目录：%s", label, entry)
+	}
+	resolvedEntry, err := filepath.EvalSymlinks(entryPath)
+	if err != nil || !pathIsWithin(resolvedEntry, resolvedRoot) || resolvedEntry == resolvedRoot {
+		return fmt.Errorf("%s 入口文件不存在或超出包目录：%s", label, entry)
+	}
+	return nil
+}
+
+func fingerprintManifest(manifestPath string) (string, error) {
+	contents, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return "", err
+	}
+	return SecureFingerprintBytes(contents), nil
 }
 
 func fingerprintPackage(manifest PackageManifest, packageDirectory string) (string, error) {
@@ -294,14 +343,6 @@ func fingerprintPackage(manifest PackageManifest, packageDirectory string) (stri
 		state.Update(contents)
 		state.Separator()
 	}
-	if len(manifest.CodexTweaks.Capabilities) > 0 {
-		capabilities, err := json.Marshal(manifest.CodexTweaks.Capabilities)
-		if err != nil {
-			return "", err
-		}
-		state.Update(capabilities)
-		state.Separator()
-	}
 	return state.Value(), nil
 }
 
@@ -311,7 +352,11 @@ func fingerprintDependencies(manifest PackageManifest, packageDirectory string) 
 	if manifest.Type != nil {
 		typeValue = *manifest.Type
 	}
-	for _, value := range []string{typeValue, strconv.Itoa(manifest.CodexTweaks.APIVersion), manifest.CodexTweaks.Entry} {
+	nodeEntry := ""
+	if manifest.CodexTweaks.Entrypoints.Node != nil {
+		nodeEntry = *manifest.CodexTweaks.Entrypoints.Node
+	}
+	for _, value := range []string{typeValue, strconv.Itoa(manifest.CodexTweaks.APIVersion), manifest.CodexTweaks.Entrypoints.Renderer, nodeEntry} {
 		state.Update([]byte(value))
 		state.Separator()
 	}
@@ -368,8 +413,24 @@ func (s *Store) loadActiveBuild(packageID string) (*ActivePackageBuild, error) {
 		return nil, errors.New("当前构建记录或编译产物无效。")
 	}
 	output := filepath.Join(cacheDirectory, "builds", record.BuildDirectoryName)
-	if !isRegularNonSymlink(filepath.Join(output, "bundle.js")) || record.HasCSS && !isRegularNonSymlink(filepath.Join(output, "bundle.css")) {
+	if !isRegularNonSymlink(filepath.Join(output, "bundle.js")) || record.HasCSS && !isRegularNonSymlink(filepath.Join(output, "bundle.css")) || record.HasNode && !isRegularNonSymlink(filepath.Join(output, "node-bundle.cjs")) {
 		return nil, errors.New("当前构建记录或编译产物无效。")
+	}
+	rendererBundle, err := os.ReadFile(filepath.Join(output, "bundle.js"))
+	if err != nil || record.RendererFingerprint == "" || SecureFingerprintBytes(rendererBundle) != record.RendererFingerprint {
+		return nil, errors.New("当前 Renderer 编译产物已发生变化。")
+	}
+	if record.HasCSS {
+		cssBundle, err := os.ReadFile(filepath.Join(output, "bundle.css"))
+		if err != nil || record.CSSFingerprint == "" || SecureFingerprintBytes(cssBundle) != record.CSSFingerprint {
+			return nil, errors.New("当前 CSS 编译产物已发生变化。")
+		}
+	}
+	if record.HasNode {
+		nodeBundle, err := os.ReadFile(filepath.Join(output, "node-bundle.cjs"))
+		if err != nil || record.NodeBundleFingerprint == "" || SecureFingerprintBytes(nodeBundle) != record.NodeBundleFingerprint {
+			return nil, errors.New("当前 Node 编译产物已发生变化。")
+		}
 	}
 	return &ActivePackageBuild{Record: record, OutputDirectory: output}, nil
 }
@@ -441,10 +502,20 @@ func (s *Store) LoadManagedLockfile() (ManagedPackageLockfile, error) {
 	return lockfile, nil
 }
 
-func (s *Store) LoadPayload(packages []Package, disabledPackageIDs map[string]bool) PayloadLoadResult {
+func (s *Store) LoadPayload(
+	packages []Package,
+	disabledPackageIDs map[string]bool,
+	nodeAuthorizedPackageIDs map[string]bool,
+) PayloadLoadResult {
 	compiled := []CompiledPackage{}
 	errorsByPackage := map[string]string{}
-	resolution := ResolveDependencies(packages, disabledPackageIDs)
+	effectiveDisabled := cloneSet(disabledPackageIDs)
+	for _, pkg := range packages {
+		if pkg.Manifest != nil && pkg.Manifest.CodexTweaks.Permissions.Node != nil && !nodeAuthorizedPackageIDs[pkg.ID] {
+			effectiveDisabled[pkg.ID] = true
+		}
+	}
+	resolution := ResolveDependencies(packages, effectiveDisabled)
 	for packageID, issues := range resolution.IssuesByPackageID {
 		if !disabledPackageIDs[packageID] && len(issues) > 0 {
 			errorsByPackage[packageID] = strings.Join(issues, " ")
@@ -452,6 +523,10 @@ func (s *Store) LoadPayload(packages []Package, disabledPackageIDs map[string]bo
 	}
 	for _, pkg := range resolution.LoadablePackages {
 		if pkg.Manifest == nil || pkg.ActiveBuild == nil || pkg.ValidationError != nil {
+			continue
+		}
+		record := pkg.ActiveBuild.Record
+		if record.NodePermission != nil && (!nodeAuthorizedPackageIDs[pkg.ID] || pkg.BuildDisposition(CompilerVersion) != BuildCurrent) {
 			continue
 		}
 		javascript, err := os.ReadFile(pkg.ActiveBuild.JavaScriptPath())
@@ -467,26 +542,34 @@ func (s *Store) LoadPayload(packages []Package, disabledPackageIDs map[string]bo
 				continue
 			}
 		}
-		capabilities, err := resolvePackageCapabilities(pkg.ID, pkg.ActiveBuild.Record.Capabilities)
+		ui, err := compilePackageUI(pkg.ID, record.UI)
 		if err != nil {
 			errorsByPackage[pkg.ID] = err.Error()
 			continue
 		}
+		var node *CompiledPackageNode
+		if record.NodePermission != nil {
+			node = &CompiledPackageNode{
+				AuthorizationID: NodeAuthorizationID(pkg),
+				Reason:          record.NodePermission.Reason,
+			}
+		}
 		compiled = append(compiled, CompiledPackage{
-			ID: pkg.ID, Name: pkg.Manifest.Name, Version: pkg.ActiveBuild.Record.PackageVersion,
-			BuildFingerprint: pkg.ActiveBuild.Record.SourceFingerprint + "-" + pkg.ActiveBuild.Record.DependencyFingerprint + "-" + pkg.ActiveBuild.Record.CompilerVersion,
-			DependencyIDs:    sortedStringKeys(pkg.ActiveBuild.Record.PackageDependencies), Capabilities: capabilities,
+			ID: pkg.ID, Name: pkg.Manifest.Name, Version: record.PackageVersion,
+			BuildFingerprint: record.ManifestFingerprint + "-" + record.SourceFingerprint + "-" + record.DependencyFingerprint + "-" + record.CompilerVersion,
+			DependencyIDs:    sortedStringKeys(record.PackageDependencies), UI: ui, Node: node,
 			CSS: string(css), JavaScript: string(javascript),
 		})
 	}
 	materials := make([]string, 0, len(compiled))
 	for _, pkg := range compiled {
-		capabilities, _ := json.Marshal(pkg.Capabilities)
-		materials = append(materials, strings.Join([]string{
-			pkg.ID, pkg.Version, pkg.BuildFingerprint, string(capabilities), pkg.CSS, pkg.JavaScript,
-		}, "\x00"))
+		ui, _ := json.Marshal(pkg.UI)
+		node, _ := json.Marshal(pkg.Node)
+		materials = append(materials, SecureFingerprintStrings(
+			pkg.ID, pkg.Version, pkg.BuildFingerprint, string(ui), string(node), pkg.CSS, pkg.JavaScript,
+		))
 	}
-	return PayloadLoadResult{Payload: Payload{Packages: compiled, Version: FingerprintString(strings.Join(materials, "\x00"))}, PackageErrors: errorsByPackage}
+	return PayloadLoadResult{Payload: Payload{Packages: compiled, Version: SecureFingerprintStrings(materials...)}, PackageErrors: errorsByPackage}
 }
 
 func directoryExists(path string) bool {
@@ -494,9 +577,14 @@ func directoryExists(path string) bool {
 	return err == nil && info.IsDir()
 }
 
-type fingerprintState struct{ hash hash.Hash64 }
+type fingerprintState struct{ hash hash.Hash }
 
-func newFingerprintState() *fingerprintState    { return &fingerprintState{hash: fnv.New64a()} }
-func (s *fingerprintState) Update(value []byte) { _, _ = s.hash.Write(value) }
-func (s *fingerprintState) Separator()          { _, _ = s.hash.Write([]byte{0}) }
-func (s *fingerprintState) Value() string       { return fmt.Sprintf("%016x", s.hash.Sum64()) }
+func newFingerprintState() *fingerprintState { return &fingerprintState{hash: sha256.New()} }
+func (s *fingerprintState) Update(value []byte) {
+	var length [8]byte
+	binary.BigEndian.PutUint64(length[:], uint64(len(value)))
+	_, _ = s.hash.Write(length[:])
+	_, _ = s.hash.Write(value)
+}
+func (s *fingerprintState) Separator()    { _, _ = s.hash.Write([]byte{0}) }
+func (s *fingerprintState) Value() string { return fmt.Sprintf("%x", s.hash.Sum(nil)) }

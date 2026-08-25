@@ -73,8 +73,8 @@ type CDPService struct {
 	logger        *Logger
 	mu            sync.Mutex
 	nextCommandID int
-	broker        *CapabilityBroker
-	sessions      map[string]*capabilitySession
+	nodeInvoker   NodeInvoker
+	sessions      map[string]*rendererBridgeSession
 }
 
 func NewCDPService(logger *Logger) *CDPService {
@@ -83,7 +83,7 @@ func NewCDPService(logger *Logger) *CDPService {
 		httpClient: &http.Client{Timeout: 5 * time.Second},
 		dialer:     &websocket.Dialer{HandshakeTimeout: 5 * time.Second, Proxy: http.ProxyFromEnvironment},
 		logger:     logger, nextCommandID: 1,
-		broker: NewCapabilityBroker(), sessions: map[string]*capabilitySession{},
+		sessions: map[string]*rendererBridgeSession{},
 	}
 }
 
@@ -92,18 +92,18 @@ func (s *CDPService) Inject(ctx context.Context, payload Payload, forceGeneratio
 	defer s.mu.Unlock()
 	targets, err := s.discoverTargets(ctx)
 	if err != nil {
-		s.closeAllCapabilitySessionsLocked()
+		s.closeAllRendererSessionsLocked()
 		return CDPInjectionResult{}, err
 	}
-	s.reconcileCapabilitySessionsLocked(targets)
+	s.reconcileRendererSessionsLocked(targets)
 	result := CDPInjectionResult{TargetCount: len(targets), PackageErrors: map[string]string{}}
 	for _, target := range targets {
-		bridgeSessionID, capabilityTokens, settingsAdapter, err := s.capabilityBridgeForTargetLocked(ctx, target, payload)
+		bridgeSessionID, nodeTokens, settingsAdapter, err := s.rendererBridgeForTargetLocked(ctx, target, payload)
 		if err != nil {
 			s.logError(fmt.Sprintf("目标 %s 无法建立能力通道：%v", target.ID, err))
 			continue
 		}
-		script := injectionScriptWithCapabilities(payload, forceGeneration, bridgeSessionID, capabilityTokens, settingsAdapter)
+		script := injectionScriptWithRendererBridge(payload, forceGeneration, bridgeSessionID, nodeTokens, settingsAdapter)
 		value, err := s.evaluate(ctx, script, *target.WebSocketDebuggerURL)
 		if err != nil {
 			s.logError(fmt.Sprintf("目标 %s 注入失败：%v", target.ID, err))
@@ -126,7 +126,7 @@ func (s *CDPService) Inject(ctx context.Context, payload Payload, forceGeneratio
 func (s *CDPService) CleanupAllTargets(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	defer s.closeAllCapabilitySessionsLocked()
+	defer s.closeAllRendererSessionsLocked()
 	targets, err := s.discoverTargets(ctx)
 	if err != nil {
 		return err
@@ -152,8 +152,8 @@ func (s *CDPService) ReloadAllTargets(ctx context.Context) (CDPReloadResult, err
 	}
 
 	// Reloading invalidates every bridge token and page-scoped binding. Close the
-	// old sessions before navigation so no stale capability channel survives.
-	s.closeAllCapabilitySessionsLocked()
+	// old sessions before navigation so no stale Renderer bridge token survives.
+	s.closeAllRendererSessionsLocked()
 	var firstError error
 	for _, target := range targets {
 		debuggerURL := *target.WebSocketDebuggerURL

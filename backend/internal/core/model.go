@@ -2,7 +2,10 @@ package core
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"strings"
@@ -10,7 +13,7 @@ import (
 )
 
 const (
-	APIVersion      = 2
+	APIVersion      = 3
 	CompilerVersion = "0.25.9"
 )
 
@@ -57,19 +60,141 @@ type PackageDependency struct {
 	Source  *PackageSource `json:"source,omitempty"`
 }
 
+type PackageEntrypoints struct {
+	Renderer string  `json:"renderer"`
+	Node     *string `json:"node,omitempty"`
+}
+
+func (e *PackageEntrypoints) UnmarshalJSON(data []byte) error {
+	if err := rejectUnknownJSONFields(data, "codexTweaks.entrypoints", "renderer", "node"); err != nil {
+		return err
+	}
+	type entrypoints PackageEntrypoints
+	value := entrypoints{}
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*e = PackageEntrypoints(value)
+	return nil
+}
+
+type PackageNodePermission struct {
+	Reason string `json:"reason"`
+}
+
+func (p *PackageNodePermission) UnmarshalJSON(data []byte) error {
+	if err := rejectUnknownJSONFields(data, "permissions.node", "reason"); err != nil {
+		return err
+	}
+	type permission PackageNodePermission
+	value := permission{}
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*p = PackageNodePermission(value)
+	return nil
+}
+
+type PackagePermissions struct {
+	Node *PackageNodePermission `json:"node,omitempty"`
+}
+
+func (p *PackagePermissions) UnmarshalJSON(data []byte) error {
+	if err := rejectUnknownJSONFields(data, "codexTweaks.permissions", "node"); err != nil {
+		return err
+	}
+	type permissions PackagePermissions
+	value := permissions{}
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*p = PackagePermissions(value)
+	return nil
+}
+
+type PackageUIConfiguration struct {
+	SettingsSections *SettingsSectionsExtension `json:"settingsSections,omitempty"`
+}
+
+func (c *PackageUIConfiguration) UnmarshalJSON(data []byte) error {
+	if err := rejectUnknownJSONFields(data, "codexTweaks.ui", "settingsSections"); err != nil {
+		return err
+	}
+	type configuration PackageUIConfiguration
+	value := configuration{}
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*c = PackageUIConfiguration(value)
+	return nil
+}
+
+type SettingsSectionsExtension struct {
+	APIVersion int                            `json:"apiVersion"`
+	Required   *bool                          `json:"required,omitempty"`
+	Items      []UISettingsSectionDeclaration `json:"items"`
+}
+
+func (e *SettingsSectionsExtension) UnmarshalJSON(data []byte) error {
+	if err := rejectUnknownJSONFields(data, "ui.settingsSections", "apiVersion", "required", "items"); err != nil {
+		return err
+	}
+	type extension SettingsSectionsExtension
+	value := extension{}
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*e = SettingsSectionsExtension(value)
+	return nil
+}
+
+type UISettingsSectionDeclaration struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	Group string `json:"group,omitempty"`
+	Icon  string `json:"icon,omitempty"`
+	After string `json:"after,omitempty"`
+}
+
+func (d *UISettingsSectionDeclaration) UnmarshalJSON(data []byte) error {
+	if err := rejectUnknownJSONFields(data, "ui.settingsSections.items", "id", "title", "group", "icon", "after"); err != nil {
+		return err
+	}
+	type declaration UISettingsSectionDeclaration
+	value := declaration{}
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*d = UISettingsSectionDeclaration(value)
+	return nil
+}
+
 type PackageConfiguration struct {
-	APIVersion          int                              `json:"apiVersion"`
-	Entry               string                           `json:"entry"`
-	Priority            int                              `json:"priority"`
-	PackageDependencies map[string]PackageDependency     `json:"packageDependencies"`
-	Capabilities        map[string]CapabilityRequirement `json:"capabilities,omitempty"`
+	APIVersion          int                          `json:"apiVersion"`
+	Entrypoints         PackageEntrypoints           `json:"entrypoints"`
+	Priority            int                          `json:"priority"`
+	PackageDependencies map[string]PackageDependency `json:"packageDependencies"`
+	Permissions         PackagePermissions           `json:"permissions,omitempty"`
+	UI                  PackageUIConfiguration       `json:"ui,omitempty"`
 }
 
 func (c *PackageConfiguration) UnmarshalJSON(data []byte) error {
+	fields := map[string]json.RawMessage{}
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	if _, exists := fields["entry"]; exists {
+		return errors.New("API v3 必须使用 codexTweaks.entrypoints.renderer，不能使用 entry。")
+	}
+	if _, exists := fields["capabilities"]; exists {
+		return errors.New("API v3 已移除 codexTweaks.capabilities；请迁移到 permissions.node 或 codexTweaks.ui。")
+	}
+	if err := rejectUnknownJSONFieldMap(fields, "codexTweaks", "apiVersion", "entrypoints", "priority", "packageDependencies", "permissions", "ui"); err != nil {
+		return err
+	}
 	type configuration PackageConfiguration
 	value := configuration{
-		APIVersion: APIVersion, PackageDependencies: map[string]PackageDependency{},
-		Capabilities: map[string]CapabilityRequirement{},
+		PackageDependencies: map[string]PackageDependency{},
 	}
 	if err := json.Unmarshal(data, &value); err != nil {
 		return err
@@ -77,10 +202,28 @@ func (c *PackageConfiguration) UnmarshalJSON(data []byte) error {
 	if value.PackageDependencies == nil {
 		value.PackageDependencies = map[string]PackageDependency{}
 	}
-	if value.Capabilities == nil {
-		value.Capabilities = map[string]CapabilityRequirement{}
-	}
 	*c = PackageConfiguration(value)
+	return nil
+}
+
+func rejectUnknownJSONFields(data []byte, label string, allowed ...string) error {
+	fields := map[string]json.RawMessage{}
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	return rejectUnknownJSONFieldMap(fields, label, allowed...)
+}
+
+func rejectUnknownJSONFieldMap(fields map[string]json.RawMessage, label string, allowed ...string) error {
+	allowedFields := make(map[string]bool, len(allowed))
+	for _, field := range allowed {
+		allowedFields[field] = true
+	}
+	for field := range fields {
+		if !allowedFields[field] {
+			return fmt.Errorf("%s 包含不支持的字段：%s", label, field)
+		}
+	}
 	return nil
 }
 
@@ -128,33 +271,36 @@ func (t *CodableTime) UnmarshalJSON(data []byte) error {
 }
 
 type PackageBuildRecord struct {
-	PackageID             string                           `json:"packageID"`
-	PackageVersion        string                           `json:"packageVersion"`
-	PackageDependencies   map[string]string                `json:"packageDependencies"`
-	Capabilities          map[string]CapabilityRequirement `json:"capabilities,omitempty"`
-	SourceFingerprint     string                           `json:"sourceFingerprint"`
-	DependencyFingerprint string                           `json:"dependencyFingerprint"`
-	CompilerVersion       string                           `json:"compilerVersion"`
-	NodeVersion           string                           `json:"nodeVersion"`
-	BuildDirectoryName    string                           `json:"buildDirectoryName"`
-	HasCSS                bool                             `json:"hasCSS"`
-	BuiltAt               CodableTime                      `json:"builtAt"`
+	PackageID             string                 `json:"packageID"`
+	PackageVersion        string                 `json:"packageVersion"`
+	PackageDependencies   map[string]string      `json:"packageDependencies"`
+	Entrypoints           PackageEntrypoints     `json:"entrypoints"`
+	NodePermission        *PackageNodePermission `json:"nodePermission,omitempty"`
+	UI                    PackageUIConfiguration `json:"ui,omitempty"`
+	ManifestFingerprint   string                 `json:"manifestFingerprint"`
+	SourceFingerprint     string                 `json:"sourceFingerprint"`
+	DependencyFingerprint string                 `json:"dependencyFingerprint"`
+	RendererFingerprint   string                 `json:"rendererFingerprint"`
+	CSSFingerprint        string                 `json:"cssFingerprint,omitempty"`
+	NodeBundleFingerprint string                 `json:"nodeBundleFingerprint,omitempty"`
+	CompilerVersion       string                 `json:"compilerVersion"`
+	NodeVersion           string                 `json:"nodeVersion"`
+	BuildDirectoryName    string                 `json:"buildDirectoryName"`
+	HasCSS                bool                   `json:"hasCSS"`
+	HasNode               bool                   `json:"hasNode"`
+	BuiltAt               CodableTime            `json:"builtAt"`
 }
 
 func (r *PackageBuildRecord) UnmarshalJSON(data []byte) error {
 	type record PackageBuildRecord
 	value := record{
 		PackageDependencies: map[string]string{},
-		Capabilities:        map[string]CapabilityRequirement{},
 	}
 	if err := json.Unmarshal(data, &value); err != nil {
 		return err
 	}
 	if value.PackageDependencies == nil {
 		value.PackageDependencies = map[string]string{}
-	}
-	if value.Capabilities == nil {
-		value.Capabilities = map[string]CapabilityRequirement{}
 	}
 	*r = PackageBuildRecord(value)
 	return nil
@@ -167,6 +313,9 @@ type ActivePackageBuild struct {
 
 func (b ActivePackageBuild) JavaScriptPath() string { return joinPath(b.OutputDirectory, "bundle.js") }
 func (b ActivePackageBuild) CSSPath() string        { return joinPath(b.OutputDirectory, "bundle.css") }
+func (b ActivePackageBuild) NodeJavaScriptPath() string {
+	return joinPath(b.OutputDirectory, "node-bundle.cjs")
+}
 
 type ManagedPackageRegistration struct {
 	PackageID             string        `json:"packageID"`
@@ -255,6 +404,7 @@ type Package struct {
 	DirectoryName         string              `json:"directoryName"`
 	Directory             string              `json:"directory"`
 	Manifest              *PackageManifest    `json:"manifest,omitempty"`
+	ManifestFingerprint   *string             `json:"manifestFingerprint,omitempty"`
 	SourceFingerprint     *string             `json:"sourceFingerprint,omitempty"`
 	DependencyFingerprint *string             `json:"dependencyFingerprint,omitempty"`
 	ActiveBuild           *ActivePackageBuild `json:"activeBuild,omitempty"`
@@ -330,6 +480,9 @@ func (p Package) BuildDisposition(compilerVersion string) BuildDisposition {
 	if record.DependencyFingerprint != *p.DependencyFingerprint {
 		return BuildDependencyUpdate
 	}
+	if p.ManifestFingerprint == nil || record.ManifestFingerprint != *p.ManifestFingerprint {
+		return BuildSourceChanged
+	}
 	if record.SourceFingerprint != *p.SourceFingerprint {
 		return BuildSourceChanged
 	}
@@ -343,7 +496,10 @@ func (p Package) BuildRequestKey(compilerVersion string) (string, bool) {
 	if p.ValidationError != nil || p.Manifest == nil || p.SourceFingerprint == nil || p.DependencyFingerprint == nil {
 		return "", false
 	}
-	return strings.Join([]string{p.Manifest.Version, *p.SourceFingerprint, *p.DependencyFingerprint, compilerVersion}, "\x00"), true
+	if p.ManifestFingerprint == nil {
+		return "", false
+	}
+	return strings.Join([]string{p.Manifest.Version, *p.ManifestFingerprint, *p.SourceFingerprint, *p.DependencyFingerprint, compilerVersion}, "\x00"), true
 }
 
 type EnablementReconciliation struct {
@@ -378,14 +534,29 @@ func ReconcileEnablement(discovered, known, disabled map[string]bool, hasKnownBa
 }
 
 type CompiledPackage struct {
-	ID               string                       `json:"id"`
-	Name             string                       `json:"name"`
-	Version          string                       `json:"version"`
-	BuildFingerprint string                       `json:"buildFingerprint"`
-	DependencyIDs    []string                     `json:"dependencyIDs"`
-	Capabilities     map[string]GrantedCapability `json:"capabilities,omitempty"`
-	CSS              string                       `json:"css"`
-	JavaScript       string                       `json:"javascript"`
+	ID               string               `json:"id"`
+	Name             string               `json:"name"`
+	Version          string               `json:"version"`
+	BuildFingerprint string               `json:"buildFingerprint"`
+	DependencyIDs    []string             `json:"dependencyIDs"`
+	UI               CompiledPackageUI    `json:"ui,omitempty"`
+	Node             *CompiledPackageNode `json:"node,omitempty"`
+	CSS              string               `json:"css"`
+	JavaScript       string               `json:"javascript"`
+}
+
+type CompiledPackageUI struct {
+	SettingsSections *CompiledSettingsSections `json:"settingsSections,omitempty"`
+}
+
+type CompiledSettingsSections struct {
+	Required bool                     `json:"required"`
+	Items    []RuntimeSettingsSection `json:"items"`
+}
+
+type CompiledPackageNode struct {
+	AuthorizationID string `json:"authorizationID"`
+	Reason          string `json:"reason"`
 }
 
 type Payload struct {
@@ -404,6 +575,24 @@ func FingerprintBytes(value []byte) string {
 	hash := fnv.New64a()
 	_, _ = hash.Write(value)
 	return fmt.Sprintf("%016x", hash.Sum64())
+}
+
+func SecureFingerprintString(value string) string { return SecureFingerprintBytes([]byte(value)) }
+
+func SecureFingerprintBytes(value []byte) string {
+	digest := sha256.Sum256(value)
+	return fmt.Sprintf("%x", digest)
+}
+
+func SecureFingerprintStrings(values ...string) string {
+	hash := sha256.New()
+	var length [8]byte
+	for _, value := range values {
+		binary.BigEndian.PutUint64(length[:], uint64(len(value)))
+		_, _ = hash.Write(length[:])
+		_, _ = hash.Write([]byte(value))
+	}
+	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 func JSONLiteral(value any) string {

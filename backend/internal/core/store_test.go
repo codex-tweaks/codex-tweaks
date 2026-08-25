@@ -2,8 +2,10 @@ package core
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -63,7 +65,7 @@ func TestStoreBuildDispositionAndPayload(t *testing.T) {
 	if got := pkg.BuildDisposition(CompilerVersion); got != BuildCurrent {
 		t.Fatalf("got %s", got)
 	}
-	payload := store.LoadPayload(packages, map[string]bool{})
+	payload := store.LoadPayload(packages, map[string]bool{}, map[string]bool{})
 	if len(payload.Payload.Packages) != 1 || payload.Payload.Packages[0].JavaScript != "demo-js" || payload.Payload.Packages[0].CSS != "demo-css" {
 		t.Fatalf("unexpected payload: %#v", payload)
 	}
@@ -115,19 +117,23 @@ func TestStorePriorityOverrideIsSeparateAndNormalized(t *testing.T) {
 	}
 }
 
-func TestStoreCarriesCapabilitiesWithoutChangingPackageAPIVersion(t *testing.T) {
+func TestStoreCarriesNodeAndUIDeclarationsAndInvalidatesManifestRevision(t *testing.T) {
 	store, _ := newTestStore(t)
-	directory := makeStorePackage(t, store, "capable", "capable", "1.0.0", 0, nil, "")
+	directory := makeStorePackage(t, store, "node-package", "node-package", "1.0.0", 0, nil, "")
 	manifest := PackageManifest{}
 	manifestPath := filepath.Join(directory, "package.json")
 	if err := readJSON(manifestPath, &manifest); err != nil {
 		t.Fatal(err)
 	}
-	manifest.CodexTweaks.Capabilities = map[string]CapabilityRequirement{
-		NetworkCapabilityID: {
-			Version:     "^1.0.0",
-			Permissions: json.RawMessage(`{"origins":["https://example.com"]}`),
-		},
+	nodeEntry := "src/node.js"
+	manifest.CodexTweaks.Entrypoints.Node = &nodeEntry
+	manifest.CodexTweaks.Permissions.Node = &PackageNodePermission{Reason: "读取用户选择的文件并生成缩略图。"}
+	manifest.CodexTweaks.UI.SettingsSections = &SettingsSectionsExtension{
+		APIVersion: 1,
+		Items:      []UISettingsSectionDeclaration{{ID: "appearance-extra", Title: "扩展外观"}},
+	}
+	if err := os.WriteFile(filepath.Join(directory, "src", "node.js"), []byte("export function activate() {}"), 0o600); err != nil {
+		t.Fatal(err)
 	}
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
@@ -138,36 +144,140 @@ func TestStoreCarriesCapabilitiesWithoutChangingPackageAPIVersion(t *testing.T) 
 	}
 	packages, err := store.LoadPackages()
 	if err != nil || len(packages) != 1 || packages[0].ValidationError != nil {
-		t.Fatalf("capability manifest failed: %v %#v", err, packages)
+		t.Fatalf("Node manifest failed: %v %#v", err, packages)
 	}
 	if packages[0].Manifest.CodexTweaks.APIVersion != APIVersion {
 		t.Fatalf("package API version changed: %d", packages[0].Manifest.CodexTweaks.APIVersion)
 	}
-	activateTestBuild(t, store, packages[0], "capable-js", "")
+	activateTestBuild(t, store, packages[0], "node-js", "")
 	packages, _ = store.LoadPackages()
-	payload := store.LoadPayload(packages, map[string]bool{})
-	grant, ok := payload.Payload.Packages[0].Capabilities[NetworkCapabilityID]
-	if !ok || grant.Version != NetworkCapabilityVersion {
-		t.Fatalf("capability grant missing from payload: %#v", payload)
+	if payload := store.LoadPayload(packages, map[string]bool{}, map[string]bool{}); len(payload.Payload.Packages) != 0 {
+		t.Fatalf("unauthorized Node package entered payload: %#v", payload)
+	}
+	payload := store.LoadPayload(packages, map[string]bool{}, map[string]bool{"node-package": true})
+	if len(payload.Payload.Packages) != 1 || payload.Payload.Packages[0].Node == nil ||
+		payload.Payload.Packages[0].UI.SettingsSections == nil {
+		t.Fatalf("Node/UI declarations missing from payload: %#v", payload)
 	}
 
 	initialFingerprint := *packages[0].SourceFingerprint
 	initialDependencyFingerprint := *packages[0].DependencyFingerprint
-	manifest.CodexTweaks.Capabilities[NetworkCapabilityID] = CapabilityRequirement{
-		Version:     "^1.0.0",
-		Permissions: json.RawMessage(`{"origins":["https://changed.example"]}`),
-	}
+	manifest.CodexTweaks.Permissions.Node.Reason = "用途说明已经变化，必须重新授权。"
 	data, _ = json.MarshalIndent(manifest, "", "  ")
 	if err := os.WriteFile(manifestPath, data, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	packages, _ = store.LoadPackages()
-	if *packages[0].SourceFingerprint == initialFingerprint ||
+	if *packages[0].SourceFingerprint != initialFingerprint ||
 		packages[0].BuildDisposition(CompilerVersion) != BuildSourceChanged {
-		t.Fatalf("capability change did not invalidate build: %#v", packages[0])
+		t.Fatalf("manifest change did not invalidate build independently: %#v", packages[0])
 	}
 	if *packages[0].DependencyFingerprint != initialDependencyFingerprint {
-		t.Fatalf("capability change was classified as a dependency update: %#v", packages[0])
+		t.Fatalf("manifest change was classified as a dependency update: %#v", packages[0])
+	}
+	if err := os.WriteFile(packages[0].ActiveBuild.JavaScriptPath(), []byte("tampered"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	tamperedPackages, _ := store.LoadPackages()
+	if tamperedPackages[0].ActiveBuild != nil {
+		t.Fatal("changed Renderer bundle remained an active executable build")
+	}
+	if err := os.WriteFile(packages[0].ActiveBuild.JavaScriptPath(), []byte("node-js"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(packages[0].ActiveBuild.NodeJavaScriptPath(), []byte("tampered"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	packages, _ = store.LoadPackages()
+	if packages[0].ActiveBuild != nil {
+		t.Fatal("changed Node bundle remained an active executable build")
+	}
+}
+
+func TestStoreRejectsLegacyAndIncompleteNodeDeclarations(t *testing.T) {
+	store, _ := newTestStore(t)
+	tests := []struct {
+		name      string
+		mutate    func(map[string]any)
+		wantError string
+		needsNode bool
+	}{
+		{
+			name: "missing API version",
+			mutate: func(configuration map[string]any) {
+				delete(configuration, "apiVersion")
+			},
+			wantError: "API v0",
+		},
+		{
+			name: "legacy entry",
+			mutate: func(configuration map[string]any) {
+				delete(configuration, "entrypoints")
+				configuration["entry"] = "src/index.js"
+			},
+			wantError: "不能使用 entry",
+		},
+		{
+			name: "legacy capabilities",
+			mutate: func(configuration map[string]any) {
+				configuration["capabilities"] = map[string]any{"network": map[string]any{}}
+			},
+			wantError: "已移除 codexTweaks.capabilities",
+		},
+		{
+			name: "unknown UI extension",
+			mutate: func(configuration map[string]any) {
+				configuration["ui"] = map[string]any{"generic": map[string]any{}}
+			},
+			wantError: "codexTweaks.ui 包含不支持的字段",
+		},
+		{
+			name: "Node entry without permission",
+			mutate: func(configuration map[string]any) {
+				configuration["entrypoints"].(map[string]any)["node"] = "src/node.js"
+			},
+			wantError: "必须同时声明",
+			needsNode: true,
+		},
+		{
+			name: "blank Node reason",
+			mutate: func(configuration map[string]any) {
+				configuration["entrypoints"].(map[string]any)["node"] = "src/node.js"
+				configuration["permissions"] = map[string]any{
+					"node": map[string]any{"reason": "  "},
+				}
+			},
+			wantError: "reason 必须为 1 到 1000",
+			needsNode: true,
+		},
+	}
+	for index, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			directoryName := fmt.Sprintf("invalid-%d", index)
+			directory := makeStorePackage(t, store, directoryName, directoryName, "1.0.0", 0, nil, "")
+			if test.needsNode {
+				if err := os.WriteFile(filepath.Join(directory, "src", "node.js"), []byte("export function activate() {}"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			manifest := map[string]any{}
+			manifestPath := filepath.Join(directory, "package.json")
+			if err := readJSON(manifestPath, &manifest); err != nil {
+				t.Fatal(err)
+			}
+			test.mutate(manifest["codexTweaks"].(map[string]any))
+			contents, err := json.MarshalIndent(manifest, "", "  ")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(manifestPath, contents, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			pkg := store.InspectPackage(directory, LocalOrigin(), nil, "")
+			if pkg.ValidationError == nil || !strings.Contains(*pkg.ValidationError, test.wantError) {
+				t.Fatalf("validation error = %v, want %q", pkg.ValidationError, test.wantError)
+			}
+		})
 	}
 }
 
@@ -194,7 +304,7 @@ func makeStorePackage(t *testing.T, store *Store, directory, name, version strin
 		t.Fatal(err)
 	}
 	typeValue := "module"
-	manifest := PackageManifest{Name: name, Version: version, Description: name, Type: &typeValue, Dependencies: dependencies, CodexTweaks: PackageConfiguration{APIVersion: 2, Entry: "src/index.js", Priority: priority, PackageDependencies: map[string]PackageDependency{}}}
+	manifest := PackageManifest{Name: name, Version: version, Description: name, Type: &typeValue, Dependencies: dependencies, CodexTweaks: PackageConfiguration{APIVersion: APIVersion, Entrypoints: PackageEntrypoints{Renderer: "src/index.js"}, Priority: priority, PackageDependencies: map[string]PackageDependency{}}}
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		t.Fatal(err)
@@ -228,7 +338,30 @@ func activateTestBuild(t *testing.T, store *Store, pkg Package, javascript, css 
 			t.Fatal(err)
 		}
 	}
-	record := PackageBuildRecord{PackageID: pkg.ID, PackageVersion: pkg.Manifest.Version, PackageDependencies: map[string]string{}, Capabilities: cloneCapabilityRequirements(pkg.Manifest.CodexTweaks.Capabilities), SourceFingerprint: *pkg.SourceFingerprint, DependencyFingerprint: *pkg.DependencyFingerprint, CompilerVersion: CompilerVersion, NodeVersion: "v24", BuildDirectoryName: "test-build", HasCSS: css != "", BuiltAt: NewCodableTime(time.Now())}
+	hasNode := pkg.Manifest.CodexTweaks.Entrypoints.Node != nil
+	cssFingerprint := ""
+	if css != "" {
+		cssFingerprint = SecureFingerprintString(css)
+	}
+	nodeBundleFingerprint := ""
+	if hasNode {
+		nodeBundle := []byte("module.exports.activate = () => {}")
+		if err := os.WriteFile(filepath.Join(buildDirectory, "node-bundle.cjs"), nodeBundle, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		nodeBundleFingerprint = SecureFingerprintBytes(nodeBundle)
+	}
+	record := PackageBuildRecord{
+		PackageID: pkg.ID, PackageVersion: pkg.Manifest.Version,
+		PackageDependencies: map[string]string{}, Entrypoints: pkg.Manifest.CodexTweaks.Entrypoints,
+		NodePermission: pkg.Manifest.CodexTweaks.Permissions.Node, UI: pkg.Manifest.CodexTweaks.UI,
+		ManifestFingerprint: *pkg.ManifestFingerprint, SourceFingerprint: *pkg.SourceFingerprint,
+		DependencyFingerprint: *pkg.DependencyFingerprint,
+		RendererFingerprint:   SecureFingerprintString(javascript),
+		CSSFingerprint:        cssFingerprint, NodeBundleFingerprint: nodeBundleFingerprint,
+		CompilerVersion: CompilerVersion, NodeVersion: "v24", BuildDirectoryName: "test-build",
+		HasCSS: css != "", HasNode: hasNode, BuiltAt: NewCodableTime(time.Now()),
+	}
 	if err := store.ActivateBuild(record); err != nil {
 		t.Fatal(err)
 	}

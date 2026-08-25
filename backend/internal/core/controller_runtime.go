@@ -80,6 +80,9 @@ func (c *Controller) Refresh() {
 	cleanupCompleted := c.disabledCleanupCompleted
 	c.mu.Unlock()
 	if !enabled {
+		if c.nodeRuntime != nil {
+			c.nodeRuntime.StopAll()
+		}
 		if !cleanupCompleted {
 			ctx, cancel := context.WithTimeout(c.ctx, 6*time.Second)
 			_ = c.cdp.CleanupAllTargets(ctx)
@@ -95,7 +98,20 @@ func (c *Controller) Refresh() {
 	}
 	c.mu.Lock()
 	c.disabledCleanupCompleted = false
+	packages := append([]Package(nil), c.packages...)
+	disabled := cloneSet(c.disabledPackageIDs)
+	trust := c.nodeTrustByPackageIDLocked()
+	nodeEnvironment := cloneNodeEnvironment(c.nodeEnvironment)
 	c.mu.Unlock()
+	if c.nodeRuntime != nil {
+		c.nodeRuntime.Reconcile(c.ctx, packages, disabled, trust, nodeEnvironment)
+		nodeErrors := c.nodeRuntime.RuntimeErrors()
+		c.mu.Lock()
+		for packageID, message := range nodeErrors {
+			c.packageRuntimeErrors[packageID] = message
+		}
+		c.mu.Unlock()
+	}
 
 	running, err := c.platform.IsCodexRunning(c.ctx)
 	if err != nil {
@@ -127,11 +143,18 @@ func (c *Controller) Refresh() {
 	}
 	c.mu.Lock()
 	c.hasAttemptedInitialLaunch = true
-	packages := append([]Package(nil), c.packages...)
-	disabled := cloneSet(c.disabledPackageIDs)
 	forceGeneration := c.forceGeneration
 	c.mu.Unlock()
-	loadResult := c.store.LoadPayload(packages, disabled)
+	nodeRunnable := map[string]bool{}
+	if c.nodeRuntime != nil {
+		runningNodePackages := c.nodeRuntime.RunningPackageIDs()
+		for packageID, mode := range trust {
+			if mode != "" && runningNodePackages[packageID] {
+				nodeRunnable[packageID] = true
+			}
+		}
+	}
+	loadResult := c.store.LoadPayload(packages, disabled, nodeRunnable)
 	c.mu.Lock()
 	c.packagePayloadErrors = loadResult.PackageErrors
 	c.mu.Unlock()
@@ -147,11 +170,18 @@ func (c *Controller) Refresh() {
 		return
 	}
 	c.mu.Lock()
-	if !stringMapsEqual(result.PackageErrors, c.packageRuntimeErrors) {
+	combinedRuntimeErrors := map[string]string{}
+	if c.nodeRuntime != nil {
+		combinedRuntimeErrors = c.nodeRuntime.RuntimeErrors()
+	}
+	for packageID, message := range result.PackageErrors {
+		combinedRuntimeErrors[packageID] = message
+	}
+	if !stringMapsEqual(combinedRuntimeErrors, c.packageRuntimeErrors) {
 		for packageID, message := range result.PackageErrors {
 			c.logger.Error("功能包 " + packageID + " 运行失败：" + message)
 		}
-		c.packageRuntimeErrors = result.PackageErrors
+		c.packageRuntimeErrors = combinedRuntimeErrors
 	}
 	switch {
 	case result.TargetCount == 0:

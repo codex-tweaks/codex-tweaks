@@ -14,7 +14,7 @@ var appInitialScriptPattern = regexp.MustCompile(`/app-initial-[A-Za-z0-9_-]+\.j
 var settingsPageImportPattern = regexp.MustCompile("import\\(`(\\./settings-page-[A-Za-z0-9_-]+\\.js)`\\)")
 var visibilityAssetPattern = regexp.MustCompile(`\./use-visible-settings-sections-[A-Za-z0-9_-]+\.js`)
 
-func (s *capabilitySession) ensureSettingsAdapter(
+func (s *rendererBridgeSession) ensureSettingsAdapter(
 	ctx context.Context,
 	payload Payload,
 ) (*SettingsAdapterConfiguration, error) {
@@ -84,7 +84,7 @@ func matchAsset(pattern *regexp.Regexp, source string) string {
 	return pattern.FindString(source)
 }
 
-func (s *capabilitySession) findScript(pattern *regexp.Regexp) (string, string) {
+func (s *rendererBridgeSession) findScript(pattern *regexp.Regexp) (string, string) {
 	s.scriptMu.RLock()
 	defer s.scriptMu.RUnlock()
 	for scriptURL, scriptID := range s.scripts {
@@ -95,7 +95,7 @@ func (s *capabilitySession) findScript(pattern *regexp.Regexp) (string, string) 
 	return "", ""
 }
 
-func (s *capabilitySession) waitForMatchingScript(
+func (s *rendererBridgeSession) waitForMatchingScript(
 	ctx context.Context,
 	pattern *regexp.Regexp,
 ) (string, string) {
@@ -120,7 +120,7 @@ func (s *capabilitySession) waitForMatchingScript(
 	}
 }
 
-func (s *capabilitySession) waitForScript(ctx context.Context, scriptURL string) string {
+func (s *rendererBridgeSession) waitForScript(ctx context.Context, scriptURL string) string {
 	ticker := time.NewTicker(20 * time.Millisecond)
 	defer ticker.Stop()
 	timer := time.NewTimer(2 * time.Second)
@@ -142,7 +142,7 @@ func (s *capabilitySession) waitForScript(ctx context.Context, scriptURL string)
 	}
 }
 
-func (s *capabilitySession) getScriptSource(ctx context.Context, scriptID string) (string, error) {
+func (s *rendererBridgeSession) getScriptSource(ctx context.Context, scriptID string) (string, error) {
 	raw, err := s.call(ctx, "Debugger.getScriptSource", map[string]any{"scriptId": scriptID})
 	if err != nil {
 		return "", err
@@ -156,7 +156,7 @@ func (s *capabilitySession) getScriptSource(ctx context.Context, scriptID string
 	return result.ScriptSource, nil
 }
 
-func (s *capabilitySession) importModule(ctx context.Context, moduleURL string) error {
+func (s *rendererBridgeSession) importModule(ctx context.Context, moduleURL string) error {
 	expression := fmt.Sprintf("import(%s).then(() => true)", JSONLiteral(moduleURL))
 	raw, err := s.call(ctx, "Runtime.evaluate", map[string]any{
 		"expression": expression, "returnByValue": true, "awaitPromise": true, "userGesture": false,

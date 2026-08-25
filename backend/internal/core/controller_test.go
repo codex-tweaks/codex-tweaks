@@ -83,6 +83,178 @@ func TestControllerUsesGoDefaultsReadsSkillAndDisablesNewPackages(t *testing.T) 
 	}
 }
 
+func TestDeveloperNodeAutomaticTrustNeverPersistsAcrossBackendRestart(t *testing.T) {
+	root := t.TempDir()
+	params := InitializeParams{
+		ApplicationSupportDirectory: filepath.Join(root, "support"),
+		CacheDirectory:              filepath.Join(root, "cache"),
+		CurrentVersion:              "0.1.0",
+		BuildNumber:                 "1",
+	}
+	controller, err := NewController(params, nil, ControllerDependencies{DisableBackground: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := controller.SetDeveloperMode(true); err != nil {
+		t.Fatal(err)
+	}
+	if err := controller.SetDeveloperAllowUnknownNode(true); err != nil {
+		t.Fatal(err)
+	}
+	if snapshot := controller.Snapshot(); !snapshot.DeveloperMode || !snapshot.DeveloperAllowUnknownNode {
+		t.Fatalf("developer Node trust was not enabled: %#v", snapshot)
+	}
+	controller.nodeRuntime.StopAll()
+	controller.cancel()
+
+	restarted, err := NewController(params, nil, ControllerDependencies{DisableBackground: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restarted.cancel()
+	if snapshot := restarted.Snapshot(); !snapshot.DeveloperMode || snapshot.DeveloperAllowUnknownNode {
+		t.Fatalf("automatic Node trust persisted across restart: %#v", snapshot)
+	}
+}
+
+func TestGlobalMasterSwitchBlocksNodeRuntimeEnvironment(t *testing.T) {
+	controller := &Controller{
+		config:          AppConfiguration{Enabled: false},
+		nodeEnvironment: &NodeEnvironment{NodePath: "/node", NPMPath: "/npm", NPXPath: "/npx"},
+	}
+	controller.mu.Lock()
+	defer controller.mu.Unlock()
+	if environment := controller.enabledNodeEnvironmentLocked(); environment != nil {
+		t.Fatalf("disabled master switch exposed a Node runtime environment: %#v", environment)
+	}
+	controller.config.Enabled = true
+	if environment := controller.enabledNodeEnvironmentLocked(); environment == nil || environment.NodePath != "/node" {
+		t.Fatalf("enabled master switch lost the Node runtime environment: %#v", environment)
+	}
+}
+
+func TestControllerRevokesExplicitNodeAuthorizationOnDisableAndRevisionChange(t *testing.T) {
+	root := t.TempDir()
+	params := InitializeParams{
+		ApplicationSupportDirectory: filepath.Join(root, "support"),
+		CacheDirectory:              filepath.Join(root, "cache"),
+		CurrentVersion:              "0.1.0",
+		BuildNumber:                 "1",
+	}
+	controller, err := NewController(
+		params,
+		nil,
+		ControllerDependencies{DisableBackground: true},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer controller.cancel()
+	controller.mu.Lock()
+	controller.config.Enabled = false
+	controller.disabledCleanupCompleted = true
+	controller.mu.Unlock()
+
+	directory := makeStorePackage(t, controller.store, "node-lifecycle", "node-lifecycle", "1.0.0", 0, nil, "")
+	manifestPath := filepath.Join(directory, "package.json")
+	manifest := PackageManifest{}
+	if err := readJSON(manifestPath, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	nodeEntry := "src/node.js"
+	manifest.CodexTweaks.Entrypoints.Node = &nodeEntry
+	manifest.CodexTweaks.Permissions.Node = &PackageNodePermission{Reason: "读取本地测试文件。"}
+	if err := os.WriteFile(filepath.Join(directory, "src", "node.js"), []byte("export function activate() {}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifestData, _ := json.MarshalIndent(manifest, "", "  ")
+	if err := os.WriteFile(manifestPath, manifestData, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := controller.ReloadPackages(); err != nil {
+		t.Fatal(err)
+	}
+	pkg, _ := controller.packageByID("node-lifecycle")
+	activateTestBuild(t, controller.store, pkg, "renderer", "")
+	if err := controller.ReloadPackages(); err != nil {
+		t.Fatal(err)
+	}
+
+	snapshot := controller.Snapshot()
+	node := snapshot.Packages[0].Node
+	if node == nil || node.AuthorizationID == "" || node.Authorized {
+		t.Fatalf("unexpected initial Node authorization state: %#v", node)
+	}
+	if err := controller.AuthorizeNodePackage("node-lifecycle", node.AuthorizationID); err == nil {
+		t.Fatal("disabled Node package accepted an authorization")
+	}
+	if err := controller.SetPackageEnabled("node-lifecycle", true); err != nil {
+		t.Fatal(err)
+	}
+	if err := controller.AuthorizeNodePackage("node-lifecycle", node.AuthorizationID); err != nil {
+		t.Fatal(err)
+	}
+	if authorized := controller.Snapshot().Packages[0].Node; authorized == nil || !authorized.ExplicitlyAuthorized {
+		t.Fatalf("explicit authorization was not applied: %#v", authorized)
+	}
+	controller.mu.Lock()
+	controller.config.Enabled = true
+	controller.disabledCleanupCompleted = true
+	controller.mu.Unlock()
+	if err := controller.SetEnabled(false); err != nil {
+		t.Fatal(err)
+	}
+	if records := controller.nodeAuthorizations; len(records) != 1 {
+		t.Fatalf("global master switch revoked explicit authorization: %#v", records)
+	}
+	restarted, err := NewController(params, nil, ControllerDependencies{DisableBackground: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restartedNode := restarted.Snapshot().Packages[0].Node; restartedNode == nil || !restartedNode.ExplicitlyAuthorized {
+		t.Fatalf("explicit authorization did not survive a backend restart: %#v", restartedNode)
+	}
+	restarted.cancel()
+	if err := controller.SetPackageEnabled("node-lifecycle", false); err != nil {
+		t.Fatal(err)
+	}
+	if records := controller.nodeAuthorizations; len(records) != 0 {
+		t.Fatalf("package disable retained explicit authorization: %#v", records)
+	}
+	staleRecords := map[string]NodeAuthorizationRecord{}
+	authorizeNodeRecord(staleRecords, "node-lifecycle", node.AuthorizationID)
+	if err := controller.store.SaveNodeAuthorizations(staleRecords); err != nil {
+		t.Fatal(err)
+	}
+	controller.mu.Lock()
+	controller.nodeAuthorizations = staleRecords
+	controller.mu.Unlock()
+	if err := controller.ReloadPackages(); err != nil {
+		t.Fatal(err)
+	}
+	if records, err := controller.store.LoadNodeAuthorizations(); err != nil || len(records) != 0 {
+		t.Fatalf("disabled package revived a stale authorization: %#v, %v", records, err)
+	}
+	if err := controller.SetPackageEnabled("node-lifecycle", true); err != nil {
+		t.Fatal(err)
+	}
+	if pending := controller.Snapshot().Packages[0].Node; pending == nil || pending.Authorized {
+		t.Fatalf("package re-enable did not return to pending authorization: %#v", pending)
+	}
+	if err := controller.AuthorizeNodePackage("node-lifecycle", node.AuthorizationID); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(directory, "src", "node.js"), []byte("export function activate() { return () => {}; }"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := controller.ReloadPackages(); err != nil {
+		t.Fatal(err)
+	}
+	if records := controller.nodeAuthorizations; len(records) != 0 {
+		t.Fatalf("source revision change retained explicit authorization: %#v", records)
+	}
+}
+
 func TestControllerKeepsManualBuildAvailableForLocalPackageChanges(t *testing.T) {
 	root := t.TempDir()
 	controller, err := NewController(

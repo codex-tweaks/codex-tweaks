@@ -33,6 +33,18 @@ func (c *Controller) updatePackages() error {
 	c.packageDependencyIssues = resolution.IssuesByPackageID
 	c.packagePriorityConstraints = resolution.PriorityConstraintsByPackageID
 	c.packages = resolution.OrderedPackages
+	installedByID := map[string]Package{}
+	for _, pkg := range resolution.OrderedPackages {
+		installedByID[pkg.ID] = pkg
+	}
+	nodeAuthorizationsChanged := false
+	for packageID, authorization := range c.nodeAuthorizations {
+		if c.disabledPackageIDs[packageID] || NodeAuthorizationID(installedByID[packageID]) != authorization.AuthorizationID {
+			delete(c.nodeAuthorizations, packageID)
+			nodeAuthorizationsChanged = true
+		}
+	}
+	c.clearUnauthorizedNodeRuntimeErrorsLocked()
 	currentRequestKeys := map[string]string{}
 	for _, pkg := range resolution.OrderedPackages {
 		if key, ok := pkg.BuildRequestKey(CompilerVersion); ok {
@@ -46,6 +58,9 @@ func (c *Controller) updatePackages() error {
 		}
 	}
 	err = c.persistConfigurationLocked()
+	if err == nil && nodeAuthorizationsChanged {
+		err = c.store.SaveNodeAuthorizations(c.nodeAuthorizations)
+	}
 	c.mu.Unlock()
 	if err != nil {
 		return err
@@ -76,6 +91,9 @@ func (c *Controller) SetEnabled(enabled bool) error {
 	c.config.Enabled = enabled
 	err := c.persistConfigurationLocked()
 	c.mu.Unlock()
+	if !enabled && c.nodeRuntime != nil {
+		c.nodeRuntime.StopAll()
+	}
 	if err != nil {
 		return err
 	}
@@ -96,9 +114,20 @@ func (c *Controller) SetDeveloperMode(enabled bool) error {
 		return nil
 	}
 	c.config.DeveloperMode = enabled
+	if !enabled {
+		c.developerAllowUnknownNode = false
+	}
+	c.clearUnauthorizedNodeRuntimeErrorsLocked()
 	c.developerBuildAttemptKeys = map[string]string{}
 	err := c.persistConfigurationLocked()
+	packages := append([]Package(nil), c.packages...)
+	disabled := cloneSet(c.disabledPackageIDs)
+	trust := c.nodeTrustByPackageIDLocked()
+	environment := c.enabledNodeEnvironmentLocked()
 	c.mu.Unlock()
+	if c.nodeRuntime != nil {
+		c.nodeRuntime.Reconcile(c.ctx, packages, disabled, trust, environment)
+	}
 	if err != nil {
 		return err
 	}
@@ -111,6 +140,74 @@ func (c *Controller) SetDeveloperMode(enabled bool) error {
 	if enabled {
 		c.scheduleDeveloperBuilds()
 	}
+	go c.Refresh()
+	return nil
+}
+
+func (c *Controller) SetDeveloperAllowUnknownNode(enabled bool) error {
+	c.mu.Lock()
+	if enabled && !c.config.DeveloperMode {
+		c.mu.Unlock()
+		return errors.New("必须先开启开发者模式。")
+	}
+	if c.developerAllowUnknownNode == enabled {
+		c.mu.Unlock()
+		return nil
+	}
+	c.developerAllowUnknownNode = enabled
+	c.clearUnauthorizedNodeRuntimeErrorsLocked()
+	packages := append([]Package(nil), c.packages...)
+	disabled := cloneSet(c.disabledPackageIDs)
+	trust := c.nodeTrustByPackageIDLocked()
+	environment := c.enabledNodeEnvironmentLocked()
+	c.mu.Unlock()
+	if c.nodeRuntime != nil {
+		c.nodeRuntime.Reconcile(c.ctx, packages, disabled, trust, environment)
+	}
+	if enabled {
+		c.logger.Info("本次运行已允许开发者模式自动执行未知 Node 包")
+	} else {
+		c.logger.Info("已停止自动信任的 Node 包；它们已回到待授权状态")
+	}
+	c.emit()
+	go c.Refresh()
+	return nil
+}
+
+func (c *Controller) AuthorizeNodePackage(packageID, authorizationID string) error {
+	pkg, exists := c.packageByID(packageID)
+	if !exists || pkg.Manifest == nil || pkg.Manifest.CodexTweaks.Permissions.Node == nil {
+		return errors.New("该功能包没有声明 Node 权限。")
+	}
+	currentAuthorizationID := NodeAuthorizationID(pkg)
+	if currentAuthorizationID == "" {
+		return errors.New("请先完成当前版本的功能包编译。")
+	}
+	if authorizationID == "" || authorizationID != currentAuthorizationID {
+		return errors.New("功能包已发生变化，请查看最新风险说明后重新授权。")
+	}
+	c.mu.Lock()
+	if c.disabledPackageIDs[packageID] {
+		c.mu.Unlock()
+		return errors.New("请先启用功能包，再授权当前 Node 版本。")
+	}
+	previousAuthorization, hadPreviousAuthorization := c.nodeAuthorizations[packageID]
+	authorizeNodeRecord(c.nodeAuthorizations, packageID, currentAuthorizationID)
+	err := c.store.SaveNodeAuthorizations(c.nodeAuthorizations)
+	if err != nil {
+		if hadPreviousAuthorization {
+			c.nodeAuthorizations[packageID] = previousAuthorization
+		} else {
+			delete(c.nodeAuthorizations, packageID)
+		}
+	}
+	c.mu.Unlock()
+	if err != nil {
+		return err
+	}
+	c.logger.Info("用户已授权功能包执行 Node 代码：" + pkg.DisplayName())
+	c.emit()
+	go c.Refresh()
 	return nil
 }
 
@@ -133,8 +230,19 @@ func (c *Controller) SetPackageEnabled(packageID string, enabled bool) error {
 		return nil
 	}
 	delete(c.packageRuntimeErrors, packageID)
+	if !enabled {
+		delete(c.nodeAuthorizations, packageID)
+	}
 	err := c.persistConfigurationLocked()
+	if !enabled {
+		if authorizationError := c.store.SaveNodeAuthorizations(c.nodeAuthorizations); err == nil {
+			err = authorizationError
+		}
+	}
 	c.mu.Unlock()
+	if !enabled && c.nodeRuntime != nil {
+		c.nodeRuntime.StopPackage(packageID)
+	}
 	if err != nil {
 		return err
 	}

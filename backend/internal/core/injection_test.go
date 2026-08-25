@@ -35,42 +35,45 @@ func TestInjectionRuntimeAndForceContracts(t *testing.T) {
 	}
 }
 
-func TestInjectionExposesGrantedCapabilitiesAndSettingsAdapter(t *testing.T) {
-	payload := Payload{Version: "capabilities", Packages: []CompiledPackage{{
+func TestInjectionExposesTypedNodeAndSettingsExtensions(t *testing.T) {
+	payload := Payload{Version: "renderer-extensions", Packages: []CompiledPackage{{
 		ID: "sample", Name: "sample", Version: "1.0.0",
-		Capabilities: map[string]GrantedCapability{
-			NetworkCapabilityID: {Version: NetworkCapabilityVersion},
-			UISettingsSectionCapabilityID: {
-				Version:     UISettingsSectionCapabilityVersion,
-				Permissions: []byte(`{"sections":[{"id":"wallpaper","title":"随机背景","slug":"codex-tweaks-sample-wallpaper-12345678"}]}`),
-			},
+		UI: CompiledPackageUI{SettingsSections: &CompiledSettingsSections{
+			Required: false,
+			Items: []RuntimeSettingsSection{{
+				PackageID: "sample", ID: "wallpaper", Title: "自定义背景",
+				Slug: "codex-tweaks-sample-wallpaper-12345678",
+			}},
+		}},
+		Node: &CompiledPackageNode{
+			AuthorizationID: "authorization", Reason: "读取背景图片。",
 		},
-		JavaScript: `module.exports.activate = ({ capabilities }) => capabilities.require("network");`,
+		JavaScript: `module.exports.activate = ({ node, ui }) => node.invoke("ping", ui.settingsSections.list());`,
 	}}}
 	configuration := &SettingsAdapterConfiguration{
 		AppModuleURL:        "app://-/assets/app-initial-test.js",
 		VisibilityModuleURL: "app://-/assets/use-visible-settings-sections-test.js",
 		Sections: []RuntimeSettingsSection{{
-			PackageID: "sample",
-			UISettingsSectionPermission: UISettingsSectionPermission{
-				ID: "wallpaper", Title: "随机背景", Slug: "codex-tweaks-sample-wallpaper-12345678",
-			},
+			PackageID: "sample", ID: "wallpaper", Title: "自定义背景",
+			Slug: "codex-tweaks-sample-wallpaper-12345678",
 		}},
 	}
-	script := injectionScriptWithCapabilities(
+	script := injectionScriptWithRendererBridge(
 		payload, 0, "bridge-session", map[string]string{"sample": "secret-token"}, configuration,
 	)
 	for _, expected := range []string{
 		`"bridge-session"`, `"secret-token"`, `"appModuleUrl"`,
-		"capabilities: createPackageCapabilities(", "ui.settings-section",
+		"createPackageNode(", "createPackageUI(", "ui.settingsSections",
+		"settleNodeInvocation", "emitNodeEvent",
 		"registry.push({ slug: descriptor.slug })", "iconMap[descriptor.slug]",
 		"settingsRouteChildren.splice(", "dispatchHostMessage", "labelRegistry", "groupRegistry",
 		`key.startsWith("__reactFiber$")`, "settingsAdapter?.cleanup?.()",
-		"capabilityPendingLimit = 64",
+		"nodePendingLimit = 64",
 		"settingsAdapterReady",
+		"try {\n      const context = {",
 	} {
 		if !strings.Contains(script, expected) {
-			t.Fatalf("capability injection script missing %q", expected)
+			t.Fatalf("renderer extension injection script missing %q", expected)
 		}
 	}
 }

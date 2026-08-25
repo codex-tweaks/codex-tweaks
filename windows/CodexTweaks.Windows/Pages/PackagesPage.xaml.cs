@@ -64,6 +64,15 @@ public sealed partial class PackagesPage : Page
             DeveloperModeDetail.Visibility = snapshot.DeveloperMode ? Visibility.Visible : Visibility.Collapsed;
             DeveloperModeToggle.IsOn = snapshot.DeveloperMode;
             DeveloperModeToggle.IsEnabled = snapshot.Presentation.Actions.SetDeveloperMode;
+            DeveloperNodePermissionPanel.Visibility = snapshot.DeveloperMode
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            DeveloperNodePermissionTitle.Text = host.Text(
+                PresentationTextKey.PackagesDeveloperAllowUnknownNode);
+            DeveloperNodePermissionDetail.Text = host.Text(
+                PresentationTextKey.PackagesDeveloperAllowUnknownNodeDetail);
+            DeveloperNodePermissionToggle.IsOn = snapshot.DeveloperAllowUnknownNode;
+            DeveloperNodePermissionToggle.IsEnabled = snapshot.DeveloperMode;
 
             RescanButtonText.Text = host.Text(PresentationTextKey.PackagesRescan);
             RescanButton.IsEnabled = snapshot.Presentation.Actions.ReloadPackages;
@@ -333,6 +342,45 @@ public sealed partial class PackagesPage : Page
         await _host.RunBackendAsync("setDeveloperMode", new { enabled = DeveloperModeToggle.IsOn });
     }
 
+    private async void DeveloperNodePermissionToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_rendering
+            || _host is null
+            || _snapshot is null
+            || DeveloperNodePermissionToggle.IsOn == _snapshot.DeveloperAllowUnknownNode)
+        {
+            return;
+        }
+        if (!DeveloperNodePermissionToggle.IsOn)
+        {
+            await _host.RunBackendAsync("setDeveloperAllowUnknownNode", new { enabled = false });
+            return;
+        }
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = Host.Text(PresentationTextKey.PackagesNodeAutomaticWarningTitle),
+            Content = new TextBlock
+            {
+                Text = Host.Text(PresentationTextKey.PackagesNodeAutomaticWarning),
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 560,
+            },
+            PrimaryButtonText = Host.Text(PresentationTextKey.PackagesNodeAutomaticWarningAllow),
+            CloseButtonText = Host.Text(PresentationTextKey.CommonCancel),
+            DefaultButton = ContentDialogButton.Close,
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+        {
+            _rendering = true;
+            DeveloperNodePermissionToggle.IsOn = false;
+            _rendering = false;
+            return;
+        }
+        await _host.RunBackendAsync("setDeveloperAllowUnknownNode", new { enabled = true });
+    }
+
     private async void RescanButton_Click(object sender, RoutedEventArgs e)
     {
         RescanButton.IsEnabled = false;
@@ -427,10 +475,95 @@ public sealed partial class PackagesPage : Page
 
         var requestedEnabled = toggle.IsOn;
         row.BeginEnablementChange(requestedEnabled);
-        var error = await Host.RunBackendAsync(
-            "setPackageEnabled",
-            new { packageID = row.Id, enabled = requestedEnabled });
+        string? error = null;
+        var requiresNodeAuthorization = requestedEnabled
+            && row.Package.Node is not null
+            && !row.Package.Node.ExplicitlyAuthorized
+            && !_snapshot.DeveloperAllowUnknownNode;
+        if (requiresNodeAuthorization)
+        {
+            if (!await ConfirmNodeAuthorizationAsync(row.Package))
+            {
+                error = "cancelled";
+            }
+        }
+        if (error is null)
+        {
+            error = await Host.RunBackendAsync(
+                "setPackageEnabled",
+                new { packageID = row.Id, enabled = requestedEnabled });
+        }
+        if (error is null && requiresNodeAuthorization)
+        {
+            error = await Host.RunBackendAsync(
+                "authorizeNodePackage",
+                new
+                {
+                    packageID = row.Id,
+                    authorizationID = row.Package.Node!.AuthorizationId,
+                });
+        }
         row.EndEnablementChange(error is null);
+    }
+
+    private async Task<bool> ConfirmNodeAuthorizationAsync(PackageView package)
+    {
+        if (package.Node is null || string.IsNullOrWhiteSpace(package.Node.AuthorizationId))
+        {
+            var unavailable = new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Title = package.Presentation.StatusTitle,
+                Content = package.Presentation.StatusDetail,
+                CloseButtonText = Host.Text(PresentationTextKey.CommonConfirm),
+            };
+            await unavailable.ShowAsync();
+            return false;
+        }
+
+        var content = new StackPanel { Spacing = 12, MaxWidth = 560 };
+        content.Children.Add(new TextBlock
+        {
+            Text = Host.Text(PresentationTextKey.PackagesNodeAuthorizationWarning),
+            TextWrapping = TextWrapping.Wrap,
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = Host.Text(PresentationTextKey.PackagesNodeAuthorizationReason),
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = package.Node.Reason,
+            TextWrapping = TextWrapping.Wrap,
+            IsTextSelectionEnabled = true,
+        });
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = Host.Text(PresentationTextKey.PackagesNodeAuthorizationTitle),
+            Content = content,
+            PrimaryButtonText = Host.Text(PresentationTextKey.PackagesNodeAuthorizationAllow),
+            CloseButtonText = Host.Text(PresentationTextKey.PackagesNodeAuthorizationCancel),
+            DefaultButton = ContentDialogButton.Close,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    private async void AuthorizeNodeButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: PackageRowViewModel row }
+            || !await ConfirmNodeAuthorizationAsync(row.Package))
+        {
+            return;
+        }
+        await Host.RunBackendAsync(
+            "authorizeNodePackage",
+            new
+            {
+                packageID = row.Id,
+                authorizationID = row.Package.Node!.AuthorizationId,
+            });
     }
 
     private async void PriorityTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
@@ -567,6 +700,11 @@ internal sealed class PackageRowViewModel : INotifyPropertyChanged
     private bool _canBuild;
     private string _messagesText = string.Empty;
     private Visibility _messagesVisibility;
+    private string _nodeReason = string.Empty;
+    private Visibility _nodeReasonVisibility;
+    private string _authorizeNodeLabel = string.Empty;
+    private Visibility _authorizeNodeVisibility;
+    private bool _canAuthorizeNode;
 
     internal PackageRowViewModel(string id)
     {
@@ -610,6 +748,11 @@ internal sealed class PackageRowViewModel : INotifyPropertyChanged
     public bool CanBuild { get => _canBuild; private set => SetProperty(ref _canBuild, value); }
     public string MessagesText { get => _messagesText; private set => SetProperty(ref _messagesText, value); }
     public Visibility MessagesVisibility { get => _messagesVisibility; private set => SetProperty(ref _messagesVisibility, value); }
+    public string NodeReason { get => _nodeReason; private set => SetProperty(ref _nodeReason, value); }
+    public Visibility NodeReasonVisibility { get => _nodeReasonVisibility; private set => SetProperty(ref _nodeReasonVisibility, value); }
+    public string AuthorizeNodeLabel { get => _authorizeNodeLabel; private set => SetProperty(ref _authorizeNodeLabel, value); }
+    public Visibility AuthorizeNodeVisibility { get => _authorizeNodeVisibility; private set => SetProperty(ref _authorizeNodeVisibility, value); }
+    public bool CanAuthorizeNode { get => _canAuthorizeNode; private set => SetProperty(ref _canAuthorizeNode, value); }
 
     internal void Update(MainWindow host, BackendAppSnapshot snapshot, PackageView package)
     {
@@ -621,6 +764,13 @@ internal sealed class PackageRowViewModel : INotifyPropertyChanged
         Detail = string.IsNullOrWhiteSpace(package.Detail)
             ? host.Text(PresentationTextKey.PackagesNoDescription)
             : package.Detail;
+        NodeReason = package.Node?.Reason ?? string.Empty;
+        NodeReasonVisibility = package.Node is null ? Visibility.Collapsed : Visibility.Visible;
+        AuthorizeNodeLabel = host.Text(PresentationTextKey.PackagesNodeAuthorizationAllow);
+        AuthorizeNodeVisibility = package.AvailableActions.AuthorizeNode
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        CanAuthorizeNode = package.AvailableActions.AuthorizeNode;
         StatusTitle = package.Presentation.StatusTitle;
         StatusDetail = package.Presentation.StatusDetail;
         StatusBrush = host.ToneBrush(package.Presentation.StatusTone);

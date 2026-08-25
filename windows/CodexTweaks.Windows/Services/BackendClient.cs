@@ -10,7 +10,7 @@ namespace CodexTweaks.Windows.Services;
 
 internal sealed class BackendClient : IAsyncDisposable
 {
-    internal const int ProtocolVersion = 4;
+    internal const int ProtocolVersion = 5;
     private static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
     private readonly ConcurrentDictionary<long, TaskCompletionSource<JsonElement>> _pending = new();

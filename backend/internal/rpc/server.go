@@ -131,6 +131,23 @@ func (s *Server) dispatch(incoming request) (any, error) {
 			return nil, err
 		}
 		return accepted(c.SetDeveloperMode(params.Enabled))
+	case "setDeveloperAllowUnknownNode":
+		var params struct {
+			Enabled bool `json:"enabled"`
+		}
+		if err := decodeParams(incoming.Params, &params); err != nil {
+			return nil, err
+		}
+		return accepted(c.SetDeveloperAllowUnknownNode(params.Enabled))
+	case "authorizeNodePackage":
+		var params struct {
+			PackageID       string `json:"packageID"`
+			AuthorizationID string `json:"authorizationID"`
+		}
+		if err := decodeParams(incoming.Params, &params); err != nil {
+			return nil, err
+		}
+		return accepted(c.AuthorizeNodePackage(params.PackageID, params.AuthorizationID))
 	case "setPackageEnabled":
 		var params struct {
 			PackageID string `json:"packageID"`

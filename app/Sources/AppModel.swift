@@ -80,6 +80,8 @@ final class AppModel: ObservableObject {
         }
     }
 
+    @Published private(set) var isDeveloperAllowUnknownNode = false
+
     var menuBarSymbol: String {
         switch status {
         case .connected: return "wand.and.stars.inverse"
@@ -196,10 +198,83 @@ final class AppModel: ObservableObject {
     }
 
     func setTweakPackage(_ package: TweakPackage, isEnabled: Bool) {
+        if isEnabled,
+           package.node?.explicitlyAuthorized == false,
+           !isDeveloperAllowUnknownNode
+        {
+            authorizeNodePackage(package, enableAfterAuthorization: true)
+            return
+        }
         command(
             "setPackageEnabled",
             PackageEnabledParameter(packageID: package.id, enabled: isEnabled)
         )
+    }
+
+    func authorizeNodePackage(
+        _ package: TweakPackage,
+        enableAfterAuthorization: Bool = false
+    ) {
+        guard let node = package.node else { return }
+        guard !node.authorizationID.isEmpty else {
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = package.presentation.statusTitle
+            alert.informativeText = package.presentation.statusDetail
+            alert.addButton(withTitle: text(.commonConfirm))
+            alert.runModal()
+            return
+        }
+        let alert = NSAlert()
+        alert.alertStyle = .critical
+        alert.messageText = text(.packagesNodeAuthorizationTitle)
+        alert.informativeText = [
+            text(.packagesNodeAuthorizationWarning),
+            text(.packagesNodeAuthorizationReason) + "：\n" + node.reason,
+        ].joined(separator: "\n\n")
+        let allowButton = alert.addButton(withTitle: text(.packagesNodeAuthorizationAllow))
+        let cancelButton = alert.addButton(withTitle: text(.packagesNodeAuthorizationCancel))
+        allowButton.keyEquivalent = ""
+        cancelButton.keyEquivalent = "\r"
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                if enableAfterAuthorization {
+                    try await backend.send(
+                        method: "setPackageEnabled",
+                        params: PackageEnabledParameter(packageID: package.id, enabled: true)
+                    )
+                }
+                try await backend.send(
+                    method: "authorizeNodePackage",
+                    params: NodeAuthorizationParameter(
+                        packageID: package.id,
+                        authorizationID: node.authorizationID
+                    )
+                )
+            } catch {
+                status = .error(error.localizedDescription)
+            }
+        }
+    }
+
+    func requestDeveloperAllowUnknownNode(_ enabled: Bool) {
+        if !enabled {
+            command("setDeveloperAllowUnknownNode", BoolParameter(enabled: false))
+            return
+        }
+        let alert = NSAlert()
+        alert.alertStyle = .critical
+        alert.messageText = text(.packagesNodeAutomaticWarningTitle)
+        alert.informativeText = text(.packagesNodeAutomaticWarning)
+        let allowButton = alert.addButton(withTitle: text(.packagesNodeAutomaticWarningAllow))
+        let cancelButton = alert.addButton(withTitle: text(.commonCancel))
+        allowButton.keyEquivalent = ""
+        cancelButton.keyEquivalent = "\r"
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        command("setDeveloperAllowUnknownNode", BoolParameter(enabled: true))
     }
 
     func setTweakPackagePriority(_ package: TweakPackage, priority: Int) {
@@ -376,7 +451,7 @@ final class AppModel: ObservableObject {
     func sendUpdateCommand(_ method: String) { command(method) }
 
     private func apply(_ snapshot: BackendAppSnapshot) {
-        guard snapshot.protocolVersion == 4 else {
+        guard snapshot.protocolVersion == 5 else {
             status = .error(text(.appProtocolMismatch))
             return
         }
@@ -384,6 +459,7 @@ final class AppModel: ObservableObject {
         isApplyingSnapshot = true
         isEnabled = snapshot.enabled
         isDeveloperMode = snapshot.developerMode
+        isDeveloperAllowUnknownNode = snapshot.developerAllowUnknownNode
         isApplyingSnapshot = false
 
         status = Status(snapshot.status)
@@ -496,6 +572,10 @@ private struct PackageIDParameter: Encodable, Sendable { let packageID: String }
 private struct PackageEnabledParameter: Encodable, Sendable {
     let packageID: String
     let enabled: Bool
+}
+private struct NodeAuthorizationParameter: Encodable, Sendable {
+    let packageID: String
+    let authorizationID: String
 }
 private struct PackagePriorityParameter: Encodable, Sendable {
     let packageID: String

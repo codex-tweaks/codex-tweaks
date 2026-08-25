@@ -42,7 +42,7 @@ final class BackendBundleTests: XCTestCase {
         )
         let response = try JSONDecoder().decode(PingResponse.self, from: responseData)
         XCTAssertEqual(response.id, 1)
-        XCTAssertEqual(response.result.protocolVersion, 4)
+        XCTAssertEqual(response.result.protocolVersion, 5)
         XCTAssertEqual(response.result.backend, "go")
     }
 

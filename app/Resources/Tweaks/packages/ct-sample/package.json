@@ -5,8 +5,10 @@
   "type": "module",
   "dependencies": {},
   "codexTweaks": {
-    "apiVersion": 2,
-    "entry": "src/index.js",
+    "apiVersion": 3,
+    "entrypoints": {
+      "renderer": "src/index.js"
+    },
     "priority": -1,
     "packageDependencies": {}
   }

@@ -14,14 +14,14 @@ const CleanupScript = `(() => {
 })()`
 
 func InjectionScript(payload Payload, forceGeneration int) string {
-	return injectionScriptWithCapabilities(payload, forceGeneration, "", map[string]string{}, nil)
+	return injectionScriptWithRendererBridge(payload, forceGeneration, "", map[string]string{}, nil)
 }
 
-func injectionScriptWithCapabilities(
+func injectionScriptWithRendererBridge(
 	payload Payload,
 	forceGeneration int,
 	bridgeSessionID string,
-	capabilityTokens map[string]string,
+	nodeTokens map[string]string,
 	settingsAdapterConfiguration *SettingsAdapterConfiguration,
 ) string {
 	effectiveVersion := payload.Version
@@ -32,7 +32,7 @@ func injectionScriptWithCapabilities(
 	executions := make([]string, 0, len(payload.Packages))
 	for _, pkg := range payload.Packages {
 		setups = append(setups, packageSetupScript(pkg))
-		executions = append(executions, packageExecutionScript(pkg, capabilityTokens[pkg.ID]))
+		executions = append(executions, packageExecutionScript(pkg, nodeTokens[pkg.ID]))
 	}
 	return fmt.Sprintf(`(async () => {
   const key = "__CODEX_TWEAKS__";
@@ -65,53 +65,61 @@ func injectionScriptWithCapabilities(
   (document.body || document.documentElement).appendChild(host);
   const packageStates = new Map();
   const packageErrors = [];
-  const capabilityPending = new Map();
-  const capabilityPendingLimit = 64;
-  const capabilityBinding = bridgeSessionID
+  const nodePending = new Map();
+  const nodePendingLimit = 64;
+  const nodeEventListeners = new Map();
+  const rendererBinding = bridgeSessionID
     ? globalThis[%s]
     : null;
-  let capabilitySequence = 0;
+  const BridgePromise = globalThis.Promise;
+  const bridgeStringify = globalThis.JSON.stringify.bind(globalThis.JSON);
+  const bridgeSetTimeout = globalThis.setTimeout.bind(globalThis);
+  const bridgeClearTimeout = globalThis.clearTimeout.bind(globalThis);
+  const bridgeRandomUUID = globalThis.crypto?.randomUUID?.bind(globalThis.crypto);
+  const bridgeNow = globalThis.Date.now.bind(globalThis.Date);
+  const bridgeRandom = globalThis.Math.random.bind(globalThis.Math);
+  let nodeSequence = 0;
 
-  const capabilityError = (message, code) => {
+  const nodeError = (message, code) => {
     const error = new Error(message);
     if (code) error.code = code;
     return error;
   };
 
-  const invokeCapability = (token, capability, method, parameters) => {
-    if (!bridgeSessionID || typeof capabilityBinding !== "function") {
-      return Promise.reject(capabilityError(
-        "Codex Tweaks host capability bridge is unavailable",
+  const invokeNode = (token, method, parameters) => {
+    if (!bridgeSessionID || typeof rendererBinding !== "function") {
+      return Promise.reject(nodeError(
+        "Codex Tweaks Node bridge is unavailable",
         "bridge_unavailable"
       ));
     }
-    if (capabilityPending.size >= capabilityPendingLimit) {
-      return Promise.reject(capabilityError(
-        "Capability bridge is busy",
+    if (nodePending.size >= nodePendingLimit) {
+      return Promise.reject(nodeError(
+        "Node bridge is busy",
         "busy"
       ));
     }
-    const randomPart = globalThis.crypto?.randomUUID?.()
-      ?? (Date.now().toString(36) + "-" + Math.random().toString(36).slice(2));
-    const id = bridgeSessionID + ":" + (++capabilitySequence) + ":" + randomPart;
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        capabilityPending.delete(id);
-        reject(capabilityError("Capability request timed out", "timeout"));
-      }, 20000);
-      capabilityPending.set(id, { resolve, reject, timeout });
+    const randomPart = bridgeRandomUUID?.()
+      ?? (bridgeNow().toString(36) + "-" + bridgeRandom().toString(36).slice(2));
+    const id = bridgeSessionID + ":" + (++nodeSequence) + ":" + randomPart;
+    return new BridgePromise((resolve, reject) => {
+      const timeout = bridgeSetTimeout(() => {
+        nodePending.delete(id);
+        reject(nodeError("Node request timed out", "timeout"));
+      }, 65000);
+      nodePending.set(id, { resolve, reject, timeout });
       try {
-        capabilityBinding(JSON.stringify({
+        rendererBinding(bridgeStringify({
+          __proto__: null,
           v: 1,
           id,
           token,
-          capability,
           method,
-          parameters: parameters ?? {}
+          parameters: parameters ?? null
         }));
       } catch (error) {
-        clearTimeout(timeout);
-        capabilityPending.delete(id);
+        bridgeClearTimeout(timeout);
+        nodePending.delete(id);
         reject(error);
       }
     });
@@ -596,72 +604,77 @@ func injectionScriptWithCapabilities(
     console.error("Codex Tweaks settings adapter unavailable", error);
   }
 
-  const createPackageCapabilities = (token, grants, packageID, registerCleanup) => {
-    const handles = new Map();
-    for (const [capabilityID, grant] of Object.entries(grants ?? {})) {
-      if (capabilityID === "network" && grant?.version === "1.0.0") {
-        handles.set(capabilityID, Object.freeze({
-          id: capabilityID,
-          version: grant.version,
-          request(parameters = {}) {
-            return invokeCapability(token, capabilityID, "request", parameters);
-          }
-        }));
+  const createSettingsSectionsExtension = (packageID, declaration, registerCleanup) => {
+    if (!declaration) return undefined;
+    if (!settingsAdapter) {
+      if (declaration.required !== false) {
+        throw new Error("Required UI extension unavailable: ui.settingsSections");
       }
-      if (
-        capabilityID === "ui.settings-section"
-        && grant?.version === "1.0.0"
-        && settingsAdapter
-      ) {
-        const declaredSections = Array.isArray(grant.permissions?.sections)
-          ? grant.permissions.sections
-          : [];
-        handles.set(capabilityID, Object.freeze({
-          id: capabilityID,
-          version: grant.version,
-          list() {
-            return declaredSections.map((section) => ({
-              id: section.id,
-              title: section.title,
-              slug: section.slug
-            }));
-          },
-          register(options) {
-            if (!options || typeof options !== "object") {
-              throw new TypeError("Settings section registration must be an object");
-            }
-            const sectionID = String(options.id ?? "").trim();
-            const mount = options.mount;
-            const registration = settingsAdapter.register(packageID, sectionID, mount);
-            registerCleanup(registration.unregister);
-            return registration;
-          }
-        }));
-      }
+      return undefined;
     }
-    const normalizeCapabilityID = (capabilityID) => {
-      if (typeof capabilityID !== "string" || !capabilityID.trim()) {
-        throw new TypeError("Capability ID must be a non-empty string");
-      }
-      return capabilityID.trim();
-    };
+    const declaredSections = Array.isArray(declaration.items) ? declaration.items : [];
     return Object.freeze({
-      has(capabilityID) {
-        return handles.has(normalizeCapabilityID(capabilityID));
-      },
-      get(capabilityID) {
-        return handles.get(normalizeCapabilityID(capabilityID));
-      },
-      require(capabilityID) {
-        const normalizedID = normalizeCapabilityID(capabilityID);
-        const handle = handles.get(normalizedID);
-        if (!handle) {
-          throw new Error("Required capability unavailable: " + normalizedID);
-        }
-        return handle;
-      },
+      apiVersion: 1,
       list() {
-        return [...handles.keys()];
+        return declaredSections.map((section) => Object.freeze({
+          id: section.id,
+          title: section.title,
+          slug: section.slug
+        }));
+      },
+      register(options) {
+        if (!options || typeof options !== "object") {
+          throw new TypeError("Settings section registration must be an object");
+        }
+        const sectionID = String(options.id ?? "").trim();
+        const registration = settingsAdapter.register(packageID, sectionID, options.mount);
+        registerCleanup(registration.unregister);
+        return registration;
+      }
+    });
+  };
+
+  const createPackageUI = (packageID, declaration, registerCleanup) => Object.freeze({
+    settingsSections: createSettingsSectionsExtension(
+      packageID,
+      declaration?.settingsSections,
+      registerCleanup
+    )
+  });
+
+  const createPackageNode = (packageID, token, declaration, registerCleanup) => {
+    if (!declaration) return undefined;
+    if (!token) throw new Error("Authorized Node bridge token is unavailable");
+    const packageListeners = new Map();
+    nodeEventListeners.set(packageID, packageListeners);
+    registerCleanup(() => nodeEventListeners.delete(packageID));
+    return Object.freeze({
+      invoke(method, parameters = null) {
+        if (typeof method !== "string" || !method.trim()) {
+          return Promise.reject(nodeError("Node method must be a non-empty string", "invalid_request"));
+        }
+        return invokeNode(token, method.trim(), parameters);
+      },
+      on(name, listener) {
+        if (typeof name !== "string" || !name.trim() || typeof listener !== "function") {
+          throw new TypeError("node.on(name, listener) requires an event name and function");
+        }
+        const normalizedName = name.trim();
+        let listeners = packageListeners.get(normalizedName);
+        if (!listeners) {
+          listeners = new Set();
+          packageListeners.set(normalizedName, listeners);
+        }
+        listeners.add(listener);
+        let active = true;
+        const unsubscribe = () => {
+          if (!active) return;
+          active = false;
+          listeners.delete(listener);
+          if (listeners.size === 0) packageListeners.delete(normalizedName);
+        };
+        registerCleanup(unsubscribe);
+        return unsubscribe;
       }
     });
   };
@@ -684,19 +697,27 @@ func injectionScriptWithCapabilities(
     settingsAdapterKey,
     settingsAdapterReady: !settingsAdapterExpected || Boolean(settingsAdapter),
     packageErrors,
-    settleCapability(response) {
+    settleNodeInvocation(response) {
       if (!response || typeof response.id !== "string") return false;
-      const pending = capabilityPending.get(response.id);
+      const pending = nodePending.get(response.id);
       if (!pending) return false;
-      capabilityPending.delete(response.id);
-      clearTimeout(pending.timeout);
+      nodePending.delete(response.id);
+      bridgeClearTimeout(pending.timeout);
       if (response.ok) {
         pending.resolve(response.result);
       } else {
-        pending.reject(capabilityError(
-          response.error?.message ?? "Capability request failed",
-          response.error?.code ?? "capability_error"
+        pending.reject(nodeError(
+          response.error?.message ?? "Node request failed",
+          response.error?.code ?? "node_error"
         ));
+      }
+      return true;
+    },
+    emitNodeEvent(packageID, name, payload) {
+      const listeners = nodeEventListeners.get(packageID)?.get(name);
+      if (!listeners) return false;
+      for (const listener of [...listeners]) {
+        try { listener(payload); } catch (error) { console.error("Node event listener failed", error); }
       }
       return true;
     },
@@ -705,11 +726,12 @@ func injectionScriptWithCapabilities(
         cleanupPackageState(state);
       }
       packageStates.clear();
-      for (const pending of capabilityPending.values()) {
-        clearTimeout(pending.timeout);
-        pending.reject(capabilityError("Codex Tweaks runtime was cleaned up", "runtime_cleanup"));
+      for (const pending of nodePending.values()) {
+        bridgeClearTimeout(pending.timeout);
+        pending.reject(nodeError("Codex Tweaks runtime was cleaned up", "runtime_cleanup"));
       }
-      capabilityPending.clear();
+      nodePending.clear();
+      nodeEventListeners.clear();
       try { settingsAdapter?.cleanup?.(); } catch (_) {}
       settingsAdapter = null;
       host.remove();
@@ -723,7 +745,7 @@ func injectionScriptWithCapabilities(
 %s
 
   return { status: "injected", version, packageErrors, settingsAdapterError };
-})()`, JSONLiteral(effectiveVersion), JSONLiteral(bridgeSessionID), JSONLiteral(settingsAdapterConfiguration), JSONLiteral(capabilityBindingName), strings.Join(setups, "\n"), strings.Join(executions, "\n"))
+})()`, JSONLiteral(effectiveVersion), JSONLiteral(bridgeSessionID), JSONLiteral(settingsAdapterConfiguration), JSONLiteral(rendererBridgeBindingName), strings.Join(setups, "\n"), strings.Join(executions, "\n"))
 }
 
 func packageSetupScript(pkg CompiledPackage) string {
@@ -753,14 +775,15 @@ func packageSetupScript(pkg CompiledPackage) string {
   }`, JSONLiteral(pkg.ID), JSONLiteral(pkg.Name), JSONLiteral(pkg.Version), JSONLiteral(pkg.CSS))
 }
 
-func packageExecutionScript(pkg CompiledPackage, capabilityToken string) string {
+func packageExecutionScript(pkg CompiledPackage, nodeToken string) string {
 	return fmt.Sprintf(`  {
     const packageID = %s;
     const packageName = %s;
     const packageVersion = %s;
     const dependencyIDs = %s ?? [];
-    const grantedCapabilities = %s;
-    const capabilityToken = %s;
+    const uiDeclaration = %s;
+    const nodeDeclaration = %s;
+    const nodeToken = %s;
     const state = packageStates.get(packageID);
     const registerPackageCleanup = (callback) => {
       if (typeof callback === "function") state.cleanupCallbacks.push(callback);
@@ -774,12 +797,6 @@ func packageExecutionScript(pkg CompiledPackage, capabilityToken string) string 
     const api = {
       packageID,
       version: packageVersion,
-      capabilities: createPackageCapabilities(
-        capabilityToken,
-        grantedCapabilities,
-        packageID,
-        registerPackageCleanup
-      ),
       registerCleanup(callback) {
         registerPackageCleanup(callback);
       },
@@ -843,18 +860,23 @@ func packageExecutionScript(pkg CompiledPackage, capabilityToken string) string 
         return [...dependencyIDs];
       }
     };
-    const context = {
-      id: packageID,
-      name: packageName,
-      version: packageVersion,
-      root: state.root,
-      api,
-      capabilities: api.capabilities,
-      dependencies,
-      onCleanup: api.registerCleanup
-    };
-
     try {
+      const context = {
+        id: packageID,
+        name: packageName,
+        version: packageVersion,
+        root: state.root,
+        api,
+        ui: createPackageUI(packageID, uiDeclaration, registerPackageCleanup),
+        node: createPackageNode(
+          packageID,
+          nodeToken,
+          nodeDeclaration,
+          registerPackageCleanup
+        ),
+        dependencies,
+        onCleanup: api.registerCleanup
+      };
       for (const dependencyID of dependencyIDs) {
         if (!packageStates.get(dependencyID)?.activated) {
           throw new Error(`+"`"+`Package dependency unavailable: ${dependencyID}`+"`"+`);
@@ -882,5 +904,5 @@ func packageExecutionScript(pkg CompiledPackage, capabilityToken string) string 
         : String(error);
       packageErrors.push({ id: packageID, name: packageName, message });
     }
-  }`, JSONLiteral(pkg.ID), JSONLiteral(pkg.Name), JSONLiteral(pkg.Version), JSONLiteral(pkg.DependencyIDs), JSONLiteral(pkg.Capabilities), JSONLiteral(capabilityToken), pkg.JavaScript)
+  }`, JSONLiteral(pkg.ID), JSONLiteral(pkg.Name), JSONLiteral(pkg.Version), JSONLiteral(pkg.DependencyIDs), JSONLiteral(pkg.UI), JSONLiteral(pkg.Node), JSONLiteral(nodeToken), pkg.JavaScript)
 }

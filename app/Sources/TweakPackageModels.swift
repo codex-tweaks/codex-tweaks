@@ -63,9 +63,14 @@ struct TweakPackageDependency: Codable, Equatable, Sendable {
 }
 
 struct TweakPackageManifest: Codable, Equatable, Sendable {
+    struct Entrypoints: Codable, Equatable, Sendable {
+        let renderer: String
+        let node: String?
+    }
+
     struct Configuration: Codable, Equatable, Sendable {
         let apiVersion: Int
-        let entry: String
+        let entrypoints: Entrypoints
         let priority: Int
         let packageDependencies: [String: TweakPackageDependency]
     }
@@ -177,6 +182,7 @@ struct TweakPackage: Codable, Identifiable, Equatable, Sendable {
     let canEnableDependencies: Bool
     let availableActions: TweakPackageAvailableActions
     let presentation: TweakPackagePresentation
+    let node: TweakPackageNode?
 
     var directoryURL: URL { URL(fileURLWithPath: directory, isDirectory: true) }
     var version: String { displayVersion }
@@ -190,8 +196,18 @@ struct TweakPackage: Codable, Identifiable, Equatable, Sendable {
         case runtimePackageDependencies, isManaged, managedLock
         case backendBuildDisposition = "buildDisposition"
         case buildRequestKey, canInstallMissingDependencies, canEnableDependencies
-        case availableActions, presentation
+        case availableActions, presentation, node
     }
+}
+
+struct TweakPackageNode: Codable, Equatable, Sendable {
+    let authorizationID: String
+    let reason: String
+    let status: String
+    let authorized: Bool
+    let explicitlyAuthorized: Bool
+    let automaticallyAllowed: Bool
+    let running: Bool
 }
 
 struct TweakPackagePresentation: Codable, Equatable, Sendable {
@@ -211,4 +227,5 @@ struct TweakPackageAvailableActions: Codable, Equatable, Sendable {
     let enableDependencies: Bool
     let updateManagedPackage: Bool
     let build: Bool
+    let authorizeNode: Bool
 }

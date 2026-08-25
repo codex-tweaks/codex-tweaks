@@ -91,7 +91,7 @@ func testPackage(id, version string, priority int, override *int, dependencies m
 	}
 	manifest := &PackageManifest{
 		Name: id, Version: version, Description: id, Dependencies: map[string]string{},
-		CodexTweaks: PackageConfiguration{APIVersion: 2, Entry: "src/index.js", Priority: priority, PackageDependencies: dependencies},
+		CodexTweaks: PackageConfiguration{APIVersion: APIVersion, Entrypoints: PackageEntrypoints{Renderer: "src/index.js"}, Priority: priority, PackageDependencies: dependencies},
 	}
 	source, dependencyFingerprint := "source-"+id, "dependencies-"+id
 	pkg := Package{ID: id, DirectoryName: id, Directory: "/tmp/" + id, Manifest: manifest, SourceFingerprint: &source, DependencyFingerprint: &dependencyFingerprint, PriorityOverride: override, Origin: origin}

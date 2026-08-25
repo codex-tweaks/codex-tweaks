@@ -276,9 +276,22 @@ private struct TweakPackagesView: View {
             localInstallFeedback
 
             if model.isDeveloperMode {
-                Text(model.text(.packagesDeveloperModeDetail))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: CGFloat(model.tokens.compactSpacing)) {
+                    Text(model.text(.packagesDeveloperModeDetail))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Toggle(
+                        model.text(.packagesDeveloperAllowUnknownNode),
+                        isOn: Binding(
+                            get: { model.isDeveloperAllowUnknownNode },
+                            set: { model.requestDeveloperAllowUnknownNode($0) }
+                        )
+                    )
+                    .toggleStyle(.switch)
+                    Text(model.text(.packagesDeveloperAllowUnknownNodeDetail))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
         }
@@ -416,6 +429,12 @@ private struct TweakPackagesView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if let node = package.node {
+                    Label(node.reason, systemImage: "terminal")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if let detail = packageStatusDetail(package) {
                     Text(detail)
                         .font(.caption)
@@ -450,6 +469,12 @@ private struct TweakPackagesView: View {
                 }
 
                 HStack(spacing: 8) {
+                    if package.availableActions.authorizeNode {
+                        Button(model.text(.packagesNodeAuthorizationAllow)) {
+                            model.authorizeNodePackage(package)
+                        }
+                    }
+
                     if model.canInstallMissingDependencies(for: package) {
                         Button(model.text(.packagesInstallDependencies)) {
                             model.installMissingDependencies(for: package)
@@ -1433,14 +1458,12 @@ private struct LogView: View {
             VStack(spacing: 0) {
                 Divider()
 
-                ScrollView(.vertical) {
-                    Text(model.logText.isEmpty ? model.text(.logsEmpty) : model.logText)
-                        .font(.system(.callout, design: .monospaced))
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .padding(CGFloat(model.tokens.cardPadding))
-                }
-                .background(Color(nsColor: .textBackgroundColor))
+                LogTextView(
+                    text: model.logText.isEmpty ? model.text(.logsEmpty) : model.logText,
+                    contentInset: CGFloat(model.tokens.cardPadding),
+                    accessibilityLabel: model.text(.logsTitle)
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 Divider()
 
@@ -1487,5 +1510,57 @@ private struct LogView: View {
             }
         }
         .task { model.refreshLog() }
+    }
+}
+
+private struct LogTextView: NSViewRepresentable {
+    let text: String
+    let contentInset: CGFloat
+    let accessibilityLabel: String
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSTextView.scrollablePlainDocumentContentTextView()
+        scrollView.borderType = .noBorder
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = .textBackgroundColor
+        scrollView.autohidesScrollers = true
+
+        guard let textView = scrollView.documentView as? NSTextView else {
+            return scrollView
+        }
+
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.drawsBackground = false
+        textView.font = .monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+        textView.textColor = .textColor
+        textView.textContainerInset = NSSize(width: contentInset, height: contentInset)
+        textView.usesFindBar = true
+        textView.isIncrementalSearchingEnabled = true
+        textView.isContinuousSpellCheckingEnabled = false
+        textView.isGrammarCheckingEnabled = false
+        textView.isAutomaticLinkDetectionEnabled = false
+        textView.isAutomaticDataDetectionEnabled = false
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.isAutomaticTextCompletionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let textView = scrollView.documentView as? NSTextView else {
+            return
+        }
+
+        textView.textContainerInset = NSSize(width: contentInset, height: contentInset)
+        textView.setAccessibilityLabel(accessibilityLabel)
+
+        guard textView.string != text else {
+            return
+        }
+
+        textView.string = text
+        textView.scrollRangeToVisible(NSRange(location: 0, length: 0))
     }
 }

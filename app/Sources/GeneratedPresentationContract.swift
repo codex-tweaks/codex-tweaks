@@ -114,10 +114,13 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case packagesDetailDependencyUpdate = "packages.detail.dependencyUpdate"
     case packagesDetailExporting = "packages.detail.exporting"
     case packagesDetailLastBuilt = "packages.detail.lastBuilt"
+    case packagesDetailNodeAuthorizationRequired = "packages.detail.nodeAuthorizationRequired"
     case packagesDetailPinnedChanged = "packages.detail.pinnedChanged"
     case packagesDetailRemoteAvailable = "packages.detail.remoteAvailable"
     case packagesDetailSourceChanged = "packages.detail.sourceChanged"
     case packagesDetailVersionUpdate = "packages.detail.versionUpdate"
+    case packagesDeveloperAllowUnknownNode = "packages.developerAllowUnknownNode"
+    case packagesDeveloperAllowUnknownNodeDetail = "packages.developerAllowUnknownNodeDetail"
     case packagesDeveloperMode = "packages.developerMode"
     case packagesDeveloperModeDetail = "packages.developerModeDetail"
     case packagesEmptyDetail = "packages.emptyDetail"
@@ -152,6 +155,14 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case packagesNoDescription = "packages.noDescription"
     case packagesNoMatchDetail = "packages.noMatchDetail"
     case packagesNoMatchTitle = "packages.noMatchTitle"
+    case packagesNodeAuthorizationAllow = "packages.nodeAuthorizationAllow"
+    case packagesNodeAuthorizationCancel = "packages.nodeAuthorizationCancel"
+    case packagesNodeAuthorizationReason = "packages.nodeAuthorizationReason"
+    case packagesNodeAuthorizationTitle = "packages.nodeAuthorizationTitle"
+    case packagesNodeAuthorizationWarning = "packages.nodeAuthorizationWarning"
+    case packagesNodeAutomaticWarning = "packages.nodeAutomaticWarning"
+    case packagesNodeAutomaticWarningAllow = "packages.nodeAutomaticWarningAllow"
+    case packagesNodeAutomaticWarningTitle = "packages.nodeAutomaticWarningTitle"
     case packagesNodeAvailable = "packages.nodeAvailable"
     case packagesNodeChecking = "packages.nodeChecking"
     case packagesNodeMissing = "packages.nodeMissing"
@@ -179,6 +190,7 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case packagesStatusInstallingRemote = "packages.status.installingRemote"
     case packagesStatusInvalid = "packages.status.invalid"
     case packagesStatusNewVersion = "packages.status.newVersion"
+    case packagesStatusNodeAuthorizationRequired = "packages.status.nodeAuthorizationRequired"
     case packagesStatusNotBuilt = "packages.status.notBuilt"
     case packagesStatusPayloadFailed = "packages.status.payloadFailed"
     case packagesStatusPending = "packages.status.pending"
@@ -451,10 +463,13 @@ enum GeneratedPresentationDefaults {
         .packagesDetailDependencyUpdate: "当前编译产物仍在运行；需手动同步依赖或构建配置。",
         .packagesDetailExporting: "正在将功能包源码整理为可再次安装的 ZIP。",
         .packagesDetailLastBuilt: "上次编译：{date}",
+        .packagesDetailNodeAuthorizationRequired: "整个功能包已被阻止；查看作者说明并授权当前版本后才会运行。",
         .packagesDetailPinnedChanged: "远端固定 Tag/Release 指向了新的 commit；为避免静默替换，已阻止普通更新。",
         .packagesDetailRemoteAvailable: "{reference} 已更新到 {commit}，点击后下载并编译。",
         .packagesDetailSourceChanged: "当前编译产物仍在运行，新源码尚未激活。",
         .packagesDetailVersionUpdate: "当前仍运行 v{current}，点击后更新到 v{next}。",
+        .packagesDeveloperAllowUnknownNode: "自动执行未知 Node 包（仅本次运行）",
+        .packagesDeveloperAllowUnknownNodeDetail: "仅在开发者模式中可用；软件重启后始终恢复关闭。",
         .packagesDeveloperMode: "开发者模式",
         .packagesDeveloperModeDetail: "开发者模式会自动编译已启用包的源码变化；依赖或版本更新仍需手动确认。",
         .packagesEmptyDetail: "在 packages 目录中创建包目录和 package.json 后重新扫描。",
@@ -489,6 +504,14 @@ enum GeneratedPresentationDefaults {
         .packagesNoDescription: "没有提供包说明。",
         .packagesNoMatchDetail: "尝试更换关键词或筛选条件。",
         .packagesNoMatchTitle: "没有匹配的功能包",
+        .packagesNodeAuthorizationAllow: "允许当前版本",
+        .packagesNodeAuthorizationCancel: "取消",
+        .packagesNodeAuthorizationReason: "作者说明",
+        .packagesNodeAuthorizationTitle: "允许此功能包执行 Node 代码？",
+        .packagesNodeAuthorizationWarning: "Node 代码将以你的当前用户身份运行，可读取和修改文件、访问网络、启动进程，并可能在安装依赖时执行 npm 脚本。仅在信任作者和下方用途说明时允许。",
+        .packagesNodeAutomaticWarning: "开启后，本次运行中所有已启用且尚未单独授权的 Node 包都可立即以当前用户身份执行本地代码，包括完整文件、网络、进程权限以及 npm 安装脚本。此选项不会保存，重启软件后自动关闭。",
+        .packagesNodeAutomaticWarningAllow: "仅本次运行允许",
+        .packagesNodeAutomaticWarningTitle: "自动执行未知 Node 包？",
         .packagesNodeAvailable: "Node.js {version} 可用",
         .packagesNodeChecking: "正在检测 Node.js…",
         .packagesNodeMissing: "未找到 Node.js、npm 和 npx；安装 Node.js 后重新扫描。",
@@ -516,6 +539,7 @@ enum GeneratedPresentationDefaults {
         .packagesStatusInstallingRemote: "正在处理远程包",
         .packagesStatusInvalid: "配置无效",
         .packagesStatusNewVersion: "发现新版本",
+        .packagesStatusNodeAuthorizationRequired: "Node 待授权",
         .packagesStatusNotBuilt: "尚未编译",
         .packagesStatusPayloadFailed: "产物读取失败",
         .packagesStatusPending: "待编译",

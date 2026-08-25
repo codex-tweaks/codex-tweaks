@@ -1,24 +1,24 @@
 ---
 name: develop-codex-tweaks-package
-description: Create or modify Codex Tweaks API v2 feature packages for the packaged macOS or Windows app, including lifecycle-safe browser injection, independently versioned host capabilities, dependencies, priorities, and Git-installable metadata.
+description: Create or modify Codex Tweaks API v3 packages with lifecycle-safe Renderer code, optional fully trusted Node backends, typed UI extensions, package dependencies, priorities, and Git-installable metadata.
 ---
 
 # Develop Codex Tweaks Packages
 
-Build one independently loadable feature package for Codex Tweaks while preserving the user's requested scope and the package manager's safety model.
+Build one independently loadable Codex Tweaks package while preserving the user's requested scope and the host's trust model.
 
 ## Working boundary
 
 - Use the packages directory shown by Codex Tweaks as the source of truth. Its default location is `~/Library/Application Support/Codex Tweaks/Tweaks/packages/<package>/` on macOS and `%LOCALAPPDATA%\Codex Tweaks\Tweaks\packages\<package>\` on Windows.
-- One direct child directory is one package. The package-level switch controls everything inside it.
-- Inspect the target package and relevant Codex page behavior before editing. If the user asks only for review or diagnosis, remain read-only.
-- Treat Codex Tweaks as an already installed, packaged host. Do not search for, modify, rebuild, or replace its source or application bundle; keep all edits inside the requested package.
-- Use only the package API documented here and capabilities returned by the installed app's current `AppSnapshot.availableCapabilities`. If a required operation is not exposed, report that boundary instead of adding a package-local bridge or patching Codex private modules directly.
-- A newly discovered or remotely installed package remains disabled until the user explicitly enables it in the app.
+- One direct child directory is one package. Its switch controls the Renderer and Node parts together.
+- Inspect the target package and relevant Codex behavior before editing. Stay read-only when the user asks only for review or diagnosis.
+- Treat Codex Tweaks as an installed host. Do not modify, rebuild, or replace its application bundle; keep requested package work inside the package directory.
+- A newly discovered or remotely installed package remains disabled until the user enables it.
+- Use API v3 only. Do not add API v2 compatibility, `codexTweaks.capabilities`, `api.capabilities`, hidden DOM bridges, localStorage queues, or direct imports of Codex private modules.
 
 ## Manifest contract
 
-Each package must contain `package.json` and a source entry inside the package directory:
+Every package contains `package.json` and a Renderer entry:
 
 ```json
 {
@@ -28,30 +28,172 @@ Each package must contain `package.json` and a source entry inside the package d
   "type": "module",
   "dependencies": {},
   "codexTweaks": {
-    "apiVersion": 2,
-    "entry": "src/index.js",
+    "apiVersion": 3,
+    "entrypoints": {
+      "renderer": "src/index.js"
+    },
     "priority": 100,
-    "packageDependencies": {},
-    "capabilities": {}
+    "packageDependencies": {}
   }
 }
 ```
 
-- `name` is the stable, unique package ID. Do not rename it casually.
-- `version` must be valid SemVer. Increment it only when the task calls for a package release or version change.
-- `description` is displayed directly in the package UI and should state the observable purpose.
-- `dependencies` contains npm compile-time dependencies. Use explicit versions and commit `package-lock.json` whenever it is non-empty.
-- `codexTweaks.entry` is resolved inside the package and compiled by esbuild for the browser.
-- `codexTweaks.priority` is the author's default priority; smaller values load earlier. Never rewrite it merely to represent a user's local ordering because the app stores user overrides separately.
+- `name` is the stable unique package ID. Do not rename it casually.
+- `version` must be valid SemVer. Increment it only when the task calls for a release or version change.
+- `description` is shown directly to users and should state observable behavior.
+- `dependencies` contains npm dependencies used at build or Node runtime. Pin explicit versions and commit `package-lock.json` whenever it is non-empty.
+- `codexTweaks.entrypoints.renderer` stays inside the package and is bundled for the browser.
+- `codexTweaks.priority` is the author's default; smaller values activate earlier. User ordering is stored separately by the app.
 
-## Host capabilities
+## Renderer entry and lifecycle
 
-Before selecting or using a host capability, obtain the latest `AppSnapshot` from the installed Codex Tweaks backend and read `AppSnapshot.availableCapabilities`:
+The Renderer entry exports `activate(context)` and may return a cleanup function:
 
-- The `initialize` and `getState` JSON-RPC responses contain the snapshot in `result`; a pushed `state` event contains it in `data`.
-- On an already initialized newline-delimited JSON-RPC connection, send `{"id": <request-id>, "method": "getState"}` and read `result.availableCapabilities`.
-- Treat the returned array as the only authoritative capability catalog. Follow each returned descriptor's manifest declaration, runtime access, usage, constraints, methods, fields, errors, and examples exactly; do not infer capabilities from the app version or hardcode a catalog from this Skill.
-- Keep requests under `codexTweaks.capabilities`. The host validates the manifest and exposes only the approved capability handles through `api.capabilities` / `context.capabilities` at runtime.
+```js
+import "./style.css";
+
+export function activate({ root, onCleanup, api, dependencies, ui, node }) {
+  const element = document.createElement("div");
+  root.append(element);
+
+  const handleResize = () => {};
+  window.addEventListener("resize", handleResize);
+  onCleanup(() => window.removeEventListener("resize", handleResize));
+
+  api.registerLibrary("example", { element });
+  const shared = dependencies.get("shared-core").getLibrary("public-api");
+  void shared;
+  void ui;
+  void node;
+}
+```
+
+The context contains:
+
+- `id`, `name`, and `version` for the active compiled package.
+- `root`, the package-owned DOM root.
+- `onCleanup(callback)` and `api.registerCleanup(callback)` for teardown.
+- `api.registerLibrary`, `hasLibrary`, `getLibrary`, and `listLibraries` for package exports.
+- `dependencies.has`, `get`, and `list` for package dependencies declared in the manifest.
+- `ui`, the typed Renderer UI extension host. Only extensions declared by the package are populated.
+- `node`, present only when this exact package revision declared Node, was trusted, and its Node runtime is running.
+
+Every observer, timer, listener, DOM node outside `root`, and external mutation must be reversible. Activation and cleanup must tolerate reinjection, remounting, and late target discovery. One package failure must not prevent unrelated packages from activating.
+
+## Node backend and trust
+
+Declare Node only when browser code and typed UI extensions cannot implement the requirement. A Node declaration grants the package full code execution as the current user, including filesystem, network, local services, databases, child processes, and installed npm modules.
+
+The Node entry and permission must always be declared together:
+
+```json
+{
+  "codexTweaks": {
+    "apiVersion": 3,
+    "entrypoints": {
+      "renderer": "src/index.js",
+      "node": "src/node.js"
+    },
+    "priority": 100,
+    "packageDependencies": {},
+    "permissions": {
+      "node": {
+        "reason": "读取用户选择的图片、生成缩略图，并把结果写入包的数据目录。"
+      }
+    }
+  }
+}
+```
+
+- `permissions.node.reason` is mandatory, is shown verbatim in the authorization dialog, and must be a concrete 1–1000 character explanation of why Node is needed and what local resources are used.
+- Do not write vague reasons such as “improve functionality.” Name filesystem, network, process, database, or local-service use that matters to the user.
+- The entire package is blocked until its current Node revision is trusted. Authorization is invalidated by a version, manifest, reason, source, dependency, entry, compiler, or Node bundle change, and when the package is turned off.
+- The app may offer an explicitly warned developer-only automatic trust switch. It is off after every app restart and is not a package guarantee; packages must work with the normal authorization flow.
+- npm install scripts are suppressed during the pre-authorization build. After authorization, a locked dependency install may execute lifecycle scripts before the Node process starts. Mention material lifecycle-script behavior in the reason.
+- Never ask the user to enable Node merely to bypass a missing Renderer convenience API.
+
+The Node entry exports `activate(context)`. Register named RPC handlers and return cleanup when necessary:
+
+```js
+import fs from "node:fs/promises";
+import path from "node:path";
+
+export function activate({ rpc, packageDirectory, dataDirectory, signal }) {
+  rpc.handle("read-config", async ({ name }) => {
+    const file = path.join(dataDirectory, `${name}.json`);
+    return JSON.parse(await fs.readFile(file, "utf8"));
+  });
+
+  const timer = setInterval(() => rpc.emit("tick", { at: Date.now() }), 1000);
+  signal.addEventListener("abort", () => clearInterval(timer), { once: true });
+  return () => clearInterval(timer);
+}
+```
+
+Renderer code calls only its own Node process:
+
+```js
+export function activate({ node, onCleanup }) {
+  if (!node) throw new Error("Node runtime is required");
+  node.invoke("read-config", { name: "settings" }).then(console.log);
+  const unsubscribe = node.on("tick", (event) => console.log(event.at));
+  onCleanup(unsubscribe);
+}
+```
+
+- RPC parameters, results, and events must be JSON-serializable.
+- `rpc.handle(method, handler)` names must be unique inside the package.
+- `rpc.emit(name, payload)` broadcasts to active Renderer instances of the same package.
+- Use `dataDirectory` for mutable private package data and `packageDirectory` only when the source package itself must be inspected.
+- Observe `signal` and clean up files, watchers, servers, timers, subprocesses, and database handles promptly.
+
+## Typed UI extensions
+
+UI integrations are parallel, independently versioned declarations under `codexTweaks.ui`. Do not invent a generic UI capability. Use only documented extension keys.
+
+To add a real Codex settings route:
+
+```json
+{
+  "codexTweaks": {
+    "ui": {
+      "settingsSections": {
+        "apiVersion": 1,
+        "required": false,
+        "items": [{
+          "id": "appearance-extra",
+          "title": "扩展外观",
+          "group": "personal",
+          "icon": "personalization",
+          "after": "personalization"
+        }]
+      }
+    }
+  }
+}
+```
+
+```js
+export function activate({ ui }) {
+  const settings = ui.settingsSections;
+  if (!settings) return;
+  return settings.register({
+    id: "appearance-extra",
+    mount(container) {
+      const page = document.createElement("div");
+      page.textContent = "扩展外观";
+      container.append(page);
+      return () => page.remove();
+    },
+  }).unregister;
+}
+```
+
+- `settingsSections.apiVersion` must be `1`; one package may declare 1–8 unique lowercase kebab-case items.
+- `required` defaults to `true`. Set it to `false` when the package can still provide useful behavior in renderers where the Codex settings adapter is unavailable.
+- Valid groups are `personal`, `integrations`, `coding`, and `archived`. Defaults are `personal` and the `personalization` icon.
+- The host owns private-module discovery, navigation placement, route registration, and cleanup. Package code owns only the mounted page content.
+- `mount` may run again and must return idempotent cleanup for every owned side effect.
 
 ## Package dependencies
 
@@ -60,20 +202,16 @@ Declare Codex Tweaks package dependencies under `codexTweaks.packageDependencies
 ```json
 {
   "codexTweaks": {
-    "apiVersion": 2,
-    "entry": "src/index.js",
+    "apiVersion": 3,
+    "entrypoints": { "renderer": "src/index.js" },
     "priority": 100,
     "packageDependencies": {
-      "local-core": {
-        "version": "^1.0.0"
-      },
+      "local-core": { "version": "^1.0.0" },
       "shared-core": {
         "version": "^1.2.0",
         "source": {
           "url": "https://github.com/example/shared-core.git",
-          "selector": {
-            "type": "latestSemverTag"
-          }
+          "selector": { "type": "latestSemverTag" }
         }
       }
     }
@@ -81,71 +219,31 @@ Declare Codex Tweaks package dependencies under `codexTweaks.packageDependencies
 }
 ```
 
-- A dependency is loaded and activated before its dependent package, regardless of user priority.
-- The object key is the dependency's canonical package ID and `version` is always required. The app must be able to build the dependency graph without network access.
-- Supported version requirements are exact SemVer, `^`, `~`, comparison operators, and `x` or `*` wildcards.
-- Omitting `source` declares a local-only dependency. If the package is missing, the app reports it but does not guess or download a repository.
-- Providing `source` declares an explicit Git installation source. A compatible package already present locally may satisfy the dependency; otherwise the app can install it after user confirmation and lock the resolved commit.
-- A Git URL alone is not a valid canonical dependency declaration. When a UI accepts a repository URL by itself, it must first read the repository package manifest and then persist both the discovered package ID and the Git source.
-- A Git-managed dependency still runs from local compiled output. Treat `source` as acquisition and provenance metadata, not as a remote runtime import.
-- Do not add an invented repository URL.
-- Supported selector types are `branch`, `latestSemverTag`, `tag`, `githubLatestRelease`, `githubRelease`, and `commit`. `branch`, `tag`, `githubRelease`, and `commit` require a `value` except the two `latest` selectors.
-- GitHub Release selectors apply only to github.com repositories. Generic Git repositories use branches, tags, or commits.
-- Do not clone repositories, run Git, download dependencies, or self-update from package runtime code. The app owns resolution, confirmation, locking, downloading, and updates.
-- Avoid circular dependencies. If several packages require incompatible versions of the same package ID, report the conflict rather than bypassing it.
-- User priority only orders packages that are not constrained by a dependency path. The app keeps that override separately, removes it when it equals the declared priority, and explains when dependency topology overrides the requested numeric order.
-
-Package dependencies provide lifecycle ordering and namespaced runtime capabilities. They do not make another package's source importable at compile time. Shared compile-time code belongs in an npm package.
-
-## Entry and lifecycle
-
-The entry must export `activate(context)` and may return a cleanup function:
-
-```js
-import "./style.css";
-
-export function activate({ root, onCleanup, api, dependencies }) {
-  const element = document.createElement("div");
-  root.append(element);
-
-  const handleEvent = () => {};
-  window.addEventListener("resize", handleEvent);
-  onCleanup(() => window.removeEventListener("resize", handleEvent));
-
-  api.registerLibrary("example", { element });
-  const shared = dependencies.get("shared-core").getLibrary("public-api");
-  void shared;
-}
-```
-
-The context contains:
-
-- `id`, `name`, and `version` for the active compiled package.
-- `root`, an isolated DOM root owned by the package.
-- `onCleanup(callback)` and `api.registerCleanup(callback)` for teardown.
-- `api.capabilities` / `capabilities` for independently versioned host capabilities declared in the manifest.
-- `api.registerLibrary`, `hasLibrary`, `getLibrary`, and `listLibraries` for libraries exported by this package.
-- `dependencies.has`, `get`, and `list` for declared dependency packages and their exported libraries. Access is limited to dependencies named in the manifest.
-
-Every observer, timer, event listener, DOM node mounted outside `root`, and external state mutation must be reversible. Activation and cleanup must tolerate reinjection, page refreshes, and target elements appearing later. A package failure must not prevent unrelated packages from running.
+- Dependencies activate before dependents. The app blocks dependents when a dependency is missing, disabled, invalid, incompatible, unauthorized, or cyclic.
+- Supported version requirements are exact SemVer, `^`, `~`, comparisons, and `x` or `*` wildcards.
+- Omitting `source` means local-only. Supplying `source` declares explicit Git acquisition metadata; the app confirms, locks, installs, and updates it.
+- Supported selectors are `branch`, `latestSemverTag`, `tag`, `githubLatestRelease`, `githubRelease`, and `commit`. Required selector values must be explicit.
+- Do not clone, download, self-update, or invent repository URLs from runtime code.
+- Package dependencies provide activation ordering and exported libraries, not compile-time source imports. Put shared compile-time code in an npm package.
 
 ## Browser and style constraints
 
-- Source may use JavaScript, TypeScript, `import`/`export`, npm modules, and CSS imports supported by esbuild.
-- Page runtime has no Node built-ins. Do not use `fs`, `child_process`, Electron internals, or runtime npm installation.
-- Do not load scripts, CSS, fonts, or modules from a CDN at runtime; bundle required code locally.
-- Scope owned DOM and CSS with a unique `data-codex-tweaks-*` attribute or package-specific class.
-- Prefer stable roles, ARIA attributes, text meaning, and structure over generated class names when locating Codex UI.
-- Handle light and dark appearance, viewport edges, long text, keyboard focus, and `prefers-reduced-motion` when relevant.
-- Decorative or watermark-only UI must use `pointer-events: none` and must not register click behavior.
+- Renderer source may use JavaScript, TypeScript, npm modules, CSS imports, and esbuild-supported syntax.
+- Renderer has no Node built-ins. Put required local work in a declared Node entry and call it through `node.invoke`.
+- Do not load runtime scripts, CSS, fonts, or modules from a CDN; bundle code locally.
+- Scope DOM and CSS with a unique `data-codex-tweaks-*` attribute or package-specific class.
+- Prefer stable roles, ARIA attributes, text meaning, and structure over generated class names.
+- Handle light/dark appearance, viewport edges, long text, keyboard focus, and reduced motion.
+- Decorative UI must use `pointer-events: none` and must not register clicks.
 
 ## Build and verification
 
-For local distribution, provide either the package directory itself or a ZIP with `package.json` at its root or inside one unambiguous top-level directory. Do not include `.git`, `node_modules`, symbolic links, or special files. Keep `package-lock.json` beside `package.json` whenever npm `dependencies` is non-empty. Local installation validates the complete package in staging and never overwrites an installed package with the same canonical ID.
+For local distribution, provide the package directory or a ZIP with `package.json` at its root or under one unambiguous top-level directory. Do not include `.git`, `node_modules`, symbolic links, or special files.
 
-- The normal update path runs `npm ci --ignore-scripts` for locked npm dependencies and then the app-pinned esbuild version.
-- Developer mode may compile local source changes from existing dependencies and compiler cache, but must not silently fetch Git updates or new npm dependencies.
-- Validate `package.json`, dependency IDs and ranges, entry containment, and cleanup behavior.
-- Use the Codex Tweaks package page to perform a manual compile when runtime verification is requested and available.
-- Run relevant non-destructive project tests. Distinguish source/test evidence from actual visual observation in Codex.
-- Report the package changed, manifest or dependency changes, compilation/tests performed, and any page behavior still requiring user confirmation.
+- Keep `package-lock.json` beside `package.json` whenever npm dependencies are non-empty.
+- Validate API v3 manifest structure, both entry paths, Node reason, UI declarations, dependency IDs/ranges, and cleanup behavior.
+- The normal pre-authorization build uses locked dependencies with lifecycle scripts disabled and the host-pinned esbuild version.
+- Developer mode may compile existing local source changes but must not silently trust Node, fetch Git updates, or install new npm dependencies.
+- Use the Codex Tweaks package page for build and authorization when live verification is requested and available.
+- Run relevant non-destructive tests. Distinguish source/test evidence from actual visual observation in Codex.
+- Report package files changed, Node/UI/dependency declarations, build/tests performed, and behavior still requiring user confirmation.

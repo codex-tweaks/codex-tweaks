@@ -156,11 +156,11 @@ function Invoke-BackendSmoke([string]$Backend, [string]$Publish, [string]$Expect
         $ping = $rpcResponses | Where-Object { $_.id -eq 1 } | Select-Object -First 1
         $initialize = $rpcResponses | Where-Object { $_.id -eq 2 } | Select-Object -First 1
         $shutdown = $rpcResponses | Where-Object { $_.id -eq 3 } | Select-Object -First 1
-        if ($null -eq $ping -or $ping.result.backend -ne 'go' -or $ping.result.protocolVersion -ne 4) {
-            throw 'Backend ping response did not satisfy protocol v4.'
+        if ($null -eq $ping -or $ping.result.backend -ne 'go' -or $ping.result.protocolVersion -ne 5) {
+            throw 'Backend ping response did not satisfy protocol v5.'
         }
-        if ($null -eq $initialize -or $initialize.result.protocolVersion -ne 4) {
-            throw 'Backend initialize response did not satisfy protocol v4.'
+        if ($null -eq $initialize -or $initialize.result.protocolVersion -ne 5) {
+            throw 'Backend initialize response did not satisfy protocol v5.'
         }
         $shutdownHasError = $null -ne $shutdown `
             -and $shutdown.PSObject.Properties.Name -contains 'error' `

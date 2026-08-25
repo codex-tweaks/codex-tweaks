@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -114,6 +115,55 @@ func TestStorePriorityOverrideIsSeparateAndNormalized(t *testing.T) {
 	packages, _ = store.LoadPackages()
 	if packages[0].PriorityOverride != nil {
 		t.Fatal("matching override should be removed")
+	}
+}
+
+func TestStoreDeletedBundledPackageDoesNotReturnOnReload(t *testing.T) {
+	root := t.TempDir()
+	bundledDirectory := filepath.Join(root, "Bundled", "packages")
+	bundledStore := &Store{PackagesDirectory: bundledDirectory}
+	makeStorePackage(t, bundledStore, "bundled-sample", "bundled-sample", "1.0.0", 0, nil, "")
+	store, err := NewStore(
+		filepath.Join(root, "Application Support"),
+		filepath.Join(root, "Caches"),
+		bundledDirectory,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	packages, err := store.LoadPackages()
+	if err != nil || len(packages) != 1 {
+		t.Fatalf("bundled package was not seeded: %v %#v", err, packages)
+	}
+	if err := store.DeleteLocalPackage(packages[0]); err != nil {
+		t.Fatal(err)
+	}
+	packages, err = store.LoadPackages()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(packages) != 0 {
+		t.Fatalf("deleted bundled package returned: %#v", packages)
+	}
+	if _, err := os.Stat(filepath.Join(store.PackagesDirectory, "bundled-sample")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("deleted bundled package directory still exists: %v", err)
+	}
+}
+
+func TestStoreRejectsDeletingOutsidePackagesDirectory(t *testing.T) {
+	store, root := newTestStore(t)
+	directory := filepath.Join(root, "outside")
+	if err := os.MkdirAll(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	err := store.DeleteLocalPackage(Package{
+		ID: "outside", DirectoryName: "outside", Directory: directory, Origin: LocalOrigin(),
+	})
+	if err == nil {
+		t.Fatal("outside directory was accepted for deletion")
+	}
+	if _, statErr := os.Stat(directory); statErr != nil {
+		t.Fatalf("outside directory was changed: %v", statErr)
 	}
 }
 

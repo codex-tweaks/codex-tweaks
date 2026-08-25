@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const ProtocolVersion = 5
+const ProtocolVersion = 8
 
 type Controller struct {
 	mu                  sync.Mutex
@@ -47,6 +47,7 @@ type Controller struct {
 	disabledPackageIDs           map[string]bool
 	buildingPackageIDs           map[string]bool
 	exportingPackageIDs          map[string]bool
+	deletingPackageIDs           map[string]bool
 	packageBuildErrors           map[string]string
 	packageBuildErrorRequestKeys map[string]string
 	packageRuntimeErrors         map[string]string
@@ -120,7 +121,8 @@ func NewController(params InitializeParams, event func(AppSnapshot), dependencie
 		currentVersion: normalizedInstalledVersion(params.CurrentVersion), buildNumber: params.BuildNumber,
 		disableBackground:  dependencies.DisableBackground,
 		status:             AppStatus{Kind: StatusStarting},
-		disabledPackageIDs: map[string]bool{}, buildingPackageIDs: map[string]bool{}, exportingPackageIDs: map[string]bool{},
+		disabledPackageIDs: map[string]bool{}, buildingPackageIDs: map[string]bool{},
+		exportingPackageIDs: map[string]bool{}, deletingPackageIDs: map[string]bool{},
 		packageBuildErrors: map[string]string{}, packageBuildErrorRequestKeys: map[string]string{},
 		packageRuntimeErrors: map[string]string{}, packagePayloadErrors: map[string]string{},
 		packageDependencyStatuses: map[string][]DependencyStatus{}, packageDependencyIssues: map[string][]string{},
@@ -242,16 +244,21 @@ func (c *Controller) Snapshot() AppSnapshot {
 		view.Node = c.packageNodeViewLocked(pkg)
 		remoteUpdate, hasRemoteUpdate := c.remotePackageUpdates[pkg.ID]
 		hasPackageExport := len(c.exportingPackageIDs) > 0
+		deletingAnyPackage := len(c.deletingPackageIDs) > 0
+		packageMutationBusy := c.installingLocalPackage || c.installingRemotePackage ||
+			hasPackageExport || deletingAnyPackage || len(c.installingPackageIDs) > 0 ||
+			len(c.buildingPackageIDs) > 0 || c.checkingRemoteUpdates
 		view.AvailableActions = PackageAvailableActions{
-			SetEnabled:                 true,
-			SetPriority:                true,
-			OpenDirectory:              true,
-			Export:                     !hasPackageExport && !c.installingLocalPackage && !c.installingRemotePackage,
-			InstallMissingDependencies: view.CanInstallMissingDependencies && c.gitEnvironment != nil && !c.installingPackageIDs[pkg.ID],
-			EnableDependencies:         view.CanEnableDependencies,
-			UpdateManagedPackage:       hasRemoteUpdate && remoteUpdate.Installable() && c.gitEnvironment != nil && !c.installingPackageIDs[pkg.ID],
-			Build:                      view.ValidationError == nil && view.BuildRequestKey != nil && c.nodeEnvironment != nil && !c.buildingPackageIDs[pkg.ID],
-			AuthorizeNode:              view.Node != nil && view.Node.AuthorizationID != "" && !view.Node.Authorized && !c.disabledPackageIDs[pkg.ID],
+			SetEnabled:                 !deletingAnyPackage,
+			SetPriority:                !deletingAnyPackage,
+			OpenDirectory:              !c.deletingPackageIDs[pkg.ID],
+			Export:                     !hasPackageExport && !c.installingLocalPackage && !c.installingRemotePackage && !deletingAnyPackage,
+			Delete:                     !packageMutationBusy,
+			InstallMissingDependencies: view.CanInstallMissingDependencies && c.gitEnvironment != nil && !c.installingPackageIDs[pkg.ID] && !deletingAnyPackage,
+			EnableDependencies:         view.CanEnableDependencies && !deletingAnyPackage,
+			UpdateManagedPackage:       hasRemoteUpdate && remoteUpdate.Installable() && c.gitEnvironment != nil && !c.installingPackageIDs[pkg.ID] && !deletingAnyPackage,
+			Build:                      view.ValidationError == nil && view.BuildRequestKey != nil && c.nodeEnvironment != nil && !c.buildingPackageIDs[pkg.ID] && !deletingAnyPackage,
+			AuthorizeNode:              view.Node != nil && view.Node.AuthorizationID != "" && !view.Node.Authorized && !c.disabledPackageIDs[pkg.ID] && !deletingAnyPackage,
 		}
 		view.Presentation = c.packagePresentation(view, presentationText)
 		packageViews = append(packageViews, view)
@@ -281,6 +288,7 @@ func (c *Controller) Snapshot() AppSnapshot {
 		CheckingRemoteUpdates:  c.checkingRemoteUpdates,
 		InstallingLocalPackage: c.installingLocalPackage, InstallingRemotePackage: c.installingRemotePackage,
 		ExportingPackage: len(c.exportingPackageIDs) > 0,
+		DeletingPackage:  len(c.deletingPackageIDs) > 0,
 		GitAvailable:     c.gitEnvironment != nil, LogAvailable: strings.TrimSpace(c.logText) != "",
 		AuthoringPromptAvailable: c.skillPath != "",
 		UpdateChecking:           c.updateChecking, UpdateAvailable: updateSnapshot.UpdateAvailable,
@@ -334,6 +342,8 @@ func (c *Controller) packagePresentation(view PackageView, text map[string]strin
 
 	result := PackagePresentation{IsError: hasError, IsPending: isPending, StatusTone: "warning"}
 	switch {
+	case c.deletingPackageIDs[packageID]:
+		result.StatusTitle = text["packages.status.deleting"]
 	case c.installingPackageIDs[packageID]:
 		result.StatusTitle = text["packages.status.installingRemote"]
 	case c.buildingPackageIDs[packageID]:
@@ -373,6 +383,8 @@ func (c *Controller) packagePresentation(view PackageView, text map[string]strin
 	}
 
 	switch {
+	case c.deletingPackageIDs[packageID]:
+		result.StatusDetail = text["packages.detail.deleting"]
 	case c.exportingPackageIDs[packageID]:
 		result.StatusDetail = text["packages.detail.exporting"]
 	case view.ValidationError != nil:
@@ -436,7 +448,8 @@ func (c *Controller) packagePresentation(view PackageView, text map[string]strin
 		hasRemoteUpdate && remoteUpdate.Status == RemoteUpdateAvailable,
 		len(dependencyIssues) > 0:
 		result.StatusTone = "warning"
-	case c.installingPackageIDs[packageID] || c.buildingPackageIDs[packageID] || c.exportingPackageIDs[packageID]:
+	case c.installingPackageIDs[packageID] || c.buildingPackageIDs[packageID] ||
+		c.exportingPackageIDs[packageID] || c.deletingPackageIDs[packageID]:
 		result.StatusTone = "accent"
 	case c.disabledPackageIDs[packageID]:
 		result.StatusTone = "neutral"
@@ -470,6 +483,10 @@ func packageView(pkg Package, disabled, installed map[string]bool) PackageView {
 			break
 		}
 	}
+	var projectPageURL *string
+	if lock := pkg.ManagedLock(); lock != nil {
+		projectPageURL = repositoryProjectPageURL(lock.Source.URL)
+	}
 	return PackageView{
 		ID: pkg.ID, DirectoryName: pkg.DirectoryName, Directory: pkg.Directory,
 		ExportFileName: PackageArchiveFileName(pkg), Manifest: pkg.Manifest,
@@ -479,7 +496,7 @@ func packageView(pkg Package, disabled, installed map[string]bool) PackageView {
 		DeclaredPriority: pkg.DeclaredPriority(), Priority: pkg.Priority(),
 		HasDependencies:     pkg.Manifest != nil && len(pkg.Manifest.Dependencies) > 0,
 		PackageDependencies: pkg.PackageDependencies(), RuntimePackageDependencies: pkg.RuntimePackageDependencies(),
-		IsManaged: pkg.Origin.Kind == OriginManaged, ManagedLock: pkg.ManagedLock(),
+		IsManaged: pkg.Origin.Kind == OriginManaged, ManagedLock: pkg.ManagedLock(), ProjectPageURL: projectPageURL,
 		BuildDisposition: pkg.BuildDisposition(CompilerVersion), BuildRequestKey: requestKeyPointer,
 		CanInstallMissingDependencies: canInstall, CanEnableDependencies: canEnable,
 	}
@@ -496,7 +513,8 @@ func (c *Controller) updateSnapshotLocked() UpdateSnapshot {
 		skipped = containsString(c.config.UpdateSkippedVersions, NormalizeVersion(c.latestRelease.TagName))
 	}
 	return UpdateSnapshot{
-		Channel: c.config.UpdateChannel, AutoCheck: c.config.UpdateAutoCheck, Checking: c.updateChecking,
+		Channel: c.config.UpdateChannel, PackageChannel: packageChannelForRelease(c.latestRelease),
+		AutoCheck: c.config.UpdateAutoCheck, Checking: c.updateChecking,
 		LatestRelease: cloneRelease(c.latestRelease), LastError: cloneStringPointer(c.updateLastError),
 		LastCheckAt: cloneTimePointer(c.config.UpdateLastCheckAt), PendingUpdate: cloneRelease(c.pendingUpdate),
 		CurrentVersion: c.currentVersion, BuildNumber: c.buildNumber, HasNewerVersion: hasNewer,

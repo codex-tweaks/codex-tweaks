@@ -133,6 +133,118 @@ func TestRemoteManagerReportsMovedPinnedTagWithoutOfferingOrdinaryUpdate(t *test
 	}
 }
 
+func TestRemoteManagerRemovesRegistrationLockAndManagedSource(t *testing.T) {
+	store, _ := newTestStore(t)
+	const packageID = "managed-delete-sample"
+	packageSourceRoot := filepath.Join(store.ManagedSourcesDirectory, FingerprintString(packageID))
+	sourceDirectory := filepath.Join(packageSourceRoot, strings.Repeat("a", 40))
+	if err := os.MkdirAll(sourceDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sourceDirectory, "package.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	relativeSource, err := filepath.Rel(store.ManagedPackagesDirectory, sourceDirectory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := PackageSource{URL: "https://github.com/example/package.git", Selector: NewRemoteSelector(SelectorBranch, "main")}
+	lock := ManagedPackageLock{
+		PackageID: packageID, Source: source, SourceRelativePath: filepath.ToSlash(relativeSource),
+	}
+	manager := NewRemoteManager(store, nil, nil, nil)
+	if err := manager.writeRegistry(ManagedPackageRegistry{
+		SchemaVersion: 1,
+		Packages: map[string]ManagedPackageRegistration{
+			packageID: {PackageID: packageID, Source: source},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.writeLockfile(ManagedPackageLockfile{
+		SchemaVersion: 1,
+		Packages:      map[string]ManagedPackageLock{packageID: lock},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := manager.Remove(packageID); err != nil {
+		t.Fatal(err)
+	}
+	registry, err := manager.loadRegistry()
+	if err != nil {
+		t.Fatal(err)
+	}
+	lockfile, err := store.LoadManagedLockfile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(registry.Packages) != 0 || len(lockfile.Packages) != 0 {
+		t.Fatalf("managed metadata remains: %#v %#v", registry, lockfile)
+	}
+	if _, err := os.Stat(packageSourceRoot); !os.IsNotExist(err) {
+		t.Fatalf("managed source remains: %v", err)
+	}
+}
+
+func TestRemoteManagerRejectsRemovalOutsideManagedSources(t *testing.T) {
+	store, _ := newTestStore(t)
+	const packageID = "managed-delete-outside"
+	outsideDirectory := filepath.Join(t.TempDir(), "outside-source")
+	if err := os.MkdirAll(outsideDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(outsideDirectory, "keep.txt")
+	if err := os.WriteFile(marker, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	relativeSource, err := filepath.Rel(store.ManagedPackagesDirectory, outsideDirectory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := PackageSource{URL: "https://github.com/example/package.git", Selector: NewRemoteSelector(SelectorBranch, "main")}
+	lock := ManagedPackageLock{
+		PackageID: packageID, Source: source, SourceRelativePath: filepath.ToSlash(relativeSource),
+	}
+	manager := NewRemoteManager(store, nil, nil, nil)
+	if err := manager.writeRegistry(ManagedPackageRegistry{
+		SchemaVersion: 1,
+		Packages: map[string]ManagedPackageRegistration{
+			packageID: {PackageID: packageID, Source: source},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.writeLockfile(ManagedPackageLockfile{
+		SchemaVersion: 1,
+		Packages:      map[string]ManagedPackageLock{packageID: lock},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	err = manager.Remove(packageID)
+	if err == nil || !strings.Contains(err.Error(), "超出托管源码目录") {
+		t.Fatalf("expected managed source boundary error, got %v", err)
+	}
+	registry, registryErr := manager.loadRegistry()
+	if registryErr != nil {
+		t.Fatal(registryErr)
+	}
+	lockfile, lockErr := store.LoadManagedLockfile()
+	if lockErr != nil {
+		t.Fatal(lockErr)
+	}
+	if _, exists := registry.Packages[packageID]; !exists {
+		t.Fatalf("registry entry was removed after rejected deletion: %#v", registry)
+	}
+	if _, exists := lockfile.Packages[packageID]; !exists {
+		t.Fatalf("lock entry was removed after rejected deletion: %#v", lockfile)
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatalf("outside source was changed: %v", err)
+	}
+}
+
 func writeRemotePackage(t *testing.T, repository, version string, dependencies map[string]string) {
 	t.Helper()
 	writeTestFile(t, filepath.Join(repository, "src", "index.js"), "export function activate() {}\n")

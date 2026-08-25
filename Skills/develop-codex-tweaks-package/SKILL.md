@@ -22,10 +22,17 @@ Every package contains `package.json` and a Renderer entry:
 
 ```json
 {
-  "name": "my-tweak",
+  "name": "ct-my-tweak",
   "version": "1.0.0",
   "description": "用一句话说明这个包在页面中实现的作用。",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/example/codex-tweaks-my-tweak.git"
+  },
+  "homepage": "https://github.com/example/codex-tweaks-my-tweak",
+  "keywords": ["codex-tweaks-package", "codex-tweaks-ui"],
+  "license": "MIT",
   "dependencies": {},
   "codexTweaks": {
     "apiVersion": 3,
@@ -38,12 +45,63 @@ Every package contains `package.json` and a Renderer entry:
 }
 ```
 
-- `name` is the stable unique package ID. Do not rename it casually.
+- `name` is the stable unique package ID. For a shared package, use `ct-<slug>` and do not rename it after publication.
 - `version` must be valid SemVer. Increment it only when the task calls for a release or version change.
 - `description` is shown directly to users and should state observable behavior.
 - `dependencies` contains npm dependencies used at build or Node runtime. Pin explicit versions and commit `package-lock.json` whenever it is non-empty.
 - `codexTweaks.entrypoints.renderer` stays inside the package and is bundled for the browser.
 - `codexTweaks.priority` is the author's default; smaller values activate earlier. User ordering is stored separately by the app.
+
+## Public repository and naming convention
+
+Use this convention whenever the user wants to publish or share a package through Git:
+
+- Keep one Codex Tweaks package in one repository, with `package.json` and `README.md` at the repository root.
+- Name both the package source directory and Git repository `codex-tweaks-<slug>`, for example `codex-tweaks-compact-sidebar`. The slug uses lowercase ASCII letters, digits, and single hyphens.
+- Name the package ID in `package.json` `ct-<slug>`, for example `ct-compact-sidebar`. Use the same slug as the directory and repository, choose a distinctive slug to avoid collisions, and keep the ID unchanged after publication.
+- Add the GitHub topic `codex-tweaks-package`. Add focused topics such as `codex-tweaks-theme`, `codex-tweaks-layout`, `codex-tweaks-workflow`, or `codex-tweaks-node` only when they describe the package.
+- Keep `repository`, `homepage`, `keywords`, and `license` accurate. Never imply that a third-party package is official, reviewed, or trusted merely because it follows the naming convention.
+- Publish immutable `v<SemVer>` tags, for example `v1.2.0`. Prefer `latestSemverTag` for normal Git installation and updates.
+- Treat this as a public-discovery convention, not an installation restriction. Existing packages, private repositories, and non-GitHub Git hosts do not need to be renamed merely to remain installable.
+
+## Package README
+
+Every package should include a root `README.md`, including local-only packages. Write it for the person deciding whether to install and trust the package, not only for its developer. Use this template and remove sections that genuinely do not apply:
+
+```md
+# <Package display name>
+
+<One sentence describing the observable change this package makes in Codex.>
+
+## Features
+
+- <User-visible behavior>
+- <Another user-visible behavior>
+
+## Install
+
+Install this repository from the Codex Tweaks package page and select a released `v<SemVer>` tag. New packages remain disabled until you review and enable them.
+
+## Permissions and safety
+
+- Renderer access: <what page content the package reads or changes>
+- Node access: <why Node is required and what local resources it uses, or "Not used">
+- Network access: <destinations and purpose, or "Not used">
+
+## Compatibility
+
+- Codex Tweaks API: v3
+- Tested platforms: <macOS, Windows, or both>
+- Known limitations: <limitations or "None known">
+
+## Development
+
+<Commands for installing dependencies, building, and verifying the package.>
+
+## License
+
+<License name and link to the license file.>
+```
 
 ## Renderer entry and lifecycle
 

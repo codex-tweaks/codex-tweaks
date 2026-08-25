@@ -1,0 +1,22 @@
+{
+  "name": "ct-sample",
+  "version": "1.0.0",
+  "description": "在页面右下角显示 Codex Tweaks 已注入状态。",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cr-zhichen/codex-tweaks.git"
+  },
+  "homepage": "https://github.com/cr-zhichen/codex-tweaks",
+  "keywords": ["codex-tweaks-package", "codex-tweaks-ui"],
+  "license": "MIT",
+  "dependencies": {},
+  "codexTweaks": {
+    "apiVersion": 3,
+    "entrypoints": {
+      "renderer": "src/index.js"
+    },
+    "priority": -1,
+    "packageDependencies": {}
+  }
+}

@@ -103,24 +103,37 @@ func (s *CDPService) Inject(ctx context.Context, payload Payload, forceGeneratio
 			s.logError(fmt.Sprintf("目标 %s 无法建立能力通道：%v", target.ID, err))
 			continue
 		}
+		probe := injectionRuntimeProbeScript(
+			payload, forceGeneration, bridgeSessionID, settingsAdapter,
+		)
+		value, probeErr := s.evaluate(ctx, probe, *target.WebSocketDebuggerURL)
+		if probeErr == nil && value["status"] == "unchanged" {
+			result.SuccessCount++
+			mergeInjectionPackageErrors(result.PackageErrors, value)
+			continue
+		}
 		script := injectionScriptWithRendererBridge(payload, forceGeneration, bridgeSessionID, nodeTokens, settingsAdapter)
-		value, err := s.evaluate(ctx, script, *target.WebSocketDebuggerURL)
+		value, err = s.evaluate(ctx, script, *target.WebSocketDebuggerURL)
 		if err != nil {
 			s.logError(fmt.Sprintf("目标 %s 注入失败：%v", target.ID, err))
 			continue
 		}
 		result.SuccessCount++
-		errorsValue, _ := value["packageErrors"].([]any)
-		for _, rawError := range errorsValue {
-			packageError, _ := rawError.(map[string]any)
-			packageID, _ := packageError["id"].(string)
-			message, _ := packageError["message"].(string)
-			if packageID != "" && message != "" {
-				result.PackageErrors[packageID] = message
-			}
-		}
+		mergeInjectionPackageErrors(result.PackageErrors, value)
 	}
 	return result, nil
+}
+
+func mergeInjectionPackageErrors(destination map[string]string, value map[string]any) {
+	errorsValue, _ := value["packageErrors"].([]any)
+	for _, rawError := range errorsValue {
+		packageError, _ := rawError.(map[string]any)
+		packageID, _ := packageError["id"].(string)
+		message, _ := packageError["message"].(string)
+		if packageID != "" && message != "" {
+			destination[packageID] = message
+		}
+	}
 }
 
 func (s *CDPService) CleanupAllTargets(ctx context.Context) error {

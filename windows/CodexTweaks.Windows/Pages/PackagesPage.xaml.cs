@@ -643,11 +643,47 @@ public sealed partial class PackagesPage : Page
         }
     }
 
+    private async void OpenProjectPageButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is HyperlinkButton { DataContext: PackageRowViewModel row })
+        {
+            await MainWindow.OpenPathAsync(row.ProjectPageUrl);
+        }
+    }
+
     private async void ExportPackageButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { DataContext: PackageRowViewModel row })
         {
             await Host.ExportPackageAsync(row.Package);
+        }
+    }
+
+    private async void DeletePackageButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: PackageRowViewModel row })
+        {
+            return;
+        }
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = Host.Text(
+                PresentationTextKey.PackagesDeleteTitle,
+                ("name", row.DisplayName)),
+            Content = new TextBlock
+            {
+                Text = Host.Text(PresentationTextKey.PackagesDeleteMessage),
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 560,
+            },
+            PrimaryButtonText = Host.Text(PresentationTextKey.PackagesDeleteConfirm),
+            CloseButtonText = Host.Text(PresentationTextKey.CommonCancel),
+            DefaultButton = ContentDialogButton.Close,
+        };
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            await Host.RunBackendAsync("deletePackage", new { packageID = row.Id });
         }
     }
 
@@ -671,6 +707,10 @@ internal sealed class PackageRowViewModel : INotifyPropertyChanged
     private string _displayName = string.Empty;
     private string _versionText = string.Empty;
     private string _detail = string.Empty;
+    private string _projectPageUrl = string.Empty;
+    private string _projectPageLabel = string.Empty;
+    private Visibility _projectLinkVisibility = Visibility.Collapsed;
+    private Visibility _projectTextVisibility = Visibility.Visible;
     private string _statusTitle = string.Empty;
     private string _statusDetail = string.Empty;
     private Brush _statusBrush = null!;
@@ -696,6 +736,9 @@ internal sealed class PackageRowViewModel : INotifyPropertyChanged
     private string _exportLabel = string.Empty;
     private string _exportHelp = string.Empty;
     private bool _canExport;
+    private string _deleteLabel = string.Empty;
+    private string _deleteHelp = string.Empty;
+    private bool _canDelete;
     private string _buildLabel = string.Empty;
     private bool _canBuild;
     private string _messagesText = string.Empty;
@@ -719,6 +762,10 @@ internal sealed class PackageRowViewModel : INotifyPropertyChanged
     public string DisplayName { get => _displayName; private set => SetProperty(ref _displayName, value); }
     public string VersionText { get => _versionText; private set => SetProperty(ref _versionText, value); }
     public string Detail { get => _detail; private set => SetProperty(ref _detail, value); }
+    public string ProjectPageUrl { get => _projectPageUrl; private set => SetProperty(ref _projectPageUrl, value); }
+    public string ProjectPageLabel { get => _projectPageLabel; private set => SetProperty(ref _projectPageLabel, value); }
+    public Visibility ProjectLinkVisibility { get => _projectLinkVisibility; private set => SetProperty(ref _projectLinkVisibility, value); }
+    public Visibility ProjectTextVisibility { get => _projectTextVisibility; private set => SetProperty(ref _projectTextVisibility, value); }
     public string StatusTitle { get => _statusTitle; private set => SetProperty(ref _statusTitle, value); }
     public string StatusDetail { get => _statusDetail; private set => SetProperty(ref _statusDetail, value); }
     public Brush StatusBrush { get => _statusBrush; private set => SetProperty(ref _statusBrush, value); }
@@ -744,6 +791,9 @@ internal sealed class PackageRowViewModel : INotifyPropertyChanged
     public string ExportLabel { get => _exportLabel; private set => SetProperty(ref _exportLabel, value); }
     public string ExportHelp { get => _exportHelp; private set => SetProperty(ref _exportHelp, value); }
     public bool CanExport { get => _canExport; private set => SetProperty(ref _canExport, value); }
+    public string DeleteLabel { get => _deleteLabel; private set => SetProperty(ref _deleteLabel, value); }
+    public string DeleteHelp { get => _deleteHelp; private set => SetProperty(ref _deleteHelp, value); }
+    public bool CanDelete { get => _canDelete; private set => SetProperty(ref _canDelete, value); }
     public string BuildLabel { get => _buildLabel; private set => SetProperty(ref _buildLabel, value); }
     public bool CanBuild { get => _canBuild; private set => SetProperty(ref _canBuild, value); }
     public string MessagesText { get => _messagesText; private set => SetProperty(ref _messagesText, value); }
@@ -764,6 +814,16 @@ internal sealed class PackageRowViewModel : INotifyPropertyChanged
         Detail = string.IsNullOrWhiteSpace(package.Detail)
             ? host.Text(PresentationTextKey.PackagesNoDescription)
             : package.Detail;
+        ProjectPageUrl = package.ProjectPageUrl ?? string.Empty;
+        ProjectPageLabel = host.Text(
+            PresentationTextKey.PackagesOpenProjectPage,
+            ("name", package.DisplayName));
+        ProjectLinkVisibility = string.IsNullOrWhiteSpace(ProjectPageUrl)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        ProjectTextVisibility = ProjectLinkVisibility == Visibility.Visible
+            ? Visibility.Collapsed
+            : Visibility.Visible;
         NodeReason = package.Node?.Reason ?? string.Empty;
         NodeReasonVisibility = package.Node is null ? Visibility.Collapsed : Visibility.Visible;
         AuthorizeNodeLabel = host.Text(PresentationTextKey.PackagesNodeAuthorizationAllow);
@@ -808,6 +868,9 @@ internal sealed class PackageRowViewModel : INotifyPropertyChanged
         ExportLabel = host.Text(PresentationTextKey.PackagesExportZip);
         ExportHelp = host.Text(PresentationTextKey.PackagesExportZipHelp);
         CanExport = package.AvailableActions.Export;
+        DeleteLabel = host.Text(PresentationTextKey.PackagesDelete);
+        DeleteHelp = host.Text(PresentationTextKey.PackagesDeleteHelp);
+        CanDelete = package.AvailableActions.Delete;
         BuildLabel = snapshot.BuildingPackageIds.Contains(package.Id)
             ? host.Text(PresentationTextKey.PackagesBuilding)
             : package.BuildDisposition switch

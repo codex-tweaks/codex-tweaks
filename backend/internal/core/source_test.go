@@ -30,3 +30,26 @@ func TestValidateSourceRejectsCredentialsInvalidSelectorsAndNonGitHubReleases(t 
 		}
 	}
 }
+
+func TestRepositoryProjectPageURLNormalizesSupportedGitSources(t *testing.T) {
+	tests := map[string]string{
+		"https://github.com/example/codex-tweaks-package.git":   "https://github.com/example/codex-tweaks-package",
+		"https://git.example.com/team/package.git/":             "https://git.example.com/team/package",
+		"ssh://git@github.com/example/codex-tweaks-package.git": "https://github.com/example/codex-tweaks-package",
+		"git@git.example.com:team/codex-tweaks-package.git":     "https://git.example.com/team/codex-tweaks-package",
+	}
+	for source, expected := range tests {
+		actual := repositoryProjectPageURL(source)
+		if actual == nil || *actual != expected {
+			t.Fatalf("repositoryProjectPageURL(%q) = %#v, want %q", source, actual, expected)
+		}
+	}
+}
+
+func TestRepositoryProjectPageURLRejectsNonRemoteAndMalformedSources(t *testing.T) {
+	for _, source := range []string{"", "file:///tmp/package", "https://github.com", "not a repository"} {
+		if actual := repositoryProjectPageURL(source); actual != nil {
+			t.Fatalf("repositoryProjectPageURL(%q) = %q, want nil", source, *actual)
+		}
+	}
+}

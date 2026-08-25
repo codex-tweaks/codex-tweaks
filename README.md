@@ -93,7 +93,7 @@ Codex Tweaks 不会修改 Codex 的应用文件。停用界面增强后，已加
 - **本地安装**：选择功能包目录或 ZIP 文件
 - **从 Git 安装**：填写功能包仓库地址并选择版本
 
-安装完成后，新功能包默认保持停用。检查名称、来源和说明，确认可信后再启用；如果卡片提示待编译，请先完成编译。你也可以先启用内置的 `ct-sample`，连接成功后它会在 Codex 右下角显示注入状态。
+安装完成后，新功能包默认保持停用。检查名称、来源和说明，确认可信后再启用；如果卡片提示待编译，请先完成编译。你也可以先启用内置的 `ct-sample`，连接成功后它会在 Codex 右下角显示注入状态。对于从 Git 安装的功能包，可以点击列表中的名称或说明打开对应的项目页面。
 
 ## 日常使用
 
@@ -138,6 +138,15 @@ Codex 只有在启动时才能开启所需的本地连接。保存当前工作�
 <summary>制作自己的功能包</summary>
 
 如果你想制作自己的功能包，可在应用概览页使用“复制 Skill”，将完整开发说明交给 Codex 或其他智能体。规范原文位于 [`Skills/develop-codex-tweaks-package/SKILL.md`](Skills/develop-codex-tweaks-package/SKILL.md)。
+
+公开分享功能包时，建议遵循统一的发现规范：
+
+- 一个 Git 仓库只放一个功能包，仓库根目录包含 `package.json` 和面向使用者的 `README.md`
+- 功能包源码目录和 Git 仓库都使用 `codex-tweaks-<slug>` 命名，例如 `codex-tweaks-compact-sidebar`
+- `package.json` 中的稳定包 ID 使用 `ct-<slug>`，例如 `ct-compact-sidebar`；三处使用相同的 `<slug>`
+- GitHub 仓库添加 `codex-tweaks-package` Topic，并使用 `v<SemVer>` 发布不可变版本标签
+
+仓库名和 Topic 用于社区检索，不是安装限制；旧包、私有仓库和其他 Git 托管服务仍可照常安装。遵循命名规范也不代表功能包经过官方审核，安装前仍应阅读其 README、权限说明和源码。
 
 </details>
 

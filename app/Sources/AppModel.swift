@@ -388,6 +388,21 @@ final class AppModel: ObservableObject {
         )
     }
 
+    func confirmDeletePackage(_ package: TweakPackage) {
+        guard package.availableActions.delete else { return }
+        let alert = NSAlert()
+        alert.alertStyle = .critical
+        alert.messageText = text(.packagesDeleteTitle, ["name": package.displayName])
+        alert.informativeText = text(.packagesDeleteMessage)
+        let deleteButton = alert.addButton(withTitle: text(.packagesDeleteConfirm))
+        let cancelButton = alert.addButton(withTitle: text(.commonCancel))
+        deleteButton.hasDestructiveAction = true
+        deleteButton.keyEquivalent = ""
+        cancelButton.keyEquivalent = "\r"
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        command("deletePackage", PackageIDParameter(packageID: package.id))
+    }
+
     func openPackageDirectory(_ package: TweakPackage) {
         NSWorkspace.shared.open(package.directoryURL)
     }
@@ -451,7 +466,7 @@ final class AppModel: ObservableObject {
     func sendUpdateCommand(_ method: String) { command(method) }
 
     private func apply(_ snapshot: BackendAppSnapshot) {
-        guard snapshot.protocolVersion == 5 else {
+        guard snapshot.protocolVersion == 8 else {
             status = .error(text(.appProtocolMismatch))
             return
         }

@@ -623,14 +623,12 @@ public sealed partial class MainWindow : Window
         {
             RenderCurrentPage();
             NotifyTrayStateChanged();
-            if (refreshBackend)
-            {
-                await _backend.SendAsync("checkAppUpdate", new { prompt = false });
-            }
+            var snapshot = await _backend.CheckAppUpdateAsync(refreshBackend);
+            ApplySnapshot(snapshot);
             _velopackResult = await _velopack.CheckAsync(
-                Snapshot.Update.Channel,
-                Snapshot.Presentation.Platform.Architecture,
-                Snapshot.Presentation.Platform.RepositoryURL);
+                snapshot.Update.PackageChannel,
+                snapshot.Presentation.Platform.Architecture,
+                snapshot.Presentation.Platform.RepositoryURL);
             await PromptForUpdateAsync();
         }
         catch (Exception exception)

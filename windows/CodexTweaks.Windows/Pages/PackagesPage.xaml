@@ -235,22 +235,55 @@
                                     Toggled="PackageToggle_Toggled" />
 
                                 <StackPanel Grid.Column="1" Spacing="4">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <StackPanel Spacing="4" Visibility="{Binding ProjectTextVisibility}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock
+                                                FontFamily="{StaticResource CodexDisplayFontFamily}"
+                                                FontSize="15"
+                                                FontWeight="SemiBold"
+                                                Text="{Binding DisplayName}"
+                                                TextWrapping="Wrap" />
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                Style="{StaticResource CodexCaptionTextStyle}"
+                                                Text="{Binding VersionText}" />
+                                        </StackPanel>
                                         <TextBlock
-                                            FontFamily="{StaticResource CodexDisplayFontFamily}"
-                                            FontSize="15"
-                                            FontWeight="SemiBold"
-                                            Text="{Binding DisplayName}"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Style="{StaticResource CodexBodyTextStyle}"
+                                            Text="{Binding Detail}"
                                             TextWrapping="Wrap" />
-                                        <TextBlock
-                                            VerticalAlignment="Center"
-                                            Style="{StaticResource CodexCaptionTextStyle}"
-                                            Text="{Binding VersionText}" />
                                     </StackPanel>
-                                    <TextBlock
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Style="{StaticResource CodexBodyTextStyle}"
-                                        Text="{Binding Detail}" />
+                                    <HyperlinkButton
+                                        MinHeight="0"
+                                        Padding="0"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        AutomationProperties.Name="{Binding ProjectPageLabel}"
+                                        Click="OpenProjectPageButton_Click"
+                                        DataContext="{Binding}"
+                                        ToolTipService.ToolTip="{Binding ProjectPageLabel}"
+                                        Visibility="{Binding ProjectLinkVisibility}">
+                                        <StackPanel Spacing="4">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock
+                                                    FontFamily="{StaticResource CodexDisplayFontFamily}"
+                                                    FontSize="15"
+                                                    FontWeight="SemiBold"
+                                                    Text="{Binding DisplayName}"
+                                                    TextWrapping="Wrap" />
+                                                <TextBlock
+                                                    VerticalAlignment="Center"
+                                                    Style="{StaticResource CodexCaptionTextStyle}"
+                                                    Text="{Binding VersionText}" />
+                                            </StackPanel>
+                                            <TextBlock
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                Style="{StaticResource CodexBodyTextStyle}"
+                                                Text="{Binding Detail}"
+                                                TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </HyperlinkButton>
                                     <Grid
                                         ColumnSpacing="7"
                                         Visibility="{Binding NodeReasonVisibility}">
@@ -371,6 +404,16 @@
                                             Style="{StaticResource CodexIconButtonStyle}"
                                             ToolTipService.ToolTip="{Binding ExportHelp}">
                                             <SymbolIcon Symbol="Save" Style="{StaticResource CodexSmallIconStyle}" />
+                                        </Button>
+                                        <Button
+                                            AutomationProperties.Name="{Binding DeleteLabel}"
+                                            DataContext="{Binding}"
+                                            Click="DeletePackageButton_Click"
+                                            Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                            IsEnabled="{Binding CanDelete}"
+                                            Style="{StaticResource CodexIconButtonStyle}"
+                                            ToolTipService.ToolTip="{Binding DeleteHelp}">
+                                            <SymbolIcon Symbol="Delete" Style="{StaticResource CodexSmallIconStyle}" />
                                         </Button>
                                         <Button
                                             DataContext="{Binding}"

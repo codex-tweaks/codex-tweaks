@@ -410,25 +410,7 @@ private struct TweakPackagesView: View {
             .disabled(!package.availableActions.setEnabled)
 
             VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    Text(package.displayName)
-                        .font(.body.weight(.semibold))
-                    Text(model.text(.packagesSourceVersion, ["version": package.version]))
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                    if let active = package.activeBuild {
-                        Text(model.text(
-                            .packagesActiveVersion,
-                            ["version": active.record.packageVersion]
-                        ))
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Text(package.detail)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                packageIdentity(package)
                 if let node = package.node {
                     Label(node.reason, systemImage: "terminal")
                         .font(.caption)
@@ -519,6 +501,15 @@ private struct TweakPackagesView: View {
                     .help(model.text(.packagesExportZipHelp))
                     .disabled(!package.availableActions.export)
 
+                    Button(role: .destructive) {
+                        model.confirmDeletePackage(package)
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .accessibilityLabel(model.text(.packagesDelete))
+                    .help(model.text(.packagesDeleteHelp))
+                    .disabled(!package.availableActions.delete)
+
                     Button(buildButtonTitle(package)) {
                         model.buildPackage(package)
                     }
@@ -531,6 +522,53 @@ private struct TweakPackagesView: View {
         }
         .padding(.vertical, CGFloat(model.tokens.compactSpacing))
         .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private func packageIdentity(_ package: TweakPackage) -> some View {
+        if let projectPageURL = package.projectPageURL {
+            Link(destination: projectPageURL) {
+                packageIdentityContent(package, isLinked: true)
+            }
+            .buttonStyle(.plain)
+            .help(model.text(.packagesOpenProjectPage, ["name": package.displayName]))
+            .accessibilityLabel(model.text(.packagesOpenProjectPage, ["name": package.displayName]))
+        } else {
+            packageIdentityContent(package, isLinked: false)
+        }
+    }
+
+    private func packageIdentityContent(_ package: TweakPackage, isLinked: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    Text(package.displayName)
+                        .font(.body.weight(.semibold))
+                    if isLinked {
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.caption)
+                    }
+                }
+                .foregroundStyle(isLinked ? Color.accentColor : Color.primary)
+
+                Text(model.text(.packagesSourceVersion, ["version": package.version]))
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                if let active = package.activeBuild {
+                    Text(model.text(
+                        .packagesActiveVersion,
+                        ["version": active.record.packageVersion]
+                    ))
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Text(package.detail)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .contentShape(Rectangle())
     }
 
     @ViewBuilder

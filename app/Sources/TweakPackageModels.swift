@@ -176,6 +176,7 @@ struct TweakPackage: Codable, Identifiable, Equatable, Sendable {
     let runtimePackageDependencies: [String: String]
     let isManaged: Bool
     let managedLock: TweakManagedPackageLock?
+    let projectPageURL: URL?
     private let backendBuildDisposition: BuildDisposition
     let buildRequestKey: String?
     let canInstallMissingDependencies: Bool
@@ -193,7 +194,7 @@ struct TweakPackage: Codable, Identifiable, Equatable, Sendable {
         case id, directoryName, directory, exportFileName, manifest, sourceFingerprint, dependencyFingerprint
         case activeBuild, validationError, priorityOverride, origin, displayName, displayVersion
         case detail, declaredPriority, priority, hasDependencies, packageDependencies
-        case runtimePackageDependencies, isManaged, managedLock
+        case runtimePackageDependencies, isManaged, managedLock, projectPageURL
         case backendBuildDisposition = "buildDisposition"
         case buildRequestKey, canInstallMissingDependencies, canEnableDependencies
         case availableActions, presentation, node
@@ -223,6 +224,7 @@ struct TweakPackageAvailableActions: Codable, Equatable, Sendable {
     let setPriority: Bool
     let openDirectory: Bool
     let export: Bool
+    let delete: Bool
     let installMissingDependencies: Bool
     let enableDependencies: Bool
     let updateManagedPackage: Bool

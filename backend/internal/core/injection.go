@@ -17,6 +17,45 @@ func InjectionScript(payload Payload, forceGeneration int) string {
 	return injectionScriptWithRendererBridge(payload, forceGeneration, "", map[string]string{}, nil)
 }
 
+func effectiveInjectionVersion(payload Payload, forceGeneration int) string {
+	if forceGeneration == 0 {
+		return payload.Version
+	}
+	return fmt.Sprintf("%s-force-%d", payload.Version, forceGeneration)
+}
+
+// injectionRuntimeProbeScript deliberately excludes package JavaScript and CSS.
+// The monitor runs frequently to discover new/reloaded Codex targets, so an
+// unchanged page must only receive this small status check. The full injection
+// script remains the source of truth and repeats the same guard for races.
+func injectionRuntimeProbeScript(
+	payload Payload,
+	forceGeneration int,
+	bridgeSessionID string,
+	settingsAdapterConfiguration *SettingsAdapterConfiguration,
+) string {
+	return fmt.Sprintf(`(() => {
+  const runtime = globalThis["__CODEX_TWEAKS__"];
+  const version = %s;
+  const bridgeSessionID = %s;
+  const settingsAdapterConfiguration = %s;
+  const settingsAdapterKey = JSON.stringify(settingsAdapterConfiguration ?? null);
+  const settingsAdapterExpected = Boolean(settingsAdapterConfiguration?.sections?.length);
+  const unchanged = Boolean(
+    runtime?.version === version
+    && runtime?.bridgeSessionID === bridgeSessionID
+    && runtime?.settingsAdapterKey === settingsAdapterKey
+    && (!settingsAdapterExpected || runtime?.settingsAdapterReady === true)
+    && document.getElementById("codex-tweaks-root")
+  );
+  return {
+    status: unchanged ? "unchanged" : "stale",
+    version: runtime?.version ?? "",
+    packageErrors: unchanged ? (runtime?.packageErrors ?? []) : []
+  };
+})()`, JSONLiteral(effectiveInjectionVersion(payload, forceGeneration)), JSONLiteral(bridgeSessionID), JSONLiteral(settingsAdapterConfiguration))
+}
+
 func injectionScriptWithRendererBridge(
 	payload Payload,
 	forceGeneration int,
@@ -24,10 +63,7 @@ func injectionScriptWithRendererBridge(
 	nodeTokens map[string]string,
 	settingsAdapterConfiguration *SettingsAdapterConfiguration,
 ) string {
-	effectiveVersion := payload.Version
-	if forceGeneration != 0 {
-		effectiveVersion = fmt.Sprintf("%s-force-%d", payload.Version, forceGeneration)
-	}
+	effectiveVersion := effectiveInjectionVersion(payload, forceGeneration)
 	setups := make([]string, 0, len(payload.Packages))
 	executions := make([]string, 0, len(payload.Packages))
 	for _, pkg := range payload.Packages {

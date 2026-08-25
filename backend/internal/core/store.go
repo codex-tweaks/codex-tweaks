@@ -23,6 +23,7 @@ type Store struct {
 	StateDirectory           string
 	PackageSettingsPath      string
 	NodeAuthorizationsPath   string
+	BundledTombstonesPath    string
 	ManagedPackagesDirectory string
 	ManagedSourcesDirectory  string
 	ManagedRegistryPath      string
@@ -55,6 +56,7 @@ func NewStore(applicationSupport, caches, bundledPackages string) (*Store, error
 		StateDirectory:           state,
 		PackageSettingsPath:      filepath.Join(state, "package-settings.json"),
 		NodeAuthorizationsPath:   filepath.Join(state, "node-authorizations.json"),
+		BundledTombstonesPath:    filepath.Join(state, "bundled-package-tombstones.json"),
 		ManagedPackagesDirectory: managed,
 		ManagedSourcesDirectory:  filepath.Join(managed, "sources"),
 		ManagedRegistryPath:      filepath.Join(managed, "registry.json"),
@@ -82,7 +84,14 @@ func (s *Store) Prepare() error {
 	if err != nil {
 		return err
 	}
+	tombstones, err := s.loadBundledPackageTombstones()
+	if err != nil {
+		return err
+	}
 	for _, source := range packages {
+		if tombstones[filepath.Base(source)] {
+			continue
+		}
 		destination := filepath.Join(s.PackagesDirectory, filepath.Base(source))
 		if _, err := os.Stat(destination); err == nil {
 			continue
@@ -483,6 +492,100 @@ func (s *Store) SetPriorityOverride(packageID string, priority *int) error {
 		settings.Packages[packageID] = PackageUserSetting{PriorityOverride: priority}
 	}
 	return s.writeUserSettings(settings)
+}
+
+func (s *Store) DeleteLocalPackage(pkg Package) error {
+	if pkg.Origin.Kind != OriginLocal {
+		return errors.New("只能从本地功能包目录删除本地包。")
+	}
+	packagesRoot, err := filepath.Abs(s.PackagesDirectory)
+	if err != nil {
+		return err
+	}
+	packageDirectory, err := filepath.Abs(pkg.Directory)
+	if err != nil {
+		return err
+	}
+	relative, err := filepath.Rel(packagesRoot, packageDirectory)
+	if err != nil || relative == "." || relative == ".." || filepath.IsAbs(relative) ||
+		strings.Contains(relative, string(filepath.Separator)) {
+		return errors.New("功能包目录不在本地 packages 目录的直接子目录中。")
+	}
+
+	markedBundled := false
+	if s.isBundledPackageDirectory(relative) {
+		if err := s.setBundledPackageTombstone(relative, true); err != nil {
+			return err
+		}
+		markedBundled = true
+	}
+	if err := os.RemoveAll(packageDirectory); err != nil {
+		if markedBundled {
+			_ = s.setBundledPackageTombstone(relative, false)
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *Store) DeletePackageArtifacts(packageID string) error {
+	settings, err := s.LoadUserSettings()
+	if err != nil {
+		return err
+	}
+	delete(settings.Packages, packageID)
+	settingsErr := s.writeUserSettings(settings)
+	cacheErr := os.RemoveAll(s.packageCacheDirectory(packageID))
+	return errors.Join(settingsErr, cacheErr)
+}
+
+type bundledPackageTombstones struct {
+	SchemaVersion  int      `json:"schemaVersion"`
+	DirectoryNames []string `json:"directoryNames"`
+}
+
+func (s *Store) loadBundledPackageTombstones() (map[string]bool, error) {
+	result := map[string]bool{}
+	if _, err := os.Stat(s.BundledTombstonesPath); errors.Is(err, os.ErrNotExist) {
+		return result, nil
+	}
+	var stored bundledPackageTombstones
+	if err := readJSON(s.BundledTombstonesPath, &stored); err != nil {
+		return nil, err
+	}
+	if stored.SchemaVersion != 0 && stored.SchemaVersion != 1 {
+		return nil, fmt.Errorf("不支持内置功能包删除记录版本 %d。", stored.SchemaVersion)
+	}
+	for _, name := range stored.DirectoryNames {
+		if filepath.Base(name) == name && name != "." && name != ".." {
+			result[name] = true
+		}
+	}
+	return result, nil
+}
+
+func (s *Store) setBundledPackageTombstone(directoryName string, deleted bool) error {
+	tombstones, err := s.loadBundledPackageTombstones()
+	if err != nil {
+		return err
+	}
+	if deleted {
+		tombstones[directoryName] = true
+	} else {
+		delete(tombstones, directoryName)
+	}
+	return writeJSONAtomic(s.BundledTombstonesPath, bundledPackageTombstones{
+		SchemaVersion:  1,
+		DirectoryNames: sortedTrueKeys(tombstones),
+	})
+}
+
+func (s *Store) isBundledPackageDirectory(directoryName string) bool {
+	if s.BundledPackagesDirectory == "" || filepath.Base(directoryName) != directoryName {
+		return false
+	}
+	info, err := os.Lstat(filepath.Join(s.BundledPackagesDirectory, directoryName))
+	return err == nil && info.IsDir() && info.Mode()&os.ModeSymlink == 0
 }
 
 func (s *Store) LoadManagedLockfile() (ManagedPackageLockfile, error) {

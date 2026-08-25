@@ -157,6 +157,59 @@ func (m *RemoteManager) Registration(packageID string) (*ManagedPackageRegistrat
 	return &registration, nil
 }
 
+func (m *RemoteManager) Remove(packageID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	registry, err := m.loadRegistry()
+	if err != nil {
+		return err
+	}
+	lockfile, err := m.store.LoadManagedLockfile()
+	if err != nil {
+		return err
+	}
+	lock, locked := lockfile.Packages[packageID]
+	_, registered := registry.Packages[packageID]
+	if !locked && !registered {
+		return fmt.Errorf("功能包 %s 不是由 Git 管理的包。", packageID)
+	}
+	deletePath := ""
+	if locked {
+		sourcesRoot, _ := filepath.Abs(m.store.ManagedSourcesDirectory)
+		sourcePath, _ := filepath.Abs(filepath.Join(
+			m.store.ManagedPackagesDirectory,
+			filepath.FromSlash(lock.SourceRelativePath),
+		))
+		if !pathIsWithin(sourcePath, sourcesRoot) || sourcePath == sourcesRoot {
+			return errors.New("远程功能包源码目录超出托管源码目录。")
+		}
+		deletePath = sourcePath
+		if relative, relErr := filepath.Rel(sourcesRoot, sourcePath); relErr == nil {
+			parts := strings.Split(filepath.ToSlash(relative), "/")
+			if len(parts) == 2 && parts[0] != "" && parts[0] != "." && parts[0] != ".." {
+				deletePath = filepath.Join(sourcesRoot, filepath.FromSlash(parts[0]))
+			}
+		}
+	}
+
+	delete(lockfile.Packages, packageID)
+	delete(registry.Packages, packageID)
+	if err := m.writeLockfile(lockfile); err != nil {
+		return err
+	}
+	if err := m.writeRegistry(registry); err != nil {
+		if locked {
+			lockfile.Packages[packageID] = lock
+			_ = m.writeLockfile(lockfile)
+		}
+		return err
+	}
+	if !locked {
+		return nil
+	}
+	return os.RemoveAll(deletePath)
+}
+
 func (m *RemoteManager) Install(ctx context.Context, source PackageSource, options RemoteInstallOptions) (ManagedPackageInstallResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

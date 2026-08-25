@@ -10,7 +10,7 @@ namespace CodexTweaks.Windows.Services;
 
 internal sealed class BackendClient : IAsyncDisposable
 {
-    internal const int ProtocolVersion = 5;
+    internal const int ProtocolVersion = 8;
     private static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
     private readonly ConcurrentDictionary<long, TaskCompletionSource<JsonElement>> _pending = new();
@@ -106,6 +106,30 @@ internal sealed class BackendClient : IAsyncDisposable
     internal async Task SendAsync(string method, object? parameters = null)
     {
         _ = await RequestAsync<JsonElement>(method, parameters);
+    }
+
+    internal async Task<BackendAppSnapshot> CheckAppUpdateAsync(bool startCheck)
+    {
+        if (startCheck)
+        {
+            await SendAsync("checkAppUpdate", new { prompt = false });
+        }
+
+        var startedAt = Stopwatch.GetTimestamp();
+        while (true)
+        {
+            var snapshot = await RequestAsync<BackendAppSnapshot>("getState", null);
+            if (!snapshot.Update.Checking)
+            {
+                return snapshot;
+            }
+            if (Stopwatch.GetElapsedTime(startedAt) >= TimeSpan.FromSeconds(45))
+            {
+                throw new TimeoutException(
+                    PresentationFallback.Text(PresentationTextKey.AppBackendRequestFailed));
+            }
+            await Task.Delay(250);
+        }
     }
 
     internal async Task<T> RequestAsync<T>(string method, object? parameters)

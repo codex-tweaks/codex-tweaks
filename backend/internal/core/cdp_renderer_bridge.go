@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -98,11 +99,13 @@ type rendererBridgeSession struct {
 
 	scriptMu              sync.RWMutex
 	scripts               map[string]string
+	executionGeneration   atomic.Uint64
 	debuggerEnabled       bool
-	settingsScriptID      string
 	settingsAppModuleURL  string
 	settingsVisibilityURL string
 	adapterMu             sync.Mutex
+	settingsAdapterCached bool
+	settingsAdapterGen    uint64
 }
 
 func openRendererBridgeSession(
@@ -252,6 +255,11 @@ func (s *rendererBridgeSession) readLoop() {
 				s.scripts[event.URL] = event.ScriptID
 				s.scriptMu.Unlock()
 			}
+		case "Runtime.executionContextsCleared":
+			s.executionGeneration.Add(1)
+			s.scriptMu.Lock()
+			clear(s.scripts)
+			s.scriptMu.Unlock()
 		}
 	}
 }

@@ -486,7 +486,7 @@ internal static class PresentationDefaults
         [PresentationTextKey.LogsEmpty] = "暂无日志",
         [PresentationTextKey.LogsOpenFile] = "打开日志文件",
         [PresentationTextKey.LogsRefresh] = "刷新",
-        [PresentationTextKey.LogsSubtitle] = "查看启动、连接和注入过程。",
+        [PresentationTextKey.LogsSubtitle] = "查看最近的启动、连接和注入日志；完整内容可打开日志文件。",
         [PresentationTextKey.LogsTitle] = "连接与注入日志",
         [PresentationTextKey.MenuQuit] = "退出 Codex Tweaks",
         [PresentationTextKey.MenuShow] = "显示 Codex Tweaks",

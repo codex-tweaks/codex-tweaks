@@ -492,7 +492,7 @@ func (c *Controller) emit() {
 }
 
 func (c *Controller) refreshLog() {
-	contents, err := c.logger.ReadNewestFirst()
+	contents, err := c.logger.ReadPreviewNewestFirst()
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if err != nil {

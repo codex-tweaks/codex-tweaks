@@ -365,7 +365,7 @@ enum GeneratedPresentationDefaults {
         .logsEmpty: "暂无日志",
         .logsOpenFile: "打开日志文件",
         .logsRefresh: "刷新",
-        .logsSubtitle: "查看启动、连接和注入过程。",
+        .logsSubtitle: "查看最近的启动、连接和注入日志；完整内容可打开日志文件。",
         .logsTitle: "连接与注入日志",
         .menuQuit: "退出 Codex Tweaks",
         .menuShow: "显示 Codex Tweaks",

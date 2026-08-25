@@ -387,7 +387,9 @@ final class AppModel: ObservableObject {
         isApplyingSnapshot = false
 
         status = Status(snapshot.status)
-        logText = snapshot.logText
+        if logText != snapshot.logText {
+            logText = snapshot.logText
+        }
         tweakPackages = snapshot.packages
         disabledTweakPackageIDs = Set(snapshot.disabledPackageIDs)
         buildingPackageIDs = Set(snapshot.buildingPackageIDs)

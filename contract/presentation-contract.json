@@ -28,7 +28,7 @@
     "logs.empty": "暂无日志",
     "logs.openFile": "打开日志文件",
     "logs.refresh": "刷新",
-    "logs.subtitle": "查看启动、连接和注入过程。",
+    "logs.subtitle": "查看最近的启动、连接和注入日志；完整内容可打开日志文件。",
     "logs.title": "连接与注入日志",
     "menu.quit": "退出 Codex Tweaks",
     "menu.show": "显示 Codex Tweaks",

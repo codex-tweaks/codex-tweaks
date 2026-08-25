@@ -1,14 +1,20 @@
 package core
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+)
+
+const (
+	logPreviewMaxLines = 1_000
+	logPreviewMaxBytes = 256 * 1024
 )
 
 type Logger struct {
@@ -44,7 +50,7 @@ func (l *Logger) EnsureExists() error {
 	return l.ensureExistsLocked()
 }
 
-func (l *Logger) ReadNewestFirst() (string, error) {
+func (l *Logger) ReadPreviewNewestFirst() (string, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if err := l.ensureExistsLocked(); err != nil {
@@ -55,15 +61,36 @@ func (l *Logger) ReadNewestFirst() (string, error) {
 		return "", err
 	}
 	defer file.Close()
-	lines := []string{}
-	scanner := bufio.NewScanner(file)
-	buffer := make([]byte, 64*1024)
-	scanner.Buffer(buffer, 4*1024*1024)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
+	info, err := file.Stat()
+	if err != nil {
 		return "", err
+	}
+	readSize := info.Size()
+	if readSize > logPreviewMaxBytes {
+		readSize = logPreviewMaxBytes
+	}
+	if readSize == 0 {
+		return "", nil
+	}
+	start := info.Size() - readSize
+	contents := make([]byte, int(readSize))
+	read, err := file.ReadAt(contents, start)
+	if err != nil && err != io.EOF {
+		return "", err
+	}
+	contents = contents[:read]
+	if start > 0 {
+		if newline := bytes.IndexByte(contents, '\n'); newline >= 0 {
+			contents = contents[newline+1:]
+		}
+	}
+	if len(contents) == 0 {
+		return "", nil
+	}
+	contents = bytes.TrimSuffix(contents, []byte{'\n'})
+	lines := strings.Split(strings.ToValidUTF8(string(contents), "�"), "\n")
+	if len(lines) > logPreviewMaxLines {
+		lines = lines[len(lines)-logPreviewMaxLines:]
 	}
 	for left, right := 0, len(lines)-1; left < right; left, right = left+1, right-1 {
 		lines[left], lines[right] = lines[right], lines[left]

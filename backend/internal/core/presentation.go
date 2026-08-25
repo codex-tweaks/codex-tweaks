@@ -433,7 +433,7 @@ func PresentationText() map[string]string {
 		"selector.commitValue":                        "Commit SHA",
 		"selector.branchDefault":                      "main",
 		"logs.title":                                  "连接与注入日志",
-		"logs.subtitle":                               "查看启动、连接和注入过程。",
+		"logs.subtitle":                               "查看最近的启动、连接和注入日志；完整内容可打开日志文件。",
 		"logs.refresh":                                "刷新",
 		"logs.openFile":                               "打开日志文件",
 		"logs.clear":                                  "清除日志",

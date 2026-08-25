@@ -20,9 +20,13 @@ public sealed partial class LogsPage : Page
         PageTitle.Text = host.Text(PresentationTextKey.LogsTitle);
         PageSubtitle.Text = host.Text(PresentationTextKey.LogsSubtitle);
         LogPathText.Text = snapshot.LogPath;
-        LogTextBox.Text = string.IsNullOrWhiteSpace(snapshot.LogText)
+        var logText = string.IsNullOrWhiteSpace(snapshot.LogText)
             ? host.Text(PresentationTextKey.LogsEmpty)
             : snapshot.LogText;
+        if (!string.Equals(LogTextBox.Text, logText, StringComparison.Ordinal))
+        {
+            LogTextBox.Text = logText;
+        }
         RefreshButton.Label = host.Text(PresentationTextKey.LogsRefresh);
         RefreshButton.IsEnabled = snapshot.Presentation.Actions.RefreshLog;
         OpenFileButton.Label = host.Text(PresentationTextKey.LogsOpenFile);

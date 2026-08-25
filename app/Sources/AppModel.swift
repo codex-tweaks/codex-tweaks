@@ -176,6 +176,19 @@ final class AppModel: ObservableObject {
         command("restartCodex")
     }
 
+    func confirmAndRestartCodexUI() {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = text(.dialogRestartCodexUITitle)
+        alert.informativeText = text(.dialogRestartCodexUIMessage)
+        let restartButton = alert.addButton(withTitle: text(.overviewRestartCodexUI))
+        let cancelButton = alert.addButton(withTitle: text(.commonCancel))
+        restartButton.keyEquivalent = ""
+        cancelButton.keyEquivalent = "\r"
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        command("restartCodexUI")
+    }
+
     func reinject() { command("reinject") }
 
     func isTweakPackageEnabled(_ package: TweakPackage) -> Bool {
@@ -363,7 +376,7 @@ final class AppModel: ObservableObject {
     func sendUpdateCommand(_ method: String) { command(method) }
 
     private func apply(_ snapshot: BackendAppSnapshot) {
-        guard snapshot.protocolVersion == 3 else {
+        guard snapshot.protocolVersion == 4 else {
             status = .error(text(.appProtocolMismatch))
             return
         }

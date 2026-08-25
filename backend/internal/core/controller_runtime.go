@@ -217,6 +217,36 @@ func (c *Controller) RestartCodex() {
 	}()
 }
 
+func (c *Controller) RestartCodexUI() error {
+	c.mu.Lock()
+	if c.restartingCodexUI {
+		c.mu.Unlock()
+		return errors.New("Codex 界面正在重启，请稍候")
+	}
+	c.restartingCodexUI = true
+	c.mu.Unlock()
+	c.emit()
+	defer func() {
+		c.mu.Lock()
+		c.restartingCodexUI = false
+		c.mu.Unlock()
+		c.emit()
+	}()
+
+	ctx, cancel := context.WithTimeout(c.ctx, 20*time.Second)
+	defer cancel()
+	result, err := c.cdp.ReloadAllTargets(ctx)
+	if err != nil {
+		c.logger.Error("重启 Codex 界面失败：" + err.Error())
+		return err
+	}
+	c.mu.Lock()
+	c.forceGeneration++
+	c.mu.Unlock()
+	c.logger.Info("已重启 " + intString(result.SuccessCount) + " 个 Codex 界面，等待重新注入")
+	return nil
+}
+
 func (c *Controller) Reinject() {
 	c.mu.Lock()
 	c.forceGeneration++

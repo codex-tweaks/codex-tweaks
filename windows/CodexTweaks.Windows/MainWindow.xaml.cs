@@ -550,6 +550,23 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    internal async Task ConfirmRestartCodexUIAsync()
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = RootGrid.XamlRoot,
+            Title = Text(PresentationTextKey.DialogRestartCodexUITitle),
+            Content = Text(PresentationTextKey.DialogRestartCodexUIMessage),
+            PrimaryButtonText = Text(PresentationTextKey.OverviewRestartCodexUI),
+            CloseButtonText = Text(PresentationTextKey.CommonCancel),
+            DefaultButton = ContentDialogButton.Close,
+        };
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            await RunBackendAsync("restartCodexUI");
+        }
+    }
+
     internal async Task ConfirmClearLogAsync()
     {
         var dialog = new ContentDialog

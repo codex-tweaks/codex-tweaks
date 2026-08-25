@@ -38,11 +38,37 @@ func TestPresentationContractOwnsCopyTokensPlatformAndActions(t *testing.T) {
 	if contract.Platform.RepositoryURL != UpdateRepositoryURL {
 		t.Fatalf("repository URL = %q, want %q", contract.Platform.RepositoryURL, UpdateRepositoryURL)
 	}
-	if !contract.Actions.Reinject || !contract.Actions.InstallRemotePackage || !contract.Actions.ClearLog {
+	if !contract.Actions.RestartCodexUI || !contract.Actions.Reinject || !contract.Actions.InstallRemotePackage || !contract.Actions.ClearLog {
 		t.Fatalf("expected connected actions to be available: %#v", contract.Actions)
 	}
 	if runtime.GOOS == "windows" && contract.Platform.UpdateInstallStrategy != "velopack" {
 		t.Fatalf("Windows update strategy = %q", contract.Platform.UpdateInstallStrategy)
+	}
+}
+
+func TestPresentationContractKeepsCodexUIRecoveryAvailableForRendererErrors(t *testing.T) {
+	errorMessage := "renderer did not respond"
+	available := NewPresentationContract(PresentationState{
+		Status: AppStatus{Kind: StatusError, Message: &errorMessage},
+	})
+	if !available.Actions.RestartCodexUI {
+		t.Fatalf("UI recovery must remain available for renderer errors: %#v", available.Actions)
+	}
+
+	busy := NewPresentationContract(PresentationState{
+		Status:            AppStatus{Kind: StatusConnected},
+		Enabled:           true,
+		RestartingCodexUI: true,
+	})
+	if busy.Actions.RestartCodexUI || busy.Actions.Reinject {
+		t.Fatalf("conflicting CDP actions must be disabled during UI restart: %#v", busy.Actions)
+	}
+
+	unavailable := NewPresentationContract(PresentationState{
+		Status: AppStatus{Kind: StatusWaitingForPage},
+	})
+	if unavailable.Actions.RestartCodexUI {
+		t.Fatalf("UI recovery must require a reachable CDP connection: %#v", unavailable.Actions)
 	}
 }
 

@@ -1216,6 +1216,28 @@ private struct OverviewView: View {
 
             Divider()
 
+            HStack(alignment: .center, spacing: 20) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(model.text(.overviewRestartCodexUI))
+                        .font(.body.weight(.medium))
+                    Text(model.text(.overviewRestartCodexUIDetail))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 16)
+
+                Button(model.text(.overviewRestartCodexUI), systemImage: "arrow.clockwise.circle") {
+                    model.confirmAndRestartCodexUI()
+                }
+                .buttonStyle(.bordered)
+                .accessibilityHint(model.text(.overviewRestartCodexUIDetail))
+                .disabled(!model.actions.restartCodexUI)
+            }
+
+            Divider()
+
             HStack(spacing: 10) {
                 Button(model.text(.overviewReinject), systemImage: "arrow.clockwise") {
                     model.reinject()

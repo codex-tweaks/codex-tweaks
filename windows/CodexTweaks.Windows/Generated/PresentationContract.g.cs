@@ -21,6 +21,8 @@ internal static class PresentationTextKey
     internal const string CommonCopy = "common.copy";
     internal const string CommonOk = "common.ok";
     internal const string CommonOpen = "common.open";
+    internal const string DialogRestartCodexUIMessage = "dialog.restartCodexUIMessage";
+    internal const string DialogRestartCodexUITitle = "dialog.restartCodexUITitle";
     internal const string DialogRestartMessage = "dialog.restartMessage";
     internal const string DialogRestartTitle = "dialog.restartTitle";
     internal const string LogsClear = "logs.clear";
@@ -66,6 +68,8 @@ internal static class PresentationTextKey
     internal const string OverviewReinject = "overview.reinject";
     internal const string OverviewResources = "overview.resources";
     internal const string OverviewRestartAndConnect = "overview.restartAndConnect";
+    internal const string OverviewRestartCodexUI = "overview.restartCodexUI";
+    internal const string OverviewRestartCodexUIDetail = "overview.restartCodexUIDetail";
     internal const string OverviewRestartDetail = "overview.restartDetail";
     internal const string OverviewSubtitle = "overview.subtitle";
     internal const string OverviewTitle = "overview.title";
@@ -336,6 +340,9 @@ internal sealed class AvailableActions
     [JsonPropertyName("restartCodex")]
     public bool RestartCodex { get; init; }
 
+    [JsonPropertyName("restartCodexUI")]
+    public bool RestartCodexUI { get; init; }
+
     [JsonPropertyName("reinject")]
     public bool Reinject { get; init; }
 
@@ -468,6 +475,8 @@ internal static class PresentationDefaults
         [PresentationTextKey.CommonCopy] = "复制",
         [PresentationTextKey.CommonOk] = "好",
         [PresentationTextKey.CommonOpen] = "打开",
+        [PresentationTextKey.DialogRestartCodexUIMessage] = "这会重新加载所有已连接的 Codex 界面，但不会退出 Codex 主进程。未提交的输入可能丢失。",
+        [PresentationTextKey.DialogRestartCodexUITitle] = "重启 Codex 界面？",
         [PresentationTextKey.DialogRestartMessage] = "Codex 只有在启动时才能开启 CDP。重启后 Codex Tweaks 会自动恢复注入。",
         [PresentationTextKey.DialogRestartTitle] = "重新启动 Codex？",
         [PresentationTextKey.LogsClear] = "清除日志",
@@ -513,6 +522,8 @@ internal static class PresentationDefaults
         [PresentationTextKey.OverviewReinject] = "重新注入",
         [PresentationTextKey.OverviewResources] = "资源目录",
         [PresentationTextKey.OverviewRestartAndConnect] = "重启并连接",
+        [PresentationTextKey.OverviewRestartCodexUI] = "重启 Codex 界面",
+        [PresentationTextKey.OverviewRestartCodexUIDetail] = "只重新加载界面，不退出 Codex；界面被功能包卡住时可用来恢复。",
         [PresentationTextKey.OverviewRestartDetail] = "需要重新启动 Codex 才能开启本地调试端口。",
         [PresentationTextKey.OverviewSubtitle] = "连接状态、注入控制与常用入口集中在一个窗口中。",
         [PresentationTextKey.OverviewTitle] = "管理 Codex 的本地界面增强",

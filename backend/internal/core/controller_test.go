@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -10,6 +11,14 @@ import (
 	"testing"
 	"time"
 )
+
+type idleControllerTestPlatform struct{}
+
+func (idleControllerTestPlatform) IsCodexRunning(context.Context) (bool, error) { return false, nil }
+func (idleControllerTestPlatform) ActivateCodex(context.Context) error          { return nil }
+func (idleControllerTestPlatform) LaunchCodex(context.Context) error            { return nil }
+func (idleControllerTestPlatform) RestartCodex(context.Context) error           { return nil }
+func (idleControllerTestPlatform) Architecture() string                         { return "amd64" }
 
 func TestControllerUsesGoDefaultsReadsSkillAndDisablesNewPackages(t *testing.T) {
 	root := t.TempDir()
@@ -94,7 +103,7 @@ func TestControllerDeletesLocalPackageSourceBuildAndSettings(t *testing.T) {
 			BuildNumber:                 "1",
 		},
 		func(snapshot AppSnapshot) { events <- snapshot },
-		ControllerDependencies{DisableBackground: true},
+		ControllerDependencies{Platform: idleControllerTestPlatform{}, DisableBackground: true},
 	)
 	if err != nil {
 		t.Fatal(err)

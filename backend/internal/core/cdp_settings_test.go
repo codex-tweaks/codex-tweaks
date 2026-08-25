@@ -2,13 +2,34 @@ package core
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
 	"time"
 )
+
+func testCompiledSettingsUI(
+	t *testing.T,
+	packageID string,
+	section UISettingsSectionDeclaration,
+) (CompiledPackageUI, RuntimeSettingsSection) {
+	t.Helper()
+	required := false
+	configuration := PackageUIConfiguration{SettingsSections: &SettingsSectionsExtension{
+		APIVersion: SettingsSectionsAPIVersion,
+		Required:   &required,
+		Items:      []UISettingsSectionDeclaration{section},
+	}}
+	if err := normalizePackageUI(&configuration); err != nil {
+		t.Fatal(err)
+	}
+	compiled, err := compilePackageUI(packageID, configuration)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return compiled, compiled.SettingsSections.Items[0]
+}
 
 func TestSettingsModuleAssetDiscovery(t *testing.T) {
 	appSource := `const page=()=>import(` + "`" + `./settings-page-ABC_123.js` + "`" + `);`
@@ -55,31 +76,20 @@ func TestSettingsAdapterLiveCDP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	permissions, err := normalizeUISettingsSectionPermissions(json.RawMessage(
-		`{"sections":[{"id":"compatibility-test","title":"Compatibility Test"}]}`,
-	))
-	if err != nil {
-		t.Fatal(err)
-	}
-	bound, err := bindUISettingsSectionPermissions("compatibility-test", permissions)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ui, _ := testCompiledSettingsUI(t, "compatibility-test", UISettingsSectionDeclaration{
+		ID: "compatibility-test", Title: "Compatibility Test",
+	})
 	payload := Payload{Packages: []CompiledPackage{{
 		ID: "compatibility-test",
-		Capabilities: map[string]GrantedCapability{
-			UISettingsSectionCapabilityID: {
-				Version: UISettingsSectionCapabilityVersion, Permissions: bound,
-			},
-		},
+		UI: ui,
 	}}}
 	errorsByTarget := []string{}
 	for _, target := range targets {
 		if strings.Contains(target.URL, "initialRoute=") {
 			continue
 		}
-		session, openError := openCapabilitySession(
-			ctx, service.dialer, service.AllowedOrigin, target, service.broker, nil,
+		session, openError := openRendererBridgeSession(
+			ctx, service.dialer, service.AllowedOrigin, target, nil, nil,
 		)
 		if openError != nil {
 			errorsByTarget = append(errorsByTarget, target.ID+": "+openError.Error())
@@ -94,7 +104,7 @@ func TestSettingsAdapterLiveCDP(t *testing.T) {
 			errorsByTarget = append(errorsByTarget, target.ID+": "+adapterError.Error())
 		}
 	}
-	t.Fatalf("no live Codex target accepted ui.settings-section@1.0.0: %s", strings.Join(errorsByTarget, "; "))
+	t.Fatalf("no live Codex target accepted ui.settingsSections@1: %s", strings.Join(errorsByTarget, "; "))
 }
 
 func TestSettingsAdapterLiveInjection(t *testing.T) {
@@ -170,32 +180,18 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
           return { restored: true };
         })()`, *target.WebSocketDebuggerURL)
 		service.mu.Lock()
-		service.closeAllCapabilitySessionsLocked()
+		service.closeAllRendererSessionsLocked()
 		service.mu.Unlock()
 	}()
-	requirements := map[string]CapabilityRequirement{
-		UISettingsSectionCapabilityID: {
-			Version: "^1.0.0",
-			Permissions: json.RawMessage(`{
-              "sections":[{
-                "id":"compatibility-test",
-                "title":"Compatibility Test",
-                "group":"personal",
-                "icon":"personalization",
-                "after":"personalization"
-              }]
-            }`),
-		},
-	}
-	grants, err := resolvePackageCapabilities("compatibility-test", requirements)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ui, _ := testCompiledSettingsUI(t, "compatibility-test", UISettingsSectionDeclaration{
+		ID: "compatibility-test", Title: "Compatibility Test", Group: "personal",
+		Icon: "personalization", After: "personalization",
+	})
 	payload := Payload{Version: "live-settings-test", Packages: []CompiledPackage{{
 		ID: "compatibility-test", Name: "compatibility-test", Version: "1.0.0",
-		Capabilities: grants,
-		JavaScript: `module.exports.activate = ({ capabilities }) => {
-          const settings = capabilities.require("ui.settings-section");
+		UI: ui,
+		JavaScript: `module.exports.activate = ({ ui }) => {
+          const settings = ui.settingsSections;
           globalThis.__CODEX_TWEAKS_UI_LIVE_TEST__ = settings.register({
             id: "compatibility-test",
             mount(container) {
@@ -205,7 +201,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
           });
         };`,
 	}}}
-	bridgeID, tokens, configuration, err := service.capabilityBridgeForTargetLocked(ctx, *target, payload)
+	bridgeID, tokens, configuration, err := service.rendererBridgeForTargetLocked(ctx, *target, payload)
 	if err != nil || configuration == nil {
 		t.Fatalf("settings bridge unavailable: %v %#v", err, configuration)
 	}
@@ -227,7 +223,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
 	}
 	result, err := service.evaluate(
 		ctx,
-		injectionScriptWithCapabilities(payload, 0, bridgeID, tokens, configuration),
+		injectionScriptWithRendererBridge(payload, 0, bridgeID, tokens, configuration),
 		*target.WebSocketDebuggerURL,
 	)
 	if err != nil {
@@ -384,9 +380,9 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
 	restoreNavigation(ctx)
 }
 
-func TestRandomBackgroundPackageLiveRuntime(t *testing.T) {
-	if os.Getenv("CODEX_TWEAKS_LIVE_RANDOM_BACKGROUND") != "1" {
-		t.Skip("set CODEX_TWEAKS_LIVE_RANDOM_BACKGROUND=1 to inspect the running migrated package")
+func TestCustomBackgroundPackageLiveRuntime(t *testing.T) {
+	if os.Getenv("CODEX_TWEAKS_LIVE_CUSTOM_BACKGROUND") != "1" {
+		t.Skip("set CODEX_TWEAKS_LIVE_CUSTOM_BACKGROUND=1 to inspect the running migrated package")
 	}
 	service := NewCDPService(nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -405,26 +401,15 @@ func TestRandomBackgroundPackageLiveRuntime(t *testing.T) {
 	if target == nil {
 		t.Fatal("no main Codex target")
 	}
-	permissions, err := normalizeUISettingsSectionPermissions(json.RawMessage(
-		`{"sections":[{"id":"random-background","title":"随机背景"}]}`,
-	))
-	if err != nil {
-		t.Fatal(err)
-	}
-	bound, err := bindUISettingsSectionPermissions("codex-random-background", permissions)
-	if err != nil {
-		t.Fatal(err)
-	}
-	settings := UISettingsSectionPermissions{}
-	if err := json.Unmarshal(bound, &settings); err != nil {
-		t.Fatal(err)
-	}
-	slug := settings.Sections[0].Slug
+	_, section := testCompiledSettingsUI(t, "codex-custom-background", UISettingsSectionDeclaration{
+		ID: "custom-background", Title: "自定义背景",
+	})
+	slug := section.Slug
 	expression := fmt.Sprintf(`(() => {
       const runtime = globalThis.__CODEX_TWEAKS__;
       const adapter = globalThis.__CODEX_TWEAKS_SETTINGS_SECTIONS__;
       const packageError = runtime?.packageErrors?.find(
-        (entry) => entry?.id === "codex-random-background"
+        (entry) => entry?.id === "codex-custom-background"
       );
       return {
         runtimePresent: Boolean(runtime),
@@ -438,23 +423,23 @@ func TestRandomBackgroundPackageLiveRuntime(t *testing.T) {
           'button[data-settings-panel-slug]'
         )].map((button) => button.dataset.settingsPanelSlug),
         panelHostSlug: document.querySelector(
-          '[data-codex-tweaks-rbgp-settings-panel]'
+          '[data-codex-tweaks-cbgp-settings-panel]'
         )?.closest('[data-codex-tweaks-settings-section-host]')
           ?.getAttribute('data-codex-tweaks-settings-section-host') ?? "",
         packageRootPresent: Boolean(document.querySelector(
-          '[data-codex-tweaks-package-root="codex-random-background"]'
+          '[data-codex-tweaks-package-root="codex-custom-background"]'
         )),
         packageRootCount: document.querySelectorAll(
-          '[data-codex-tweaks-package-root="codex-random-background"]'
+          '[data-codex-tweaks-package-root="codex-custom-background"]'
         ).length,
         packageStylePresent: Boolean(document.querySelector(
-          'style[data-codex-tweaks-package-style="codex-random-background"]'
+          'style[data-codex-tweaks-package-style="codex-custom-background"]'
         )),
         packageStyleCount: document.querySelectorAll(
-          'style[data-codex-tweaks-package-style="codex-random-background"]'
+          'style[data-codex-tweaks-package-style="codex-custom-background"]'
         ).length,
         legacyEmbeds: [...document.querySelectorAll(
-          '[data-codex-tweaks-rbgp-embed]'
+          '[data-codex-tweaks-cbgp-embed]'
         )].map((element) => ({
           parentTag: element.parentElement?.tagName ?? "",
           parentClass: element.parentElement?.className ?? "",
@@ -466,7 +451,7 @@ func TestRandomBackgroundPackageLiveRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("running random-background diagnostics: %#v", observed)
+	t.Logf("running custom-background diagnostics: %#v", observed)
 	if observed["runtimePresent"] != true || observed["packageError"] != "" ||
 		observed["settingsRegistered"] != true || observed["packageRootPresent"] != true ||
 		observed["packageStylePresent"] != true {
@@ -474,9 +459,9 @@ func TestRandomBackgroundPackageLiveRuntime(t *testing.T) {
 	}
 }
 
-func TestRandomBackgroundSettingsRouteLive(t *testing.T) {
-	if os.Getenv("CODEX_TWEAKS_LIVE_RANDOM_BACKGROUND_ROUTE") != "1" {
-		t.Skip("set CODEX_TWEAKS_LIVE_RANDOM_BACKGROUND_ROUTE=1 to verify settings route ownership")
+func TestCustomBackgroundSettingsRouteLive(t *testing.T) {
+	if os.Getenv("CODEX_TWEAKS_LIVE_CUSTOM_BACKGROUND_ROUTE") != "1" {
+		t.Skip("set CODEX_TWEAKS_LIVE_CUSTOM_BACKGROUND_ROUTE=1 to verify settings route ownership")
 	}
 	service := NewCDPService(nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -495,37 +480,17 @@ func TestRandomBackgroundSettingsRouteLive(t *testing.T) {
 	if target == nil {
 		t.Fatal("no main Codex target")
 	}
-	permissions, err := normalizeUISettingsSectionPermissions(json.RawMessage(`{
-      "sections":[{
-        "id":"random-background",
-        "title":"随机背景",
-        "group":"personal",
-        "icon":"personalization",
-        "after":"personalization"
-      }]
-    }`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	bound, err := bindUISettingsSectionPermissions("codex-random-background", permissions)
-	if err != nil {
-		t.Fatal(err)
-	}
-	settings := UISettingsSectionPermissions{}
-	if err := json.Unmarshal(bound, &settings); err != nil {
-		t.Fatal(err)
-	}
-	slug := settings.Sections[0].Slug
+	ui, section := testCompiledSettingsUI(t, "codex-custom-background", UISettingsSectionDeclaration{
+		ID: "custom-background", Title: "自定义背景", Group: "personal",
+		Icon: "personalization", After: "personalization",
+	})
+	slug := section.Slug
 	payload := Payload{Packages: []CompiledPackage{{
-		ID: "codex-random-background",
-		Capabilities: map[string]GrantedCapability{
-			UISettingsSectionCapabilityID: {
-				Version: UISettingsSectionCapabilityVersion, Permissions: bound,
-			},
-		},
+		ID: "codex-custom-background",
+		UI: ui,
 	}}}
-	session, err := openCapabilitySession(
-		ctx, service.dialer, service.AllowedOrigin, *target, service.broker, nil,
+	session, err := openRendererBridgeSession(
+		ctx, service.dialer, service.AllowedOrigin, *target, nil, nil,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -538,7 +503,7 @@ func TestRandomBackgroundSettingsRouteLive(t *testing.T) {
 
 	observe := func() map[string]any {
 		observed, evaluateError := service.evaluate(ctx, `(() => {
-          const panel = document.querySelector('[data-codex-tweaks-rbgp-settings-panel]');
+          const panel = document.querySelector('[data-codex-tweaks-cbgp-settings-panel]');
           return {
             activeSlug: document.querySelector(
               'button[data-settings-panel-slug][aria-current="page"]'
@@ -547,13 +512,13 @@ func TestRandomBackgroundSettingsRouteLive(t *testing.T) {
               'button[data-settings-panel-slug]'
             )].map((button) => button.dataset.settingsPanelSlug),
             panelCount: document.querySelectorAll(
-              '[data-codex-tweaks-rbgp-settings-panel]'
+              '[data-codex-tweaks-cbgp-settings-panel]'
             ).length,
             legacyEmbedCount: document.querySelectorAll(
-              '[data-codex-tweaks-rbgp-embed]'
+              '[data-codex-tweaks-cbgp-embed]'
             ).length,
             legacyEmbedDetails: [...document.querySelectorAll(
-              '[data-codex-tweaks-rbgp-embed]'
+              '[data-codex-tweaks-cbgp-embed]'
             )].map((element) => ({
               parentTag: element.parentElement?.tagName ?? "",
               parentClass: element.parentElement?.className ?? "",
@@ -627,16 +592,16 @@ func TestRandomBackgroundSettingsRouteLive(t *testing.T) {
 	}
 
 	navigate(slug, originalSlug != "")
-	randomPage := waitFor(slug, 1, 0)
-	if randomPage["panelHostSlug"] != slug {
-		t.Fatalf("random-background panel is not owned by its route: %#v", randomPage)
+	customPage := waitFor(slug, 1, 0)
+	if customPage["panelHostSlug"] != slug {
+		t.Fatalf("custom-background panel is not owned by its route: %#v", customPage)
 	}
 	navigate("personalization", true)
 	personalizationPage := waitFor("personalization", 0, 0)
 	if personalizationPage["panelCount"] != float64(0) ||
 		personalizationPage["legacyEmbedCount"] != float64(0) {
-		t.Fatalf("random-background settings leaked into personalization: %#v", personalizationPage)
+		t.Fatalf("custom-background settings leaked into personalization: %#v", personalizationPage)
 	}
-	t.Logf("random page: %#v", randomPage)
+	t.Logf("custom page: %#v", customPage)
 	t.Logf("personalization page: %#v", personalizationPage)
 }

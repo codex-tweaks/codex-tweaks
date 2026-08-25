@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const ProtocolVersion = 4
+const ProtocolVersion = 5
 
 type Controller struct {
 	mu                  sync.Mutex
@@ -28,6 +28,7 @@ type Controller struct {
 	store             *Store
 	logger            *Logger
 	builder           *Builder
+	nodeRuntime       *NodeRuntimeSupervisor
 	remote            *RemoteManager
 	installer         *LocalInstaller
 	exporter          *PackageExporter
@@ -55,6 +56,8 @@ type Controller struct {
 	packagePriorityConstraints   map[string]PriorityConstraint
 	nodeEnvironment              *NodeEnvironment
 	checkingNode                 bool
+	nodeAuthorizations           map[string]NodeAuthorizationRecord
+	developerAllowUnknownNode    bool
 	gitEnvironment               *GitEnvironment
 	checkingGit                  bool
 	checkingRemoteUpdates        bool
@@ -124,6 +127,7 @@ func NewController(params InitializeParams, event func(AppSnapshot), dependencie
 		packagePriorityConstraints: map[string]PriorityConstraint{}, remotePackageUpdates: map[string]RemoteUpdate{},
 		remotePackageErrors: map[string]string{}, installingPackageIDs: map[string]bool{},
 		developerBuildAttemptKeys: map[string]string{},
+		nodeAuthorizations:        map[string]NodeAuthorizationRecord{},
 	}
 	if err := controller.loadConfiguration(); err != nil {
 		cancel()
@@ -133,6 +137,15 @@ func NewController(params InitializeParams, event func(AppSnapshot), dependencie
 		cancel()
 		return nil, err
 	}
+	authorizations, err := store.LoadNodeAuthorizations()
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+	controller.nodeAuthorizations = authorizations
+	controller.nodeRuntime = NewNodeRuntimeSupervisor(store, dependencies.Runner, logger)
+	controller.nodeRuntime.SetEventHandler(cdp.EmitNodeEvent)
+	cdp.SetNodeInvoker(controller.nodeRuntime)
 	if err := controller.updatePackages(); err != nil {
 		message := "无法准备功能包：" + err.Error()
 		controller.status = AppStatus{Kind: StatusError, Message: &message}
@@ -226,6 +239,7 @@ func (c *Controller) Snapshot() AppSnapshot {
 	enabledCount := 0
 	for _, pkg := range c.packages {
 		view := packageView(pkg, c.disabledPackageIDs, installedIDs)
+		view.Node = c.packageNodeViewLocked(pkg)
 		remoteUpdate, hasRemoteUpdate := c.remotePackageUpdates[pkg.ID]
 		hasPackageExport := len(c.exportingPackageIDs) > 0
 		view.AvailableActions = PackageAvailableActions{
@@ -237,6 +251,7 @@ func (c *Controller) Snapshot() AppSnapshot {
 			EnableDependencies:         view.CanEnableDependencies,
 			UpdateManagedPackage:       hasRemoteUpdate && remoteUpdate.Installable() && c.gitEnvironment != nil && !c.installingPackageIDs[pkg.ID],
 			Build:                      view.ValidationError == nil && view.BuildRequestKey != nil && c.nodeEnvironment != nil && !c.buildingPackageIDs[pkg.ID],
+			AuthorizeNode:              view.Node != nil && view.Node.AuthorizationID != "" && !view.Node.Authorized && !c.disabledPackageIDs[pkg.ID],
 		}
 		view.Presentation = c.packagePresentation(view, presentationText)
 		packageViews = append(packageViews, view)
@@ -244,7 +259,20 @@ func (c *Controller) Snapshot() AppSnapshot {
 			enabledCount++
 		}
 	}
-	activeCount := len(ResolveDependencies(c.packages, c.disabledPackageIDs).LoadablePackages)
+	activeCount := 0
+	runningNodePackages := map[string]bool{}
+	if c.nodeRuntime != nil {
+		runningNodePackages = c.nodeRuntime.RunningPackageIDs()
+	}
+	effectiveActiveDisabled := cloneSet(c.disabledPackageIDs)
+	for _, pkg := range c.packages {
+		if pkg.Manifest != nil && pkg.Manifest.CodexTweaks.Permissions.Node != nil && !runningNodePackages[pkg.ID] {
+			effectiveActiveDisabled[pkg.ID] = true
+		}
+	}
+	for range ResolveDependencies(c.packages, effectiveActiveDisabled).LoadablePackages {
+		activeCount++
+	}
 	updateSnapshot := c.updateSnapshotLocked()
 	presentation := NewPresentationContract(PresentationState{
 		Status: c.status, Enabled: c.config.Enabled,
@@ -260,7 +288,7 @@ func (c *Controller) Snapshot() AppSnapshot {
 	return AppSnapshot{
 		ProtocolVersion: ProtocolVersion, Presentation: presentation, Status: c.status,
 		Enabled: c.config.Enabled, DeveloperMode: c.config.DeveloperMode,
-		AvailableCapabilities: AvailableCapabilities(), Packages: packageViews,
+		DeveloperAllowUnknownNode: c.developerAllowUnknownNode, Packages: packageViews,
 		DisabledPackageIDs: sortedTrueKeys(c.disabledPackageIDs), BuildingPackageIDs: sortedTrueKeys(c.buildingPackageIDs),
 		ExportingPackageIDs: sortedTrueKeys(c.exportingPackageIDs),
 		PackageBuildErrors:  cloneStringMap(c.packageBuildErrors), PackageRuntimeErrors: cloneStringMap(c.packageRuntimeErrors),
@@ -296,6 +324,9 @@ func (c *Controller) packagePresentation(view PackageView, text map[string]strin
 		c.packagePayloadErrors[packageID] != "" || c.packageRuntimeErrors[packageID] != "" ||
 		c.remotePackageErrors[packageID] != "" || criticalDependency
 	isPending := hasRemoteUpdate && remoteUpdate.Status != RemoteUpdateCurrent || len(dependencyIssues) > 0
+	if view.Node != nil && !view.Node.Authorized {
+		isPending = true
+	}
 	switch view.BuildDisposition {
 	case BuildNotBuilt, BuildVersionUpdate, BuildDependencyUpdate, BuildSourceChanged, BuildCompilerUpdate:
 		isPending = true
@@ -327,6 +358,8 @@ func (c *Controller) packagePresentation(view PackageView, text map[string]strin
 		result.StatusTitle = text["packages.status.runtimeFailed"]
 	case c.disabledPackageIDs[packageID]:
 		result.StatusTitle = text["packages.status.disabled"]
+	case view.Node != nil && view.Node.Status == "pendingAuthorization":
+		result.StatusTitle = text["packages.status.nodeAuthorizationRequired"]
 	default:
 		result.StatusTitle = map[BuildDisposition]string{
 			BuildInvalid:          text["packages.status.unavailable"],
@@ -373,6 +406,8 @@ func (c *Controller) packagePresentation(view PackageView, text map[string]strin
 		result.StatusDetail = c.packagePayloadErrors[packageID]
 	case c.packageRuntimeErrors[packageID] != "":
 		result.StatusDetail = c.packageRuntimeErrors[packageID]
+	case view.Node != nil && view.Node.Status == "pendingAuthorization":
+		result.StatusDetail = text["packages.detail.nodeAuthorizationRequired"]
 	case view.ActiveBuild == nil:
 		result.StatusDetail = text["packages.notBuiltDetail"]
 	case view.BuildDisposition == BuildVersionUpdate:
@@ -530,6 +565,9 @@ func (c *Controller) ReadAuthoringPrompt() (string, error) {
 }
 
 func (c *Controller) Shutdown() {
+	if c.nodeRuntime != nil {
+		c.nodeRuntime.StopAll()
+	}
 	c.cancel()
 	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
 	defer cancel()

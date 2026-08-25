@@ -28,6 +28,15 @@ func TestBuilderArgumentsPreserveLockedAndPinnedContract(t *testing.T) {
 	if !containsString(EsbuildArguments("/tmp/index.js", "/tmp/bundle.js", false), "--offline") {
 		t.Fatal("developer build must use only cached compiler")
 	}
+	nodeArguments := EsbuildNodeArguments("/tmp/package/src/node.ts", "/tmp/build/node-bundle.cjs", true)
+	for _, expected := range []string{"--platform=node", "--format=cjs", "--target=node20", "--packages=external", "--outfile=/tmp/build/node-bundle.cjs"} {
+		if !containsString(nodeArguments, expected) {
+			t.Fatalf("missing Node build argument %q in %#v", expected, nodeArguments)
+		}
+	}
+	if containsString(DependencyInstallWithScriptsArguments, "--ignore-scripts") {
+		t.Fatal("post-authorization npm install must be allowed to run package scripts")
+	}
 }
 
 func TestNodeCandidatesUsePathAndDeduplicate(t *testing.T) {

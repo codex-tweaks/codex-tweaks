@@ -61,7 +61,7 @@ func (b *Builder) DetectNodeEnvironment(ctx context.Context) *NodeEnvironment {
 func (b *Builder) Build(ctx context.Context, pkg Package, installDependencies, allowCompilerDownload bool) (PackageBuildRecord, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	if pkg.ValidationError != nil || pkg.Manifest == nil || pkg.SourceFingerprint == nil || pkg.DependencyFingerprint == nil {
+	if pkg.ValidationError != nil || pkg.Manifest == nil || pkg.ManifestFingerprint == nil || pkg.SourceFingerprint == nil || pkg.DependencyFingerprint == nil {
 		return PackageBuildRecord{}, errors.New("包配置无效，无法编译。")
 	}
 	node := b.DetectNodeEnvironment(ctx)
@@ -91,7 +91,7 @@ func (b *Builder) Build(ctx context.Context, pkg Package, installDependencies, a
 		return PackageBuildRecord{}, err
 	}
 	defer os.RemoveAll(stagingDirectory)
-	entryPath := filepath.Join(pkg.Directory, filepath.FromSlash(pkg.Manifest.CodexTweaks.Entry))
+	entryPath := filepath.Join(pkg.Directory, filepath.FromSlash(pkg.Manifest.CodexTweaks.Entrypoints.Renderer))
 	javaScriptPath := filepath.Join(stagingDirectory, "bundle.js")
 	result, err := b.runner.Run(ctx, node.NPXPath, EsbuildArguments(entryPath, javaScriptPath, allowCompilerDownload), pkg.Directory, environment)
 	if err != nil {
@@ -102,6 +102,38 @@ func (b *Builder) Build(ctx context.Context, pkg Package, installDependencies, a
 	}
 	if !isRegularNonSymlink(javaScriptPath) {
 		return PackageBuildRecord{}, errors.New("编译器没有生成 bundle.js。")
+	}
+	rendererBundle, err := os.ReadFile(javaScriptPath)
+	if err != nil {
+		return PackageBuildRecord{}, errors.New("无法读取编译器生成的 bundle.js。")
+	}
+	rendererFingerprint := SecureFingerprintBytes(rendererBundle)
+	hasCSS := isRegularNonSymlink(filepath.Join(stagingDirectory, "bundle.css"))
+	cssFingerprint := ""
+	if hasCSS {
+		cssBundle, err := os.ReadFile(filepath.Join(stagingDirectory, "bundle.css"))
+		if err != nil {
+			return PackageBuildRecord{}, errors.New("无法读取编译器生成的 bundle.css。")
+		}
+		cssFingerprint = SecureFingerprintBytes(cssBundle)
+	}
+	nodeBundleFingerprint := ""
+	hasNode := pkg.Manifest.CodexTweaks.Entrypoints.Node != nil
+	if hasNode {
+		nodeEntryPath := filepath.Join(pkg.Directory, filepath.FromSlash(*pkg.Manifest.CodexTweaks.Entrypoints.Node))
+		nodeJavaScriptPath := filepath.Join(stagingDirectory, "node-bundle.cjs")
+		result, err := b.runner.Run(ctx, node.NPXPath, EsbuildNodeArguments(nodeEntryPath, nodeJavaScriptPath, allowCompilerDownload), pkg.Directory, environment)
+		if err != nil {
+			return PackageBuildRecord{}, err
+		}
+		if err := requireCommandSuccess(result, "esbuild node"); err != nil {
+			return PackageBuildRecord{}, err
+		}
+		contents, err := os.ReadFile(nodeJavaScriptPath)
+		if err != nil {
+			return PackageBuildRecord{}, errors.New("编译器没有生成 node-bundle.cjs。")
+		}
+		nodeBundleFingerprint = SecureFingerprintBytes(contents)
 	}
 	randomSuffix, err := randomHex(4)
 	if err != nil {
@@ -115,10 +147,16 @@ func (b *Builder) Build(ctx context.Context, pkg Package, installDependencies, a
 	record := PackageBuildRecord{
 		PackageID: pkg.Manifest.Name, PackageVersion: pkg.Manifest.Version,
 		PackageDependencies: packageDependencyVersions(pkg.Manifest.CodexTweaks.PackageDependencies),
-		Capabilities:        cloneCapabilityRequirements(pkg.Manifest.CodexTweaks.Capabilities),
+		Entrypoints:         pkg.Manifest.CodexTweaks.Entrypoints,
+		NodePermission:      pkg.Manifest.CodexTweaks.Permissions.Node,
+		UI:                  pkg.Manifest.CodexTweaks.UI,
+		ManifestFingerprint: *pkg.ManifestFingerprint,
 		SourceFingerprint:   *pkg.SourceFingerprint, DependencyFingerprint: *pkg.DependencyFingerprint,
-		CompilerVersion: CompilerVersion, NodeVersion: node.Version, BuildDirectoryName: buildDirectoryName,
-		HasCSS: isRegularNonSymlink(filepath.Join(finalDirectory, "bundle.css")), BuiltAt: NewCodableTime(time.Now()),
+		RendererFingerprint: rendererFingerprint, CSSFingerprint: cssFingerprint,
+		NodeBundleFingerprint: nodeBundleFingerprint,
+		CompilerVersion:       CompilerVersion, NodeVersion: node.Version, BuildDirectoryName: buildDirectoryName,
+		HasCSS: hasCSS, HasNode: hasNode,
+		BuiltAt: NewCodableTime(time.Now()),
 	}
 	if err := b.store.ActivateBuild(record); err != nil {
 		return PackageBuildRecord{}, err
@@ -223,6 +261,18 @@ func EsbuildArguments(entryPath, outputPath string, allowCompilerDownload bool) 
 	return append(arguments,
 		"esbuild@"+CompilerVersion, entryPath, "--bundle", "--platform=browser", "--format=cjs",
 		"--target=chrome120", "--sourcemap=inline", "--log-level=warning",
+		`--define:process.env.NODE_ENV="production"`, "--outfile="+outputPath,
+	)
+}
+
+func EsbuildNodeArguments(entryPath, outputPath string, allowCompilerDownload bool) []string {
+	arguments := []string{"--yes"}
+	if !allowCompilerDownload {
+		arguments = append(arguments, "--offline")
+	}
+	return append(arguments,
+		"esbuild@"+CompilerVersion, entryPath, "--bundle", "--platform=node", "--format=cjs",
+		"--target=node20", "--packages=external", "--sourcemap=inline", "--log-level=warning",
 		`--define:process.env.NODE_ENV="production"`, "--outfile="+outputPath,
 	)
 }

@@ -112,7 +112,7 @@ func installerManifestJSON(name, version string, dependencies map[string]string)
 	if dependencies == nil {
 		dependencies = map[string]string{}
 	}
-	manifest := PackageManifest{Name: name, Version: version, Description: "test", Dependencies: dependencies, CodexTweaks: PackageConfiguration{APIVersion: 2, Entry: "src/index.js", Priority: 100, PackageDependencies: map[string]PackageDependency{}}}
+	manifest := PackageManifest{Name: name, Version: version, Description: "test", Dependencies: dependencies, CodexTweaks: PackageConfiguration{APIVersion: APIVersion, Entrypoints: PackageEntrypoints{Renderer: "src/index.js"}, Priority: 100, PackageDependencies: map[string]PackageDependency{}}}
 	return JSONLiteral(manifest)
 }
 

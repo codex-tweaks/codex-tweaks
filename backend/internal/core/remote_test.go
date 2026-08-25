@@ -139,7 +139,7 @@ func writeRemotePackage(t *testing.T, repository, version string, dependencies m
 	if dependencies == nil {
 		dependencies = map[string]string{}
 	}
-	manifest := PackageManifest{Name: "remote-sample", Version: version, Description: "Remote fixture", Dependencies: dependencies, CodexTweaks: PackageConfiguration{APIVersion: 2, Entry: "src/index.js", PackageDependencies: map[string]PackageDependency{}}}
+	manifest := PackageManifest{Name: "remote-sample", Version: version, Description: "Remote fixture", Dependencies: dependencies, CodexTweaks: PackageConfiguration{APIVersion: APIVersion, Entrypoints: PackageEntrypoints{Renderer: "src/index.js"}, PackageDependencies: map[string]PackageDependency{}}}
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		t.Fatal(err)

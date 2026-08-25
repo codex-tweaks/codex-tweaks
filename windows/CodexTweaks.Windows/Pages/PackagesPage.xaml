@@ -77,6 +77,33 @@
             <TextBlock
                 x:Name="DeveloperModeDetail"
                 Style="{StaticResource CodexCaptionTextStyle}" />
+            <Grid
+                x:Name="DeveloperNodePermissionPanel"
+                ColumnSpacing="8"
+                Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ToggleSwitch
+                    x:Name="DeveloperNodePermissionToggle"
+                    Width="44"
+                    MinWidth="0"
+                    OffContent=""
+                    OnContent=""
+                    Toggled="DeveloperNodePermissionToggle_Toggled" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock
+                        x:Name="DeveloperNodePermissionTitle"
+                        Style="{StaticResource CodexBodyTextStyle}"
+                        FontWeight="SemiBold"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        x:Name="DeveloperNodePermissionDetail"
+                        Style="{StaticResource CodexCaptionTextStyle}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
         </StackPanel>
 
         <StackPanel Grid.Row="2" Spacing="8">
@@ -224,6 +251,24 @@
                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                         Style="{StaticResource CodexBodyTextStyle}"
                                         Text="{Binding Detail}" />
+                                    <Grid
+                                        ColumnSpacing="7"
+                                        Visibility="{Binding NodeReasonVisibility}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon
+                                            FontFamily="Segoe Fluent Icons"
+                                            FontSize="13"
+                                            Glyph="&#xE756;" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Style="{StaticResource CodexCaptionTextStyle}"
+                                            Text="{Binding NodeReason}"
+                                            TextWrapping="Wrap" />
+                                    </Grid>
                                     <TextBlock
                                         Foreground="{Binding StatusBrush}"
                                         Style="{StaticResource CodexCaptionTextStyle}"
@@ -282,6 +327,12 @@
                                         </Border>
                                     </StackPanel>
                                     <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Spacing="8">
+                                        <Button
+                                            DataContext="{Binding}"
+                                            Click="AuthorizeNodeButton_Click"
+                                            Content="{Binding AuthorizeNodeLabel}"
+                                            IsEnabled="{Binding CanAuthorizeNode}"
+                                            Visibility="{Binding AuthorizeNodeVisibility}" />
                                         <Button
                                             DataContext="{Binding}"
                                             Click="InstallDependenciesButton_Click"

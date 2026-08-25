@@ -97,6 +97,19 @@ func TestPresentationContractDisablesInstallActionsDuringPackageExport(t *testin
 	}
 }
 
+func TestPresentationContractDisablesConflictingActionsDuringPackageDeletion(t *testing.T) {
+	contract := NewPresentationContract(PresentationState{
+		Status:          AppStatus{Kind: StatusConnected},
+		Enabled:         true,
+		GitAvailable:    true,
+		DeletingPackage: true,
+	})
+	if contract.Actions.InstallLocalPackage || contract.Actions.InstallRemotePackage ||
+		contract.Actions.SetEnabled || contract.Actions.SetDeveloperMode || contract.Actions.ReloadPackages {
+		t.Fatalf("conflicting actions must be disabled while deleting a package: %#v", contract.Actions)
+	}
+}
+
 func TestPresentationContractCanBeGeneratedForAnExplicitPlatform(t *testing.T) {
 	contract := NewPresentationContractForPlatform(PresentationState{}, "windows", "arm64")
 	if contract.Platform.OperatingSystem != "windows" || contract.Platform.Architecture != "arm64" {

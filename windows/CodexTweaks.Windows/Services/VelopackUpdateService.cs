@@ -14,7 +14,7 @@ internal sealed class VelopackUpdateService
     private PendingUpdate? _pending;
 
     internal async Task<VelopackUpdateResult> CheckAsync(
-        string channel,
+        string packageChannel,
         string architecture,
         string repositoryUrl)
     {
@@ -24,12 +24,12 @@ internal sealed class VelopackUpdateService
             var ridArchitecture = architecture == "arm64" ? "arm64" : "x64";
             var options = new UpdateOptions
             {
-                ExplicitChannel = $"win-{ridArchitecture}-{channel}",
+                ExplicitChannel = $"win-{ridArchitecture}-{packageChannel}",
                 AllowVersionDowngrade = false,
             };
             var manager = string.IsNullOrWhiteSpace(localSource)
                 ? new UpdateManager(
-                    new GithubSource(repositoryUrl, null, channel == "beta"),
+                    new GithubSource(repositoryUrl, null, packageChannel == "beta"),
                     options)
                 : new UpdateManager(localSource, options);
             var update = await manager.CheckForUpdatesAsync();

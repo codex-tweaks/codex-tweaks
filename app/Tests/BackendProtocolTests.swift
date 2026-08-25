@@ -50,8 +50,8 @@ final class BackendProtocolTests: XCTestCase {
             """
             {
               "id": "ct-sample",
-              "directoryName": "ct-sample",
-              "directory": "/tmp/ct-sample",
+              "directoryName": "codex-tweaks-sample",
+              "directory": "/tmp/codex-tweaks-sample",
               "exportFileName": "ct-sample-v1.0.0.zip",
               "manifest": {
                 "name": "ct-sample",
@@ -89,6 +89,7 @@ final class BackendProtocolTests: XCTestCase {
                 "setPriority": true,
                 "openDirectory": true,
                 "export": true,
+                "delete": true,
                 "installMissingDependencies": false,
                 "enableDependencies": false,
                 "updateManagedPackage": false,
@@ -106,6 +107,7 @@ final class BackendProtocolTests: XCTestCase {
             """
         )
         XCTAssertEqual(package.id, "ct-sample")
+        XCTAssertEqual(package.directoryName, "codex-tweaks-sample")
         XCTAssertEqual(package.buildDisposition, .notBuilt)
         XCTAssertEqual(package.origin, .local)
 
@@ -113,7 +115,7 @@ final class BackendProtocolTests: XCTestCase {
             BackendAppSnapshot.self,
             """
             {
-              "protocolVersion": 5,
+              "protocolVersion": 8,
               "presentation": \(presentationJSON),
               "status": {"kind": "connected", "targetCount": 1},
               "enabled": true,
@@ -145,6 +147,7 @@ final class BackendProtocolTests: XCTestCase {
               "activePackageCount": 0,
               "update": {
                 "channel": "stable",
+                "packageChannel": "stable",
                 "autoCheck": true,
                 "checking": false,
                 "currentVersion": "0.1.0",
@@ -157,11 +160,12 @@ final class BackendProtocolTests: XCTestCase {
             }
             """
         )
-        XCTAssertEqual(snapshot.protocolVersion, 5)
+        XCTAssertEqual(snapshot.protocolVersion, 8)
         XCTAssertEqual(snapshot.presentation.version, 1)
         XCTAssertEqual(snapshot.status.targetCount, 1)
         XCTAssertFalse(snapshot.developerAllowUnknownNode)
         XCTAssertEqual(snapshot.update.channel, .stable)
+        XCTAssertEqual(snapshot.update.packageChannel, .stable)
     }
 
     func testGeneratedPresentationContractOwnsSharedCopyTokensAndPlatformConstants() {

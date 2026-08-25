@@ -68,6 +68,7 @@ type PackageView struct {
 	RuntimePackageDependencies    map[string]string            `json:"runtimePackageDependencies"`
 	IsManaged                     bool                         `json:"isManaged"`
 	ManagedLock                   *ManagedPackageLock          `json:"managedLock,omitempty"`
+	ProjectPageURL                *string                      `json:"projectPageURL,omitempty"`
 	BuildDisposition              BuildDisposition             `json:"buildDisposition"`
 	BuildRequestKey               *string                      `json:"buildRequestKey,omitempty"`
 	CanInstallMissingDependencies bool                         `json:"canInstallMissingDependencies"`
@@ -100,6 +101,7 @@ type PackageAvailableActions struct {
 	SetPriority                bool `json:"setPriority"`
 	OpenDirectory              bool `json:"openDirectory"`
 	Export                     bool `json:"export"`
+	Delete                     bool `json:"delete"`
 	InstallMissingDependencies bool `json:"installMissingDependencies"`
 	EnableDependencies         bool `json:"enableDependencies"`
 	UpdateManagedPackage       bool `json:"updateManagedPackage"`
@@ -108,7 +110,10 @@ type PackageAvailableActions struct {
 }
 
 type UpdateSnapshot struct {
-	Channel                UpdateChannel  `json:"channel"`
+	Channel UpdateChannel `json:"channel"`
+	// PackageChannel is the concrete Velopack feed for LatestRelease. It may be
+	// stable even when Channel allows stable, beta, and RC releases.
+	PackageChannel         UpdateChannel  `json:"packageChannel"`
 	AutoCheck              bool           `json:"autoCheck"`
 	Checking               bool           `json:"checking"`
 	LatestRelease          *GitHubRelease `json:"latestRelease,omitempty"`

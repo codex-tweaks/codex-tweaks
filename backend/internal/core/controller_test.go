@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -10,6 +11,14 @@ import (
 	"testing"
 	"time"
 )
+
+type idleControllerTestPlatform struct{}
+
+func (idleControllerTestPlatform) IsCodexRunning(context.Context) (bool, error) { return false, nil }
+func (idleControllerTestPlatform) ActivateCodex(context.Context) error          { return nil }
+func (idleControllerTestPlatform) LaunchCodex(context.Context) error            { return nil }
+func (idleControllerTestPlatform) RestartCodex(context.Context) error           { return nil }
+func (idleControllerTestPlatform) Architecture() string                         { return "amd64" }
 
 func TestControllerUsesGoDefaultsReadsSkillAndDisablesNewPackages(t *testing.T) {
 	root := t.TempDir()
@@ -52,7 +61,7 @@ func TestControllerUsesGoDefaultsReadsSkillAndDisablesNewPackages(t *testing.T) 
 		t.Fatalf("new package must remain disabled: %#v", afterReload.DisabledPackageIDs)
 	}
 	actions := afterReload.Packages[0].AvailableActions
-	if !actions.SetEnabled || !actions.SetPriority || !actions.OpenDirectory || !actions.Export || actions.Build {
+	if !actions.SetEnabled || !actions.SetPriority || !actions.OpenDirectory || !actions.Export || !actions.Delete || actions.Build {
 		t.Fatalf("unexpected Go-provided package actions: %#v", actions)
 	}
 	presentation := afterReload.Packages[0].Presentation
@@ -80,6 +89,105 @@ func TestControllerUsesGoDefaultsReadsSkillAndDisablesNewPackages(t *testing.T) 
 	afterDisable := controller.Snapshot()
 	if !containsString(afterDisable.DisabledPackageIDs, "new-package") || afterDisable.EnabledPackageCount != 0 {
 		t.Fatalf("disabled package snapshot is inconsistent: %#v", afterDisable.DisabledPackageIDs)
+	}
+}
+
+func TestControllerDeletesLocalPackageSourceBuildAndSettings(t *testing.T) {
+	root := t.TempDir()
+	events := make(chan AppSnapshot, 16)
+	controller, err := NewController(
+		InitializeParams{
+			ApplicationSupportDirectory: filepath.Join(root, "support"),
+			CacheDirectory:              filepath.Join(root, "cache"),
+			CurrentVersion:              "0.1.0",
+			BuildNumber:                 "1",
+		},
+		func(snapshot AppSnapshot) { events <- snapshot },
+		ControllerDependencies{Platform: idleControllerTestPlatform{}, DisableBackground: true},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer controller.cancel()
+
+	directory := makeStorePackage(t, controller.store, "delete-sample", "delete-sample", "1.0.0", 12, nil, "")
+	if err := controller.ReloadPackages(); err != nil {
+		t.Fatal(err)
+	}
+	pkg, exists := controller.packageByID("delete-sample")
+	if !exists {
+		t.Fatal("test package was not loaded")
+	}
+	activateTestBuild(t, controller.store, pkg, "renderer", "")
+	priority := -4
+	if err := controller.store.SetPriorityOverride(pkg.ID, &priority); err != nil {
+		t.Fatal(err)
+	}
+	if err := controller.ReloadPackages(); err != nil {
+		t.Fatal(err)
+	}
+	if !controller.Snapshot().Packages[0].AvailableActions.Delete {
+		t.Fatal("delete action was not available")
+	}
+
+	if err := controller.DeletePackage(pkg.ID); err != nil {
+		t.Fatal(err)
+	}
+	timeout := time.NewTimer(2 * time.Second)
+	defer timeout.Stop()
+	for {
+		select {
+		case snapshot := <-events:
+			if snapshot.LocalOperationError != nil {
+				t.Fatalf("package deletion failed: %s", *snapshot.LocalOperationError)
+			}
+			if snapshot.LocalOperationMessage == nil || !strings.Contains(*snapshot.LocalOperationMessage, "delete-sample") {
+				continue
+			}
+			if len(snapshot.Packages) != 0 {
+				t.Fatalf("deleted package remains in snapshot: %#v", snapshot.Packages)
+			}
+			if !containsString(snapshot.DisabledPackageIDs, pkg.ID) {
+				t.Fatalf("deleted package was not kept disabled for safe reinstall: %#v", snapshot.DisabledPackageIDs)
+			}
+			if _, err := os.Stat(directory); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("package source still exists: %v", err)
+			}
+			if _, err := os.Stat(controller.store.packageCacheDirectory(pkg.ID)); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("package build cache still exists: %v", err)
+			}
+			settings, err := controller.store.LoadUserSettings()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, exists := settings.Packages[pkg.ID]; exists {
+				t.Fatalf("package priority setting still exists: %#v", settings.Packages[pkg.ID])
+			}
+			return
+		case <-timeout.C:
+			t.Fatal("timed out waiting for package deletion")
+		}
+	}
+}
+
+func TestPackageViewExposesProjectPageOnlyForManagedPackages(t *testing.T) {
+	lock := ManagedPackageLock{
+		PackageID: "ct-example-package",
+		Source: PackageSource{
+			URL:      "git@github.com:example/codex-tweaks-package.git",
+			Selector: NewRemoteSelector(SelectorLatestSemverTag, ""),
+		},
+	}
+	pkg := Package{ID: lock.PackageID, DirectoryName: lock.PackageID, Origin: ManagedOrigin(lock)}
+	managed := packageView(pkg, nil, nil)
+	if managed.ProjectPageURL == nil || *managed.ProjectPageURL != "https://github.com/example/codex-tweaks-package" {
+		t.Fatalf("managed project page = %#v", managed.ProjectPageURL)
+	}
+
+	pkg.Origin = LocalOrigin()
+	local := packageView(pkg, nil, nil)
+	if local.ProjectPageURL != nil {
+		t.Fatalf("local package exposed a project page: %q", *local.ProjectPageURL)
 	}
 }
 

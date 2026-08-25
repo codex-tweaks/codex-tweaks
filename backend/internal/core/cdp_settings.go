@@ -30,6 +30,14 @@ func (s *rendererBridgeSession) ensureSettingsAdapter(
 		}
 		s.debuggerEnabled = true
 	}
+	generation := s.executionGeneration.Load()
+	if s.settingsAdapterCached && s.settingsAdapterGen == generation &&
+		s.settingsAppModuleURL != "" && s.settingsVisibilityURL != "" {
+		return &SettingsAdapterConfiguration{
+			AppModuleURL: s.settingsAppModuleURL, VisibilityModuleURL: s.settingsVisibilityURL,
+			Sections: sections,
+		}, nil
+	}
 	appModuleURL, appScriptID := s.waitForMatchingScript(ctx, appInitialScriptPattern)
 	if appScriptID == "" {
 		return nil, errors.New("当前 Codex 构建中未找到 app-initial 模块")
@@ -53,23 +61,25 @@ func (s *rendererBridgeSession) ensureSettingsAdapter(
 	if settingsScriptID == "" {
 		return nil, errors.New("Codex 设置模块没有出现在调试器中")
 	}
-	if s.settingsScriptID != settingsScriptID {
-		settingsSource, err := s.getScriptSource(ctx, settingsScriptID)
-		if err != nil {
-			return nil, err
-		}
-		visibilityAsset := visibilityAssetPattern.FindString(settingsSource)
-		if visibilityAsset == "" {
-			return nil, errors.New("当前 Codex 构建中未找到设置可见性模块")
-		}
-		visibilityURL, err := resolveModuleURL(settingsModuleURL, visibilityAsset)
-		if err != nil {
-			return nil, err
-		}
-		s.settingsScriptID = settingsScriptID
-		s.settingsAppModuleURL = appModuleURL
-		s.settingsVisibilityURL = visibilityURL
+	settingsSource, err := s.getScriptSource(ctx, settingsScriptID)
+	if err != nil {
+		return nil, err
 	}
+	visibilityAsset := visibilityAssetPattern.FindString(settingsSource)
+	if visibilityAsset == "" {
+		return nil, errors.New("当前 Codex 构建中未找到设置可见性模块")
+	}
+	visibilityURL, err := resolveModuleURL(settingsModuleURL, visibilityAsset)
+	if err != nil {
+		return nil, err
+	}
+	if s.executionGeneration.Load() != generation {
+		return nil, errors.New("Codex 页面在设置模块适配期间发生刷新")
+	}
+	s.settingsAppModuleURL = appModuleURL
+	s.settingsVisibilityURL = visibilityURL
+	s.settingsAdapterGen = generation
+	s.settingsAdapterCached = true
 	return &SettingsAdapterConfiguration{
 		AppModuleURL: s.settingsAppModuleURL, VisibilityModuleURL: s.settingsVisibilityURL,
 		Sections: sections,

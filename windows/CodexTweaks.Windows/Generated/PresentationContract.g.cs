@@ -86,6 +86,13 @@ internal static class PresentationTextKey
     internal const string PackagesClearMessage = "packages.clearMessage";
     internal const string PackagesClearSearch = "packages.clearSearch";
     internal const string PackagesCollapsed = "packages.collapsed";
+    internal const string PackagesDelete = "packages.delete";
+    internal const string PackagesDeleteConfirm = "packages.deleteConfirm";
+    internal const string PackagesDeleteFailed = "packages.deleteFailed";
+    internal const string PackagesDeleteHelp = "packages.deleteHelp";
+    internal const string PackagesDeleteMessage = "packages.deleteMessage";
+    internal const string PackagesDeleteSuccess = "packages.deleteSuccess";
+    internal const string PackagesDeleteTitle = "packages.deleteTitle";
     internal const string PackagesDependencyConstraint = "packages.dependencyConstraint";
     internal const string PackagesDependencyInstalledSource = "packages.dependencyInstalledSource";
     internal const string PackagesDependencyNoGitSource = "packages.dependencyNoGitSource";
@@ -114,6 +121,7 @@ internal static class PresentationTextKey
     internal const string PackagesDependencySummaryPending = "packages.dependencySummaryPending";
     internal const string PackagesDetailActiveBuildError = "packages.detail.activeBuildError";
     internal const string PackagesDetailCompilerUpdate = "packages.detail.compilerUpdate";
+    internal const string PackagesDetailDeleting = "packages.detail.deleting";
     internal const string PackagesDetailDependencyIssues = "packages.detail.dependencyIssues";
     internal const string PackagesDetailDependencyUpdate = "packages.detail.dependencyUpdate";
     internal const string PackagesDetailExporting = "packages.detail.exporting";
@@ -172,6 +180,7 @@ internal static class PresentationTextKey
     internal const string PackagesNodeMissing = "packages.nodeMissing";
     internal const string PackagesNotBuiltDetail = "packages.notBuiltDetail";
     internal const string PackagesOpenDirectory = "packages.openDirectory";
+    internal const string PackagesOpenProjectPage = "packages.openProjectPage";
     internal const string PackagesPackageCountSuffix = "packages.packageCountSuffix";
     internal const string PackagesPriority = "packages.priority";
     internal const string PackagesPriorityActual = "packages.priorityActual";
@@ -186,6 +195,7 @@ internal static class PresentationTextKey
     internal const string PackagesStatusBuildFailed = "packages.status.buildFailed";
     internal const string PackagesStatusBuilding = "packages.status.building";
     internal const string PackagesStatusCompilerChanged = "packages.status.compilerChanged";
+    internal const string PackagesStatusDeleting = "packages.status.deleting";
     internal const string PackagesStatusDependency = "packages.status.dependency";
     internal const string PackagesStatusDependencyBlocked = "packages.status.dependencyBlocked";
     internal const string PackagesStatusDependencyChanged = "packages.status.dependencyChanged";
@@ -552,6 +562,13 @@ internal static class PresentationDefaults
         [PresentationTextKey.PackagesClearMessage] = "清除操作提示",
         [PresentationTextKey.PackagesClearSearch] = "清除搜索与筛选",
         [PresentationTextKey.PackagesCollapsed] = "已折叠",
+        [PresentationTextKey.PackagesDelete] = "删除功能包",
+        [PresentationTextKey.PackagesDeleteConfirm] = "删除",
+        [PresentationTextKey.PackagesDeleteFailed] = "删除功能包 {name} 失败：{message}",
+        [PresentationTextKey.PackagesDeleteHelp] = "删除功能包源码、本地编译产物和包级设置",
+        [PresentationTextKey.PackagesDeleteMessage] = "将永久删除此功能包的源码、本地编译产物和包级设置；依赖它的功能包可能停止运行。此操作无法撤销。",
+        [PresentationTextKey.PackagesDeleteSuccess] = "已删除功能包 {name}。",
+        [PresentationTextKey.PackagesDeleteTitle] = "删除 {name}？",
         [PresentationTextKey.PackagesDependencyConstraint] = "依赖约束",
         [PresentationTextKey.PackagesDependencyInstalledSource] = "本机已安装来源：{url}",
         [PresentationTextKey.PackagesDependencyNoGitSource] = "未声明 Git 来源，仅在本地查找",
@@ -580,6 +597,7 @@ internal static class PresentationDefaults
         [PresentationTextKey.PackagesDependencySummaryPending] = "依赖 {total} · {pending} 个需处理",
         [PresentationTextKey.PackagesDetailActiveBuildError] = "当前仍运行 v{version}。{message}",
         [PresentationTextKey.PackagesDetailCompilerUpdate] = "当前产物由 esbuild {version} 生成。",
+        [PresentationTextKey.PackagesDetailDeleting] = "正在移除功能包源码、本地编译产物和包级设置。",
         [PresentationTextKey.PackagesDetailDependencyIssues] = "有 {count} 个依赖问题，展开依赖详情可查看具体状态。",
         [PresentationTextKey.PackagesDetailDependencyUpdate] = "当前编译产物仍在运行；需手动同步依赖或构建配置。",
         [PresentationTextKey.PackagesDetailExporting] = "正在将功能包源码整理为可再次安装的 ZIP。",
@@ -638,6 +656,7 @@ internal static class PresentationDefaults
         [PresentationTextKey.PackagesNodeMissing] = "未找到 Node.js、npm 和 npx；安装 Node.js 后重新扫描。",
         [PresentationTextKey.PackagesNotBuiltDetail] = "点击编译后才会加载到页面。",
         [PresentationTextKey.PackagesOpenDirectory] = "在文件管理器中打开功能包",
+        [PresentationTextKey.PackagesOpenProjectPage] = "打开 {name} 的项目页面",
         [PresentationTextKey.PackagesPackageCountSuffix] = " 等 {count} 个包",
         [PresentationTextKey.PackagesPriority] = "优先级",
         [PresentationTextKey.PackagesPriorityActual] = "实际加载顺序 #{position}。用户优先级 {priority} 仍用于和没有依赖路径的功能包排序。",
@@ -652,6 +671,7 @@ internal static class PresentationDefaults
         [PresentationTextKey.PackagesStatusBuildFailed] = "编译失败",
         [PresentationTextKey.PackagesStatusBuilding] = "正在编译",
         [PresentationTextKey.PackagesStatusCompilerChanged] = "编译器有更新",
+        [PresentationTextKey.PackagesStatusDeleting] = "正在删除",
         [PresentationTextKey.PackagesStatusDependency] = "依赖待处理",
         [PresentationTextKey.PackagesStatusDependencyBlocked] = "依赖阻塞",
         [PresentationTextKey.PackagesStatusDependencyChanged] = "依赖或配置更新",

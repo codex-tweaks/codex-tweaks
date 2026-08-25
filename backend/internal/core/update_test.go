@@ -41,13 +41,23 @@ func TestPreferredDownloadURL(t *testing.T) {
 }
 
 func TestStableReleaseIsNewerThanMatchingPrerelease(t *testing.T) {
-	stable := GitHubRelease{TagName: "v3.0.0"}
-	prerelease := GitHubRelease{TagName: "v3.0.0-beta.9"}
+	stable := GitHubRelease{TagName: "v3.1.0"}
+	prerelease := GitHubRelease{TagName: "v3.1.0-beta.7", Prerelease: true}
 	if !HasNewerVersion(&stable, prerelease.TagName) {
 		t.Fatal("stable release must be newer than its matching prerelease")
 	}
 	if HasNewerVersion(&prerelease, stable.TagName) {
 		t.Fatal("matching prerelease must not be newer than the stable release")
+	}
+	selected := SelectLatestRelease([]GitHubRelease{prerelease, stable}, UpdateBeta)
+	if selected == nil || selected.TagName != stable.TagName {
+		t.Fatalf("beta-inclusive channel did not promote the stable release: %#v", selected)
+	}
+	if got := packageChannelForRelease(selected); got != UpdateStable {
+		t.Fatalf("stable promotion package channel = %q, want %q", got, UpdateStable)
+	}
+	if got := packageChannelForRelease(&prerelease); got != UpdateBeta {
+		t.Fatalf("prerelease package channel = %q, want %q", got, UpdateBeta)
 	}
 }
 

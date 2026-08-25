@@ -35,6 +35,32 @@ func TestInjectionRuntimeAndForceContracts(t *testing.T) {
 	}
 }
 
+func TestInjectionRuntimeProbeExcludesPackageBundles(t *testing.T) {
+	payload := Payload{Version: "base", Packages: []CompiledPackage{{
+		ID: "sample", CSS: "large-package-css-marker", JavaScript: "large-package-js-marker",
+	}}}
+	configuration := &SettingsAdapterConfiguration{
+		AppModuleURL:        "app://-/assets/app-initial-test.js",
+		VisibilityModuleURL: "app://-/assets/use-visible-settings-sections-test.js",
+		Sections: []RuntimeSettingsSection{{
+			PackageID: "sample", ID: "wallpaper", Title: "自定义背景", Slug: "sample-wallpaper",
+		}},
+	}
+	probe := injectionRuntimeProbeScript(payload, 7, "bridge-session", configuration)
+	for _, expected := range []string{
+		`"base-force-7"`, `"bridge-session"`, `"appModuleUrl"`, `"unchanged"`,
+	} {
+		if !strings.Contains(probe, expected) {
+			t.Fatalf("runtime probe missing %q", expected)
+		}
+	}
+	for _, excluded := range []string{"large-package-css-marker", "large-package-js-marker"} {
+		if strings.Contains(probe, excluded) {
+			t.Fatalf("runtime probe unexpectedly contains package bundle %q", excluded)
+		}
+	}
+}
+
 func TestInjectionExposesTypedNodeAndSettingsExtensions(t *testing.T) {
 	payload := Payload{Version: "renderer-extensions", Packages: []CompiledPackage{{
 		ID: "sample", Name: "sample", Version: "1.0.0",

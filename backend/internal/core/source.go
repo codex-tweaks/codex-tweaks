@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var scpRepositoryPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:[^\s]+$`)
+var scpRepositoryPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+@([A-Za-z0-9.-]+):([^\s]+)$`)
 
 func ValidateSource(source PackageSource) error {
 	value := strings.TrimSpace(source.URL)
@@ -59,4 +59,33 @@ func isGitHubRepository(raw string) bool {
 	repositoryPath = strings.TrimSuffix(repositoryPath, ".git")
 	parts := strings.Split(repositoryPath, "/")
 	return len(parts) == 2 && parts[0] != "" && parts[1] != ""
+}
+
+func repositoryProjectPageURL(raw string) *string {
+	value := strings.TrimSpace(raw)
+	var host string
+	var path string
+	if matches := scpRepositoryPattern.FindStringSubmatch(value); len(matches) == 3 {
+		host = matches[1]
+		path = matches[2]
+	} else {
+		parsed, err := url.Parse(value)
+		if err != nil || parsed.Hostname() == "" {
+			return nil
+		}
+		switch strings.ToLower(parsed.Scheme) {
+		case "https", "ssh":
+		default:
+			return nil
+		}
+		host = parsed.Host
+		path = parsed.Path
+	}
+	path = strings.Trim(strings.TrimSpace(path), "/")
+	path = strings.TrimSuffix(path, ".git")
+	if host == "" || path == "" {
+		return nil
+	}
+	projectURL := (&url.URL{Scheme: "https", Host: host, Path: "/" + path}).String()
+	return &projectURL
 }

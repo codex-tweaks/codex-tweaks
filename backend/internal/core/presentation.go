@@ -88,6 +88,7 @@ type PresentationState struct {
 	InstallingLocalPackage   bool
 	InstallingRemotePackage  bool
 	ExportingPackage         bool
+	DeletingPackage          bool
 	GitAvailable             bool
 	LogAvailable             bool
 	AuthoringPromptAvailable bool
@@ -103,6 +104,7 @@ func NewPresentationContractForPlatform(state PresentationState, operatingSystem
 	text := PresentationText()
 	cdpAvailable := state.Status.Kind == StatusWaitingForPage || state.Status.Kind == StatusConnected || state.Status.Kind == StatusDisabled
 	uiRestartAvailable := state.Status.Kind == StatusConnected || state.Status.Kind == StatusDisabled || state.Status.Kind == StatusError
+	packageTransferBusy := state.InstallingLocalPackage || state.InstallingRemotePackage || state.ExportingPackage || state.DeletingPackage
 	strategy := "openDownload"
 	if operatingSystem == "darwin" {
 		strategy = "sparkle"
@@ -122,11 +124,11 @@ func NewPresentationContractForPlatform(state PresentationState, operatingSystem
 			OpenPackagesDirectory:      true,
 			OpenLogFile:                true,
 			OpenRepository:             true,
-			SetEnabled:                 true,
-			SetDeveloperMode:           true,
-			ReloadPackages:             true,
-			InstallLocalPackage:        !state.InstallingLocalPackage && !state.InstallingRemotePackage && !state.ExportingPackage,
-			InstallRemotePackage:       state.GitAvailable && !state.InstallingRemotePackage && !state.InstallingLocalPackage && !state.ExportingPackage,
+			SetEnabled:                 !state.DeletingPackage,
+			SetDeveloperMode:           !state.DeletingPackage,
+			ReloadPackages:             !state.DeletingPackage,
+			InstallLocalPackage:        !packageTransferBusy,
+			InstallRemotePackage:       state.GitAvailable && !packageTransferBusy,
 			CheckNodeEnvironment:       !state.CheckingNode,
 			CheckGitEnvironment:        !state.CheckingGit,
 			CheckManagedPackageUpdates: state.GitAvailable && !state.CheckingRemoteUpdates,
@@ -326,6 +328,13 @@ func PresentationText() map[string]string {
 		"packages.zipFileType":                        "ZIP 压缩包",
 		"packages.exportSuccess":                      "已导出 {name}：{file}",
 		"packages.exportFailed":                       "导出 {name} 失败：{message}",
+		"packages.delete":                             "删除功能包",
+		"packages.deleteHelp":                         "删除功能包源码、本地编译产物和包级设置",
+		"packages.deleteTitle":                        "删除 {name}？",
+		"packages.deleteMessage":                      "将永久删除此功能包的源码、本地编译产物和包级设置；依赖它的功能包可能停止运行。此操作无法撤销。",
+		"packages.deleteConfirm":                      "删除",
+		"packages.deleteSuccess":                      "已删除功能包 {name}。",
+		"packages.deleteFailed":                       "删除功能包 {name} 失败：{message}",
 		"packages.enablePackage":                      "启用 {name}",
 		"packages.expanded":                           "已展开",
 		"packages.collapsed":                          "已折叠",
@@ -344,6 +353,7 @@ func PresentationText() map[string]string {
 		"packages.enableDependencies":                 "启用依赖",
 		"packages.updateAndBuild":                     "更新并编译",
 		"packages.openDirectory":                      "在文件管理器中打开功能包",
+		"packages.openProjectPage":                    "打开 {name} 的项目页面",
 		"packages.priority":                           "优先级",
 		"packages.userPriority":                       "{name} 用户优先级",
 		"packages.resetPriority":                      "恢复包默认优先级 {priority}",
@@ -373,6 +383,7 @@ func PresentationText() map[string]string {
 		"packages.status.installingRemote":            "正在处理远程包",
 		"packages.status.building":                    "正在编译",
 		"packages.status.exporting":                   "正在导出",
+		"packages.status.deleting":                    "正在删除",
 		"packages.status.remoteFailed":                "远程操作失败",
 		"packages.status.pinnedChanged":               "固定引用已变化",
 		"packages.status.dependencyBlocked":           "依赖阻塞",
@@ -397,6 +408,7 @@ func PresentationText() map[string]string {
 		"packages.detail.compilerUpdate":              "当前产物由 esbuild {version} 生成。",
 		"packages.detail.lastBuilt":                   "上次编译：{date}",
 		"packages.detail.exporting":                   "正在将功能包源码整理为可再次安装的 ZIP。",
+		"packages.detail.deleting":                    "正在移除功能包源码、本地编译产物和包级设置。",
 		"packages.installAndBuild":                    "安装并编译",
 		"packages.updateToVersion":                    "更新到 v{version}",
 		"packages.syncAndBuild":                       "同步并编译",

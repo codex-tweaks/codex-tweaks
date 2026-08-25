@@ -217,6 +217,10 @@ func (c *Controller) SetPackageEnabled(packageID string, enabled bool) error {
 		return errors.New("没有找到功能包：" + packageID)
 	}
 	c.mu.Lock()
+	if len(c.deletingPackageIDs) > 0 {
+		c.mu.Unlock()
+		return errors.New("当前正在删除功能包。")
+	}
 	changed := false
 	if enabled && c.disabledPackageIDs[packageID] {
 		delete(c.disabledPackageIDs, packageID)
@@ -265,6 +269,12 @@ func (c *Controller) SetPackagePriority(packageID string, priority *int) error {
 	if !exists {
 		return errors.New("没有找到功能包：" + packageID)
 	}
+	c.mu.Lock()
+	deletingPackage := len(c.deletingPackageIDs) > 0
+	c.mu.Unlock()
+	if deletingPackage {
+		return errors.New("当前正在删除功能包。")
+	}
 	if priority != nil && *priority == pkg.DeclaredPriority() {
 		priority = nil
 	}
@@ -293,6 +303,10 @@ func (c *Controller) EnableDependencies(packageID string) error {
 		return errors.New("没有找到功能包：" + packageID)
 	}
 	c.mu.Lock()
+	if len(c.deletingPackageIDs) > 0 {
+		c.mu.Unlock()
+		return errors.New("当前正在删除功能包。")
+	}
 	packageByID := map[string]Package{}
 	for _, item := range c.packages {
 		packageByID[item.ID] = item

@@ -28,7 +28,7 @@ func TestBuilderBuildsBundledSampleOnDesktop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(packages) != 1 || packages[0].ID != "ct-sample" {
+	if len(packages) != 1 || packages[0].ID != "ct-sample" || packages[0].DirectoryName != "codex-tweaks-sample" {
 		t.Fatalf("unexpected bundled packages: %#v", packages)
 	}
 	record, err := NewBuilder(store, nil).Build(context.Background(), packages[0], true, true)

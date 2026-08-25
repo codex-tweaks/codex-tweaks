@@ -3,10 +3,15 @@ package core
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 func testCompiledSettingsUI(
@@ -62,6 +67,133 @@ func TestSettingsModuleAssetFixtures(t *testing.T) {
 	if matchAsset(settingsPageImportPattern, string(appSource)) == "" ||
 		visibilityAssetPattern.FindString(string(settingsSource)) == "" {
 		t.Fatal("current Codex module assets were not discovered")
+	}
+}
+
+func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.T) {
+	const (
+		appModuleURL        = "app://-/assets/app-initial-TEST.js"
+		settingsModuleURL   = "app://-/assets/settings-page-TEST.js"
+		visibilityModuleURL = "app://-/assets/use-visible-settings-sections-TEST.js"
+	)
+	upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
+	var countsMu sync.Mutex
+	getScriptSourceCount := 0
+	importModuleCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		connection, err := upgrader.Upgrade(writer, request, nil)
+		if err != nil {
+			return
+		}
+		defer connection.Close()
+		writeResponse := func(command map[string]any, result map[string]any) {
+			_ = connection.WriteJSON(map[string]any{"id": command["id"], "result": result})
+		}
+		writeScriptParsed := func(scriptID, scriptURL string) {
+			_ = connection.WriteJSON(map[string]any{
+				"method": "Debugger.scriptParsed",
+				"params": map[string]any{"scriptId": scriptID, "url": scriptURL},
+			})
+		}
+		for {
+			command := map[string]any{}
+			if connection.ReadJSON(&command) != nil {
+				return
+			}
+			method, _ := command["method"].(string)
+			switch method {
+			case "Runtime.enable", "Runtime.addBinding":
+				writeResponse(command, map[string]any{})
+			case "Debugger.enable":
+				writeScriptParsed("app-1", appModuleURL)
+				writeResponse(command, map[string]any{})
+			case "Debugger.getScriptSource":
+				params, _ := command["params"].(map[string]any)
+				scriptID, _ := params["scriptId"].(string)
+				countsMu.Lock()
+				getScriptSourceCount++
+				countsMu.Unlock()
+				source := `import "./use-visible-settings-sections-TEST.js";`
+				if strings.HasPrefix(scriptID, "app-") {
+					source = "const page=()=>import(`./settings-page-TEST.js`);"
+				}
+				writeResponse(command, map[string]any{"scriptSource": source})
+			case "Runtime.evaluate":
+				countsMu.Lock()
+				importModuleCount++
+				settingsScriptID := fmt.Sprintf("settings-%d", importModuleCount)
+				countsMu.Unlock()
+				writeScriptParsed(settingsScriptID, settingsModuleURL)
+				writeResponse(command, map[string]any{"result": map[string]any{"value": true}})
+			case "Test.resetExecutionContext":
+				_ = connection.WriteJSON(map[string]any{
+					"method": "Runtime.executionContextsCleared", "params": map[string]any{},
+				})
+				writeScriptParsed("app-2", appModuleURL)
+				writeResponse(command, map[string]any{})
+			default:
+				_ = connection.WriteJSON(map[string]any{
+					"id": command["id"], "error": map[string]any{"message": "unexpected method " + method},
+				})
+			}
+		}
+	}))
+	defer server.Close()
+
+	debuggerURL := "ws" + strings.TrimPrefix(server.URL, "http")
+	target := CDPTarget{
+		ID: "codex-main", Type: "page", URL: "app://-/index.html", WebSocketDebuggerURL: &debuggerURL,
+	}
+	service := NewCDPService(nil)
+	session, err := openRendererBridgeSession(
+		context.Background(), service.dialer, server.URL, target, nil, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+
+	makePayload := func(title string) Payload {
+		return Payload{Packages: []CompiledPackage{{
+			ID: "sample",
+			UI: CompiledPackageUI{SettingsSections: &CompiledSettingsSections{Items: []RuntimeSettingsSection{{
+				PackageID: "sample", ID: "wallpaper", Title: title, Slug: "sample-wallpaper",
+			}}}},
+		}}}
+	}
+	first, err := session.ensureSettingsAdapter(context.Background(), makePayload("First"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := session.ensureSettingsAdapter(context.Background(), makePayload("Second"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.AppModuleURL != appModuleURL || first.VisibilityModuleURL != visibilityModuleURL ||
+		second.AppModuleURL != appModuleURL || second.VisibilityModuleURL != visibilityModuleURL ||
+		len(second.Sections) != 1 || second.Sections[0].Title != "Second" {
+		t.Fatalf("unexpected cached settings adapters: first=%#v second=%#v", first, second)
+	}
+	countsMu.Lock()
+	if getScriptSourceCount != 2 || importModuleCount != 1 {
+		t.Fatalf("cached discovery repeated CDP work: getScriptSource=%d import=%d", getScriptSourceCount, importModuleCount)
+	}
+	countsMu.Unlock()
+
+	if _, err := session.call(context.Background(), "Test.resetExecutionContext", map[string]any{}); err != nil {
+		t.Fatal(err)
+	}
+	third, err := session.ensureSettingsAdapter(context.Background(), makePayload("Third"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(third.Sections) != 1 || third.Sections[0].Title != "Third" {
+		t.Fatalf("settings sections were not refreshed after navigation: %#v", third)
+	}
+	countsMu.Lock()
+	defer countsMu.Unlock()
+	if getScriptSourceCount != 4 || importModuleCount != 2 {
+		t.Fatalf("execution-context reset did not invalidate discovery: getScriptSource=%d import=%d", getScriptSourceCount, importModuleCount)
 	}
 }
 

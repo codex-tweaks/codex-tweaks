@@ -100,7 +100,7 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 		t.Fatalf("initialize response not found in %q", output.String())
 	}
 	if !foundState || state.Result.ProtocolVersion != core.ProtocolVersion || state.Result.DeveloperAllowUnknownNode {
-		t.Fatalf("getState did not expose the v5 non-persistent Node default: %q", output.String())
+		t.Fatalf("getState did not expose the v8 non-persistent Node default: %q", output.String())
 	}
 }
 

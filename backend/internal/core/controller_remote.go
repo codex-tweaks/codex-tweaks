@@ -10,7 +10,7 @@ const automaticRemoteCheckInterval = 6 * time.Hour
 
 func (c *Controller) InstallRemotePackage(repositoryURL string, selectorType RemoteSelectorType, selectorValue string) {
 	c.mu.Lock()
-	if c.installingRemotePackage || c.installingLocalPackage || len(c.exportingPackageIDs) > 0 {
+	if c.installingRemotePackage || c.installingLocalPackage || len(c.exportingPackageIDs) > 0 || len(c.deletingPackageIDs) > 0 {
 		c.mu.Unlock()
 		return
 	}
@@ -53,7 +53,7 @@ func (c *Controller) InstallRemotePackage(repositoryURL string, selectorType Rem
 
 func (c *Controller) InstallLocalPackage(sourcePath string) {
 	c.mu.Lock()
-	if c.installingLocalPackage || c.installingRemotePackage || len(c.exportingPackageIDs) > 0 {
+	if c.installingLocalPackage || c.installingRemotePackage || len(c.exportingPackageIDs) > 0 || len(c.deletingPackageIDs) > 0 {
 		c.mu.Unlock()
 		return
 	}
@@ -124,7 +124,7 @@ func (c *Controller) InstallMissingDependencies(packageID string) error {
 		return errors.New("没有找到功能包：" + packageID)
 	}
 	c.mu.Lock()
-	if c.installingPackageIDs[packageID] {
+	if c.installingPackageIDs[packageID] || len(c.deletingPackageIDs) > 0 {
 		c.mu.Unlock()
 		return nil
 	}
@@ -164,7 +164,7 @@ func (c *Controller) InstallMissingDependencies(packageID string) error {
 
 func (c *Controller) CheckManagedPackageUpdates(automatic bool) {
 	c.mu.Lock()
-	if c.gitEnvironment == nil || c.checkingRemoteUpdates {
+	if c.gitEnvironment == nil || c.checkingRemoteUpdates || len(c.deletingPackageIDs) > 0 {
 		c.mu.Unlock()
 		return
 	}
@@ -211,7 +211,7 @@ func (c *Controller) UpdateManagedPackage(packageID string) error {
 		return errors.New("功能包 " + packageID + " 不是由 Git 管理的包。")
 	}
 	c.mu.Lock()
-	if c.installingPackageIDs[packageID] {
+	if c.installingPackageIDs[packageID] || len(c.deletingPackageIDs) > 0 {
 		c.mu.Unlock()
 		return nil
 	}

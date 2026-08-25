@@ -36,6 +36,7 @@ struct GitHubRelease: Codable, Equatable, Identifiable, Sendable {
 
 struct BackendUpdateSnapshot: Codable, Equatable, Sendable {
     let channel: BackendUpdateChannel
+    let packageChannel: BackendUpdateChannel
     let autoCheck: Bool
     let checking: Bool
     let latestRelease: GitHubRelease?

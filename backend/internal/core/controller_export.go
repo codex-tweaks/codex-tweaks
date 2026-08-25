@@ -11,7 +11,7 @@ func (c *Controller) ExportPackage(packageID, destinationPath string) error {
 		return errors.New("没有找到功能包：" + packageID)
 	}
 	c.mu.Lock()
-	if c.installingLocalPackage || c.installingRemotePackage || len(c.exportingPackageIDs) > 0 {
+	if c.installingLocalPackage || c.installingRemotePackage || len(c.exportingPackageIDs) > 0 || len(c.deletingPackageIDs) > 0 {
 		c.mu.Unlock()
 		return errors.New("当前有另一个功能包本地操作正在进行。")
 	}

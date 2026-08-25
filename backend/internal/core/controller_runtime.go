@@ -323,7 +323,7 @@ func (c *Controller) startPackageBuild(pkg Package, installDependencies, allowCo
 		return
 	}
 	c.mu.Lock()
-	if c.buildingPackageIDs[pkg.ID] {
+	if c.buildingPackageIDs[pkg.ID] || len(c.deletingPackageIDs) > 0 {
 		c.mu.Unlock()
 		return
 	}

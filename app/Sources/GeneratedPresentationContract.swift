@@ -82,6 +82,13 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case packagesClearMessage = "packages.clearMessage"
     case packagesClearSearch = "packages.clearSearch"
     case packagesCollapsed = "packages.collapsed"
+    case packagesDelete = "packages.delete"
+    case packagesDeleteConfirm = "packages.deleteConfirm"
+    case packagesDeleteFailed = "packages.deleteFailed"
+    case packagesDeleteHelp = "packages.deleteHelp"
+    case packagesDeleteMessage = "packages.deleteMessage"
+    case packagesDeleteSuccess = "packages.deleteSuccess"
+    case packagesDeleteTitle = "packages.deleteTitle"
     case packagesDependencyConstraint = "packages.dependencyConstraint"
     case packagesDependencyInstalledSource = "packages.dependencyInstalledSource"
     case packagesDependencyNoGitSource = "packages.dependencyNoGitSource"
@@ -110,6 +117,7 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case packagesDependencySummaryPending = "packages.dependencySummaryPending"
     case packagesDetailActiveBuildError = "packages.detail.activeBuildError"
     case packagesDetailCompilerUpdate = "packages.detail.compilerUpdate"
+    case packagesDetailDeleting = "packages.detail.deleting"
     case packagesDetailDependencyIssues = "packages.detail.dependencyIssues"
     case packagesDetailDependencyUpdate = "packages.detail.dependencyUpdate"
     case packagesDetailExporting = "packages.detail.exporting"
@@ -168,6 +176,7 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case packagesNodeMissing = "packages.nodeMissing"
     case packagesNotBuiltDetail = "packages.notBuiltDetail"
     case packagesOpenDirectory = "packages.openDirectory"
+    case packagesOpenProjectPage = "packages.openProjectPage"
     case packagesPackageCountSuffix = "packages.packageCountSuffix"
     case packagesPriority = "packages.priority"
     case packagesPriorityActual = "packages.priorityActual"
@@ -182,6 +191,7 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case packagesStatusBuildFailed = "packages.status.buildFailed"
     case packagesStatusBuilding = "packages.status.building"
     case packagesStatusCompilerChanged = "packages.status.compilerChanged"
+    case packagesStatusDeleting = "packages.status.deleting"
     case packagesStatusDependency = "packages.status.dependency"
     case packagesStatusDependencyBlocked = "packages.status.dependencyBlocked"
     case packagesStatusDependencyChanged = "packages.status.dependencyChanged"
@@ -431,6 +441,13 @@ enum GeneratedPresentationDefaults {
         .packagesClearMessage: "清除操作提示",
         .packagesClearSearch: "清除搜索与筛选",
         .packagesCollapsed: "已折叠",
+        .packagesDelete: "删除功能包",
+        .packagesDeleteConfirm: "删除",
+        .packagesDeleteFailed: "删除功能包 {name} 失败：{message}",
+        .packagesDeleteHelp: "删除功能包源码、本地编译产物和包级设置",
+        .packagesDeleteMessage: "将永久删除此功能包的源码、本地编译产物和包级设置；依赖它的功能包可能停止运行。此操作无法撤销。",
+        .packagesDeleteSuccess: "已删除功能包 {name}。",
+        .packagesDeleteTitle: "删除 {name}？",
         .packagesDependencyConstraint: "依赖约束",
         .packagesDependencyInstalledSource: "本机已安装来源：{url}",
         .packagesDependencyNoGitSource: "未声明 Git 来源，仅在本地查找",
@@ -459,6 +476,7 @@ enum GeneratedPresentationDefaults {
         .packagesDependencySummaryPending: "依赖 {total} · {pending} 个需处理",
         .packagesDetailActiveBuildError: "当前仍运行 v{version}。{message}",
         .packagesDetailCompilerUpdate: "当前产物由 esbuild {version} 生成。",
+        .packagesDetailDeleting: "正在移除功能包源码、本地编译产物和包级设置。",
         .packagesDetailDependencyIssues: "有 {count} 个依赖问题，展开依赖详情可查看具体状态。",
         .packagesDetailDependencyUpdate: "当前编译产物仍在运行；需手动同步依赖或构建配置。",
         .packagesDetailExporting: "正在将功能包源码整理为可再次安装的 ZIP。",
@@ -517,6 +535,7 @@ enum GeneratedPresentationDefaults {
         .packagesNodeMissing: "未找到 Node.js、npm 和 npx；安装 Node.js 后重新扫描。",
         .packagesNotBuiltDetail: "点击编译后才会加载到页面。",
         .packagesOpenDirectory: "在文件管理器中打开功能包",
+        .packagesOpenProjectPage: "打开 {name} 的项目页面",
         .packagesPackageCountSuffix: " 等 {count} 个包",
         .packagesPriority: "优先级",
         .packagesPriorityActual: "实际加载顺序 #{position}。用户优先级 {priority} 仍用于和没有依赖路径的功能包排序。",
@@ -531,6 +550,7 @@ enum GeneratedPresentationDefaults {
         .packagesStatusBuildFailed: "编译失败",
         .packagesStatusBuilding: "正在编译",
         .packagesStatusCompilerChanged: "编译器有更新",
+        .packagesStatusDeleting: "正在删除",
         .packagesStatusDependency: "依赖待处理",
         .packagesStatusDependencyBlocked: "依赖阻塞",
         .packagesStatusDependencyChanged: "依赖或配置更新",

@@ -77,6 +77,9 @@ internal sealed class PackageView
     [JsonPropertyName("isManaged")]
     public bool IsManaged { get; init; }
 
+    [JsonPropertyName("projectPageURL")]
+    public string? ProjectPageUrl { get; init; }
+
     [JsonPropertyName("buildDisposition")]
     public string BuildDisposition { get; init; } = string.Empty;
 
@@ -155,6 +158,9 @@ internal sealed class PackageAvailableActions
     [JsonPropertyName("export")]
     public bool Export { get; init; }
 
+    [JsonPropertyName("delete")]
+    public bool Delete { get; init; }
+
     [JsonPropertyName("installMissingDependencies")]
     public bool InstallMissingDependencies { get; init; }
 
@@ -190,6 +196,9 @@ internal sealed class BackendUpdateSnapshot
 {
     [JsonPropertyName("channel")]
     public string Channel { get; init; } = "stable";
+
+    [JsonPropertyName("packageChannel")]
+    public string PackageChannel { get; init; } = "stable";
 
     [JsonPropertyName("autoCheck")]
     public bool AutoCheck { get; init; }

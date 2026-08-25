@@ -181,3 +181,10 @@ func HasNewerVersion(release *GitHubRelease, installedVersion string) bool {
 	installed, installedOK := ParseSemanticVersion(installedVersion)
 	return latestOK && installedOK && latest.Compare(installed) > 0
 }
+
+func packageChannelForRelease(release *GitHubRelease) UpdateChannel {
+	if release != nil && release.Prerelease {
+		return UpdateBeta
+	}
+	return UpdateStable
+}

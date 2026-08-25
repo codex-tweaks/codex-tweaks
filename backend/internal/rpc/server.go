@@ -195,6 +195,12 @@ func (s *Server) dispatch(incoming request) (any, error) {
 			return nil, err
 		}
 		return accepted(c.ExportPackage(params.PackageID, params.DestinationPath))
+	case "deletePackage":
+		var params packageIDParams
+		if err := decodeParams(incoming.Params, &params); err != nil {
+			return nil, err
+		}
+		return accepted(c.DeletePackage(params.PackageID))
 	case "installRemotePackage":
 		var params struct {
 			RepositoryURL string                  `json:"repositoryURL"`

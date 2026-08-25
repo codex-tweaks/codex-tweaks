@@ -530,7 +530,7 @@ public sealed partial class PackagesPage : Page
         content.Children.Add(new TextBlock
         {
             Text = Host.Text(PresentationTextKey.PackagesNodeAuthorizationReason),
-            FontWeight = global::Windows.UI.Text.FontWeights.SemiBold,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
         });
         content.Children.Add(new TextBlock
         {

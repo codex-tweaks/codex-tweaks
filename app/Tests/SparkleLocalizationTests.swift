@@ -11,8 +11,12 @@ final class SparkleLocalizationTests: XCTestCase {
             .appendingPathComponent("Contents/Frameworks/Sparkle.framework", isDirectory: true)
         let sparkleBundle = try XCTUnwrap(Bundle(url: sparkleURL))
         XCTAssertTrue(sparkleBundle.localizations.contains("zh_CN"))
+        let simplifiedChineseURL = try XCTUnwrap(
+            sparkleBundle.url(forResource: "zh_CN", withExtension: "lproj")
+        )
+        let simplifiedChineseBundle = try XCTUnwrap(Bundle(url: simplifiedChineseURL))
         XCTAssertEqual(
-            sparkleBundle.localizedString(
+            simplifiedChineseBundle.localizedString(
                 forKey: "Install Update",
                 value: nil,
                 table: "Sparkle"

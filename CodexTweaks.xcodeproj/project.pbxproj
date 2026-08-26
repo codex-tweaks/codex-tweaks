@@ -15,7 +15,7 @@
 		4F40D070B051F7E9E4D2AC5C /* SparkleUpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE948BF0C89AAC647E0A612E /* SparkleUpdateController.swift */; };
 		54B0B6FE5BFFCD0689A620EF /* BackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ECD0C73EE0D60F0F6A53202 /* BackendClient.swift */; };
 		5DBF9AC702A390EB5F6499B2 /* PresentationColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8078C635651B9E12B769538 /* PresentationColor.swift */; };
-		5DDE42750711BDE523AA30EC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0B0DED2144F0CDD788DF8C77 /* Assets.xcassets */; };
+		6532DEC8D6DCE8C0132E9CE6 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0F5EBF53A71E7D7C218FDA82 /* AppIcon.icon */; };
 		679D7FF97A038DA4D7C90826 /* SparkleLocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD05BAEA4FC2428057D00725 /* SparkleLocalizationTests.swift */; };
 		6EE55D663F4BA7C8C133418A /* Tweaks in Resources */ = {isa = PBXBuildFile; fileRef = ED5BA7E20B31B6B736EF5A33 /* Tweaks */; };
 		7824CE3D453FE429FB9B83A2 /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 710989624754350B9549F3B1 /* UpdateChecker.swift */; };
@@ -43,7 +43,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		0B0DED2144F0CDD788DF8C77 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		0F5EBF53A71E7D7C218FDA82 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		12AEDA74C8286F095B2A4E60 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		272C1FF554CEC91593F59C8F /* Skills */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Skills; sourceTree = SOURCE_ROOT; };
 		2ED75A85C1B3152DC926A30F /* TweakPackageModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageModels.swift; sourceTree = "<group>"; };
@@ -117,10 +117,18 @@
 		532C8F4528F64B3A519B1F81 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				0B0DED2144F0CDD788DF8C77 /* Assets.xcassets */,
 				ED5BA7E20B31B6B736EF5A33 /* Tweaks */,
+				652075A293D7AC5C680B964A /* Icons */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		652075A293D7AC5C680B964A /* Icons */ = {
+			isa = PBXGroup;
+			children = (
+				0F5EBF53A71E7D7C218FDA82 /* AppIcon.icon */,
+			);
+			path = Icons;
 			sourceTree = "<group>";
 		};
 		97D480478F1DC70304266CB9 /* app */ = {
@@ -238,7 +246,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5DDE42750711BDE523AA30EC /* Assets.xcassets in Resources */,
+				6532DEC8D6DCE8C0132E9CE6 /* AppIcon.icon in Resources */,
 				C6EF7C822C1A087A5B678E40 /* Skills in Resources */,
 				6EE55D663F4BA7C8C133418A /* Tweaks in Resources */,
 			);

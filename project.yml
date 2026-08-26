@@ -31,7 +31,7 @@ targets:
     productName: Codex Tweaks
     sources:
       - path: app/Sources
-      - path: app/Resources/Assets.xcassets
+      - path: app/Resources/Icons
       - path: app/Resources/Tweaks
         type: folder
       - path: Skills

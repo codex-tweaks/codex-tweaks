@@ -12,12 +12,12 @@
 <p align="center">
   <img alt="macOS 13 或更新版本" src="https://img.shields.io/badge/macOS-13.0%2B-black?logo=apple&logoColor=white">
   <img alt="Windows 10 2004 或更新版本" src="https://img.shields.io/badge/Windows-10%202004%2B-0078D4?logo=windows&logoColor=white">
-  <a href="https://github.com/cr-zhichen/codex-tweaks/releases"><img alt="最新版本" src="https://img.shields.io/github/v/release/cr-zhichen/codex-tweaks"></a>
+  <a href="https://github.com/codex-tweaks/codex-tweaks/releases"><img alt="最新版本" src="https://img.shields.io/github/v/release/codex-tweaks/codex-tweaks"></a>
   <a href="LICENSE"><img alt="MIT 许可证" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/cr-zhichen/codex-tweaks/releases"><strong>下载 Codex Tweaks</strong></a>
+  <a href="https://github.com/codex-tweaks/codex-tweaks/releases"><strong>下载 Codex Tweaks</strong></a>
 </p>
 
 > Codex Tweaks 是非官方的本地定制工具，与 OpenAI 没有隶属或授权关系。Codex 更新后，部分功能包可能需要同步适配。
@@ -49,7 +49,7 @@ Codex Tweaks 不会修改 Codex 的应用文件。停用界面增强后，已加
 
 ### 2. 下载并安装
 
-前往 [GitHub Releases](https://github.com/cr-zhichen/codex-tweaks/releases)，按自己的设备下载一个安装文件：
+前往 [GitHub Releases](https://github.com/codex-tweaks/codex-tweaks/releases)，按自己的设备下载一个安装文件：
 
 | 系统 | 下载文件 | 适用设备 |
 | --- | --- | --- |

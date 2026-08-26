@@ -12,7 +12,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/cr-zhichen/codex-tweaks/backend/internal/core"
+	"github.com/codex-tweaks/codex-tweaks/backend/internal/core"
 )
 
 type outputFile struct {

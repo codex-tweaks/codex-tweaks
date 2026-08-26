@@ -179,7 +179,7 @@ final class BackendProtocolTests: XCTestCase {
         )
         XCTAssertEqual(
             contract.platform.repositoryURL,
-            "https://github.com/cr-zhichen/codex-tweaks"
+            "https://github.com/codex-tweaks/codex-tweaks"
         )
     }
 

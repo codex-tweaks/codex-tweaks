@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cr-zhichen/codex-tweaks/backend/internal/core"
+	"github.com/codex-tweaks/codex-tweaks/backend/internal/core"
 )
 
 func TestServerPingAndPreInitializationGuard(t *testing.T) {

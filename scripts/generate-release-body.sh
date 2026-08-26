@@ -4,7 +4,7 @@ set -euo pipefail
 RELEASE_TAG="${RELEASE_TAG:-${1:-}}"
 RELEASE_BODY_PATH="${RELEASE_BODY_PATH:-${2:-release-body.md}}"
 GITHUB_SERVER_URL="${GITHUB_SERVER_URL:-https://github.com}"
-GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-cr-zhichen/codex-tweaks}"
+GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-codex-tweaks/codex-tweaks}"
 RELEASE_ASSET_ROOT="${RELEASE_ASSET_ROOT:-}"
 
 if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then

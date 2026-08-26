@@ -5,6 +5,15 @@ import (
 	"testing"
 )
 
+func TestUpdateRepositoryUsesOrganizationCanonicalURL(t *testing.T) {
+	if UpdateRepository != "codex-tweaks/codex-tweaks" {
+		t.Fatalf("update repository = %q", UpdateRepository)
+	}
+	if UpdateRepositoryURL != "https://github.com/codex-tweaks/codex-tweaks" {
+		t.Fatalf("update repository URL = %q", UpdateRepositoryURL)
+	}
+}
+
 func TestUpdateReleaseSelectionContracts(t *testing.T) {
 	stable := SelectLatestRelease([]GitHubRelease{
 		{TagName: "v1.1.0"}, {TagName: "v9.0.0", Draft: true},

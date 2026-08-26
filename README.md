@@ -22,6 +22,26 @@
 
 > Codex Tweaks 是非官方的本地定制工具，与 OpenAI 没有隶属或授权关系。Codex 更新后，部分功能包可能需要同步适配。
 
+## 界面预览
+
+Codex Tweaks 为 macOS 和 Windows 分别提供原生客户端。点击图片可查看原图。
+
+### macOS
+
+<p align="center">
+  <a href="docs/screenshots/macos-overview.png"><img alt="Codex Tweaks macOS 概览界面" src="docs/screenshots/macos-overview.png" width="49%"></a>
+  <a href="docs/screenshots/macos-packages.png"><img alt="Codex Tweaks macOS 功能包界面" src="docs/screenshots/macos-packages.png" width="49%"></a>
+</p>
+<p align="center"><sub>概览 · 功能包</sub></p>
+
+### Windows
+
+<p align="center">
+  <a href="docs/screenshots/windows-overview.png"><img alt="Codex Tweaks Windows 概览界面" src="docs/screenshots/windows-overview.png" width="49%"></a>
+  <a href="docs/screenshots/windows-packages.png"><img alt="Codex Tweaks Windows 功能包界面" src="docs/screenshots/windows-packages.png" width="49%"></a>
+</p>
+<p align="center"><sub>概览 · 功能包</sub></p>
+
 ## 主要功能
 
 使用 Codex Tweaks 可以：

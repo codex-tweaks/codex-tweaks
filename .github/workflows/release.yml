@@ -215,35 +215,60 @@ jobs:
           appcast_path='release-assets/macos/appcast.xml'
           test -s "$appcast_path"
 
-          if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/updates" >/dev/null 2>&1; then
-            release_commit="$(git rev-list -n 1 "refs/tags/$RELEASE_TAG")"
+          encoded_appcast="$(base64 < "$appcast_path" | tr -d '\n')"
+          appcast_blob_sha="$(
+            gh api \
+              --method POST \
+              "repos/$GITHUB_REPOSITORY/git/blobs" \
+              -f "content=$encoded_appcast" \
+              -f encoding=base64 \
+              --jq '.sha'
+          )"
+          appcast_tree_sha="$(
+            # Keep the updates branch feed-only by intentionally omitting base_tree.
+            jq -n \
+              --arg sha "$appcast_blob_sha" \
+              '{tree: [{path: "appcast.xml", mode: "100644", type: "blob", sha: $sha}]}' \
+            | gh api \
+                --method POST \
+                "repos/$GITHUB_REPOSITORY/git/trees" \
+                --input - \
+                --jq '.sha'
+          )"
+          updates_commit_sha="$(
+            gh api \
+              "repos/$GITHUB_REPOSITORY/git/ref/heads/updates" \
+              --jq '.object.sha' \
+              2>/dev/null \
+              || true
+          )"
+          appcast_commit_sha="$(
+            jq -n \
+              --arg message "chore(release): update Sparkle appcast for $RELEASE_TAG" \
+              --arg tree "$appcast_tree_sha" \
+              --arg parent "$updates_commit_sha" \
+              '{message: $message, tree: $tree} + (if $parent == "" then {} else {parents: [$parent]} end)' \
+            | gh api \
+                --method POST \
+                "repos/$GITHUB_REPOSITORY/git/commits" \
+                --input - \
+                --jq '.sha'
+          )"
+
+          if [[ -n "$updates_commit_sha" ]]; then
+            gh api \
+              --method PATCH \
+              "repos/$GITHUB_REPOSITORY/git/refs/heads/updates" \
+              -f "sha=$appcast_commit_sha" \
+              >/dev/null
+          else
             gh api \
               --method POST \
               "repos/$GITHUB_REPOSITORY/git/refs" \
               -f ref='refs/heads/updates' \
-              -f sha="$release_commit" \
+              -f "sha=$appcast_commit_sha" \
               >/dev/null
           fi
-
-          existing_sha="$(
-            gh api \
-              "repos/$GITHUB_REPOSITORY/contents/appcast.xml?ref=updates" \
-              --jq '.sha' \
-              2>/dev/null \
-              || true
-          )"
-          encoded_appcast="$(base64 < "$appcast_path" | tr -d '\n')"
-          api_arguments=(
-            --method PUT
-            "repos/$GITHUB_REPOSITORY/contents/appcast.xml"
-            -f "message=chore(release): update Sparkle appcast for $RELEASE_TAG"
-            -f "content=$encoded_appcast"
-            -f branch=updates
-          )
-          if [[ -n "$existing_sha" ]]; then
-            api_arguments+=(-f "sha=$existing_sha")
-          fi
-          gh api "${api_arguments[@]}" >/dev/null
 
   cleanup:
     name: Delete temporary release artifacts

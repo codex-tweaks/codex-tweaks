@@ -15,6 +15,16 @@ func TestValidateSourceAcceptsSupportedNonCredentialedGitURLs(t *testing.T) {
 	}
 }
 
+func TestValidateSourceAcceptsDefaultBranchWithoutValue(t *testing.T) {
+	source := PackageSource{
+		URL:      "https://github.com/example/package.git",
+		Selector: NewRemoteSelector(SelectorDefaultBranch, ""),
+	}
+	if err := ValidateSource(source); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestValidateSourceRejectsCredentialsInvalidSelectorsAndNonGitHubReleases(t *testing.T) {
 	values := []PackageSource{
 		{URL: "https://user@example.com/package.git", Selector: NewRemoteSelector(SelectorBranch, "main")},

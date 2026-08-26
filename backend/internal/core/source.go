@@ -28,7 +28,7 @@ func ValidateSource(source PackageSource) error {
 		return errors.New("GitHub Release 选择器要求 github.com 仓库地址。")
 	}
 	switch source.Selector.Type {
-	case SelectorBranch, SelectorLatestSemverTag, SelectorTag, SelectorGitHubLatestRelease, SelectorGitHubRelease, SelectorCommit:
+	case SelectorDefaultBranch, SelectorBranch, SelectorLatestSemverTag, SelectorTag, SelectorGitHubLatestRelease, SelectorGitHubRelease, SelectorCommit:
 		return nil
 	default:
 		return errors.New("不支持的远程来源选择器。")

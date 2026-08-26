@@ -235,6 +235,7 @@ internal static class PresentationTextKey
     internal const string SelectorBranchValue = "selector.branchValue";
     internal const string SelectorCommit = "selector.commit";
     internal const string SelectorCommitValue = "selector.commitValue";
+    internal const string SelectorDefaultBranch = "selector.defaultBranch";
     internal const string SelectorGithubLatestRelease = "selector.githubLatestRelease";
     internal const string SelectorGithubRelease = "selector.githubRelease";
     internal const string SelectorGithubReleaseValue = "selector.githubReleaseValue";
@@ -711,6 +712,7 @@ internal static class PresentationDefaults
         [PresentationTextKey.SelectorBranchValue] = "分支名称",
         [PresentationTextKey.SelectorCommit] = "指定 Commit",
         [PresentationTextKey.SelectorCommitValue] = "Commit SHA",
+        [PresentationTextKey.SelectorDefaultBranch] = "仓库主分支",
         [PresentationTextKey.SelectorGithubLatestRelease] = "GitHub 最新 Release",
         [PresentationTextKey.SelectorGithubRelease] = "指定 GitHub Release",
         [PresentationTextKey.SelectorGithubReleaseValue] = "Release 的 Tag",

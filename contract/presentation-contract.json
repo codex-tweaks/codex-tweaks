@@ -231,6 +231,7 @@
     "selector.branchValue": "分支名称",
     "selector.commit": "指定 Commit",
     "selector.commitValue": "Commit SHA",
+    "selector.defaultBranch": "仓库主分支",
     "selector.githubLatestRelease": "GitHub 最新 Release",
     "selector.githubRelease": "指定 GitHub Release",
     "selector.githubReleaseValue": "Release 的 Tag",

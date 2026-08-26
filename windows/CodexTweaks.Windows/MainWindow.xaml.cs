@@ -469,6 +469,7 @@ public sealed partial class MainWindow : Window
         };
         var selectorOptions = new (string Value, string Key, bool RequiresValue)[]
         {
+            ("defaultBranch", PresentationTextKey.SelectorDefaultBranch, false),
             ("branch", PresentationTextKey.SelectorBranch, true),
             ("latestSemverTag", PresentationTextKey.SelectorLatestSemverTag, false),
             ("tag", PresentationTextKey.SelectorTag, true),
@@ -484,12 +485,14 @@ public sealed partial class MainWindow : Window
         var selectorValue = new TextBox
         {
             Header = Text(PresentationTextKey.SelectorBranchValue),
-            Text = Text(PresentationTextKey.SelectorBranchDefault),
+            IsEnabled = false,
+            Visibility = Visibility.Collapsed,
         };
         selector.SelectionChanged += (_, _) =>
         {
             var selected = selectorOptions[selector.SelectedIndex];
             selectorValue.IsEnabled = selected.RequiresValue;
+            selectorValue.Visibility = selected.RequiresValue ? Visibility.Visible : Visibility.Collapsed;
             selectorValue.Header = selected.Value switch
             {
                 "tag" => Text(PresentationTextKey.SelectorTagValue),
@@ -497,10 +500,9 @@ public sealed partial class MainWindow : Window
                 "commit" => Text(PresentationTextKey.SelectorCommitValue),
                 _ => Text(PresentationTextKey.SelectorBranchValue),
             };
-            if (!selected.RequiresValue)
-            {
-                selectorValue.Text = string.Empty;
-            }
+            selectorValue.Text = selected.Value == "branch"
+                ? Text(PresentationTextKey.SelectorBranchDefault)
+                : string.Empty;
         };
         var content = new StackPanel { Spacing = Tokens.ControlSpacing };
         content.Children.Add(repository);

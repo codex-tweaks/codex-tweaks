@@ -20,6 +20,7 @@ const (
 type RemoteSelectorType string
 
 const (
+	SelectorDefaultBranch       RemoteSelectorType = "defaultBranch"
 	SelectorBranch              RemoteSelectorType = "branch"
 	SelectorLatestSemverTag     RemoteSelectorType = "latestSemverTag"
 	SelectorTag                 RemoteSelectorType = "tag"

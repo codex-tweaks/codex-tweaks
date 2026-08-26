@@ -280,7 +280,7 @@ Declare Codex Tweaks package dependencies under `codexTweaks.packageDependencies
 - Dependencies activate before dependents. The app blocks dependents when a dependency is missing, disabled, invalid, incompatible, unauthorized, or cyclic.
 - Supported version requirements are exact SemVer, `^`, `~`, comparisons, and `x` or `*` wildcards.
 - Omitting `source` means local-only. Supplying `source` declares explicit Git acquisition metadata; the app confirms, locks, installs, and updates it.
-- Supported selectors are `branch`, `latestSemverTag`, `tag`, `githubLatestRelease`, `githubRelease`, and `commit`. Required selector values must be explicit.
+- Supported selectors are `defaultBranch`, `branch`, `latestSemverTag`, `tag`, `githubLatestRelease`, `githubRelease`, and `commit`. `defaultBranch` follows the repository's remote HEAD; required selector values must be explicit.
 - Do not clone, download, self-update, or invent repository URLs from runtime code.
 - Package dependencies provide activation ordering and exported libraries, not compile-time source imports. Put shared compile-time code in an npm package.
 

@@ -445,6 +445,7 @@ func PresentationText() map[string]string {
 		"remote.install":                              "安装",
 		"remote.close":                                "关闭",
 		"remote.validationDetail":                     "安装会校验 package.json、API 版本、SemVer、入口、包依赖与 npm 锁文件。通过后新包默认保持停用；有 Node.js 时会继续下载锁定依赖并编译，但不会自动启用。",
+		"selector.defaultBranch":                      "仓库主分支",
 		"selector.branch":                             "指定分支",
 		"selector.latestSemverTag":                    "最新 SemVer Tag",
 		"selector.tag":                                "指定 Tag",

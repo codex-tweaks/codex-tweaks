@@ -231,6 +231,7 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case selectorBranchValue = "selector.branchValue"
     case selectorCommit = "selector.commit"
     case selectorCommitValue = "selector.commitValue"
+    case selectorDefaultBranch = "selector.defaultBranch"
     case selectorGithubLatestRelease = "selector.githubLatestRelease"
     case selectorGithubRelease = "selector.githubRelease"
     case selectorGithubReleaseValue = "selector.githubReleaseValue"
@@ -590,6 +591,7 @@ enum GeneratedPresentationDefaults {
         .selectorBranchValue: "分支名称",
         .selectorCommit: "指定 Commit",
         .selectorCommitValue: "Commit SHA",
+        .selectorDefaultBranch: "仓库主分支",
         .selectorGithubLatestRelease: "GitHub 最新 Release",
         .selectorGithubRelease: "指定 GitHub Release",
         .selectorGithubReleaseValue: "Release 的 Tag",

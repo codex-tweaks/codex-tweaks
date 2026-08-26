@@ -1,6 +1,7 @@
 import Foundation
 
 enum TweakPackageRemoteSelectorType: String, Codable, CaseIterable, Identifiable, Sendable {
+    case defaultBranch
     case branch
     case latestSemverTag
     case tag
@@ -12,6 +13,7 @@ enum TweakPackageRemoteSelectorType: String, Codable, CaseIterable, Identifiable
 
     var titleKey: PresentationTextKey {
         switch self {
+        case .defaultBranch: return .selectorDefaultBranch
         case .branch: return .selectorBranch
         case .latestSemverTag: return .selectorLatestSemverTag
         case .tag: return .selectorTag
@@ -27,7 +29,7 @@ enum TweakPackageRemoteSelectorType: String, Codable, CaseIterable, Identifiable
         case .tag: return .selectorTagValue
         case .githubRelease: return .selectorGithubReleaseValue
         case .commit: return .selectorCommitValue
-        case .latestSemverTag, .githubLatestRelease: return nil
+        case .defaultBranch, .latestSemverTag, .githubLatestRelease: return nil
         }
     }
 

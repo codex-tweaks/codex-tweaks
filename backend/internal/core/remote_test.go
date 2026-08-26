@@ -61,6 +61,48 @@ func TestRemoteManagerInstallsLatestSemverAndFindsUpdate(t *testing.T) {
 	}
 }
 
+func TestRemoteManagerInstallsDefaultBranchAndFindsUpdate(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git unavailable")
+	}
+	store, root := newTestStore(t)
+	repository := filepath.Join(root, "repository")
+	if err := os.MkdirAll(repository, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	runGitTest(t, repository, "init", "--quiet", "--initial-branch", "trunk")
+	runGitTest(t, repository, "config", "user.email", "tests@codex-tweaks.invalid")
+	runGitTest(t, repository, "config", "user.name", "Codex Tweaks Tests")
+	writeRemotePackage(t, repository, "1.0.0", nil)
+	commitRemotePackage(t, repository, "first")
+
+	remoteURL := "https://example.test/default-branch.git"
+	environment := environmentMap()
+	environment["GIT_CONFIG_COUNT"] = "1"
+	environment["GIT_CONFIG_KEY_0"] = "url.file://" + repository + "/.insteadOf"
+	environment["GIT_CONFIG_VALUE_0"] = remoteURL
+	environment["GIT_ALLOW_PROTOCOL"] = "file"
+	manager := NewRemoteManager(store, nil, nil, environment)
+	source := PackageSource{URL: remoteURL, Selector: NewRemoteSelector(SelectorDefaultBranch, "")}
+	installed, err := manager.Install(context.Background(), source, RemoteInstallOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if installed.Lock.ResolvedReference != "trunk" {
+		t.Fatalf("resolved reference = %q, want trunk", installed.Lock.ResolvedReference)
+	}
+
+	writeRemotePackage(t, repository, "1.0.1", nil)
+	commitRemotePackage(t, repository, "second")
+	update, err := manager.CheckForUpdate(context.Background(), installed.PackageID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if update.Status != RemoteUpdateAvailable || update.CandidateReference != "trunk" || update.CandidateCommit == update.CurrentCommit {
+		t.Fatalf("unexpected update: %#v", update)
+	}
+}
+
 func TestRemoteManagerRejectsPackageWithoutLockfile(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git unavailable")

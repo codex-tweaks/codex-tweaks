@@ -474,6 +474,17 @@ func (m *RemoteManager) resolve(ctx context.Context, source PackageSource, requi
 		return RemoteResolution{}, errors.New("没有找到可用的 Git。")
 	}
 	switch source.Selector.Type {
+	case SelectorDefaultBranch:
+		result, err := m.gitCommand(ctx, *git, []string{"ls-remote", "--symref", source.URL, "HEAD"})
+		if err != nil {
+			return RemoteResolution{}, err
+		}
+		branch, commit, err := resolveDefaultBranch(result.Output)
+		if err != nil {
+			return RemoteResolution{}, err
+		}
+		reference := "refs/heads/" + branch
+		return RemoteResolution{Reference: branch, Commit: commit, FetchReference: reference}, nil
 	case SelectorBranch:
 		branch, err := requiredSelectorValue(source.Selector)
 		if err != nil {
@@ -541,6 +552,25 @@ func (m *RemoteManager) resolve(ctx context.Context, source PackageSource, requi
 	default:
 		return RemoteResolution{}, errors.New("不支持的远程来源选择器。")
 	}
+}
+
+func resolveDefaultBranch(output string) (string, string, error) {
+	branch := ""
+	commit := ""
+	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+		columns := strings.Fields(line)
+		if len(columns) == 3 && columns[0] == "ref:" && columns[2] == "HEAD" && strings.HasPrefix(columns[1], "refs/heads/") {
+			branch = strings.TrimPrefix(columns[1], "refs/heads/")
+			continue
+		}
+		if len(columns) == 2 && columns[1] == "HEAD" {
+			commit = strings.ToLower(columns[0])
+		}
+	}
+	if branch == "" || commit == "" {
+		return "", "", errors.New("远程仓库未提供主分支（HEAD）；请改用“指定分支”并输入分支名称。")
+	}
+	return branch, commit, nil
 }
 
 func (m *RemoteManager) resolveSingleRef(ctx context.Context, reference string, source PackageSource, git GitEnvironment) (string, error) {

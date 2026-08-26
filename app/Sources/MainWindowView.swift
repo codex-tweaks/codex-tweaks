@@ -1097,7 +1097,7 @@ private struct GitPackageInstallView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var model: AppModel
     @State private var repositoryURL = ""
-    @State private var selectorType: TweakPackageRemoteSelectorType = .branch
+    @State private var selectorType: TweakPackageRemoteSelectorType = .defaultBranch
     @State private var selectorValue = ""
 
     var body: some View {
@@ -1169,9 +1169,6 @@ private struct GitPackageInstallView: View {
         .frame(minHeight: 420)
         .onAppear {
             model.clearRemoteOperationFeedback()
-            if selectorValue.isEmpty {
-                selectorValue = model.text(.selectorBranchDefault)
-            }
         }
         .onChange(of: selectorType) { type in
             selectorValue = type == .branch ? model.text(.selectorBranchDefault) : ""

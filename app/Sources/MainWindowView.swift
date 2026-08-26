@@ -453,7 +453,10 @@ private struct TweakPackagesView: View {
                 HStack(spacing: 8) {
                     if package.availableActions.authorizeNode {
                         Button(model.text(.packagesNodeAuthorizationAllow)) {
-                            model.authorizeNodePackage(package)
+                            model.authorizeNodePackage(
+                                package,
+                                enableAfterAuthorization: !model.isTweakPackageEnabled(package)
+                            )
                         }
                     }
 

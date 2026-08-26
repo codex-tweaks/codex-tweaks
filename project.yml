@@ -48,6 +48,9 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         COMBINE_HIDPI_IMAGES: YES
         ENABLE_USER_SCRIPT_SANDBOXING: NO
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: com.zgccrui.CodexTweaks.Debug
     preBuildScripts:
       - name: Build Go Backend
         script: |
@@ -56,13 +59,36 @@ targets:
   CodexTweaksTests:
     type: bundle.unit-test
     platform: macOS
+    # Compile the pure Swift sources directly so XCTest never launches the app.
     sources:
-      - path: app/Tests
-    dependencies:
-      - target: CodexTweaks
+      - path: app/Tests/BackendProtocolTests.swift
+      - path: app/Tests/TestIsolationTests.swift
+      - path: app/Sources/AppStatus.swift
+      - path: app/Sources/BackendJSON.swift
+      - path: app/Sources/BackendProtocol.swift
+      - path: app/Sources/GeneratedPresentationContract.swift
+      - path: app/Sources/PresentationText.swift
+      - path: app/Sources/TweakPackageBuilder.swift
+      - path: app/Sources/TweakPackageDependencyResolver.swift
+      - path: app/Sources/TweakPackageModels.swift
+      - path: app/Sources/TweakPackageRemoteManager.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zgccrui.CodexTweaksTests
+        GENERATE_INFOPLIST_FILE: YES
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+  CodexTweaksBundleTests:
+    type: bundle.unit-test
+    platform: macOS
+    # The scheme builds the app artifact; this target inspects it without hosting in it.
+    sources:
+      - path: app/Tests/BackendBundleTests.swift
+      - path: app/Tests/BuiltAppBundle.swift
+      - path: app/Tests/SparkleLocalizationTests.swift
+      - path: app/Tests/TestIsolationTests.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zgccrui.CodexTweaksBundleTests
         GENERATE_INFOPLIST_FILE: YES
         MACOSX_DEPLOYMENT_TARGET: "14.0"
 
@@ -76,10 +102,9 @@ schemes:
     test:
       config: Debug
       gatherCoverageData: true
-      environmentVariables:
-        DYLD_FRAMEWORK_PATH: "$(BUILT_PRODUCTS_DIR)/Codex Tweaks.app/Contents/Frameworks"
       targets:
         - CodexTweaksTests
+        - CodexTweaksBundleTests
     profile:
       config: Release
     analyze:

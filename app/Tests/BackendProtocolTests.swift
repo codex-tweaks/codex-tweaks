@@ -1,6 +1,5 @@
 import Foundation
 import XCTest
-@testable import CodexTweaks
 
 final class BackendProtocolTests: XCTestCase {
     func testDependencyStatesDecodeGoTaggedPayloads() throws {
@@ -184,11 +183,11 @@ final class BackendProtocolTests: XCTestCase {
     }
 
     func testFrontendKeepsOnlyNativeStatusSymbolChoice() {
-        XCTAssertEqual(AppModel.Status.restartRequired.symbol, "arrow.clockwise.circle")
-        XCTAssertTrue(AppModel.Status.waitingForPage.isCDPAvailable)
+        XCTAssertEqual(AppStatus.restartRequired.symbol, "arrow.clockwise.circle")
+        XCTAssertTrue(AppStatus.waitingForPage.isCDPAvailable)
     }
 
     private func decode<Value: Decodable>(_ type: Value.Type, _ json: String) throws -> Value {
-        try BackendClient.makeDecoder().decode(type, from: Data(json.utf8))
+        try BackendJSON.makeDecoder().decode(type, from: Data(json.utf8))
     }
 }

@@ -10,49 +10,57 @@
 		0AD62E2F7A6F5259A737C7E7 /* TweakPackageDependencyResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CB762E9C9F9FD3D4400C65F /* TweakPackageDependencyResolver.swift */; };
 		0C1AA02F95574A89518B4FFF /* UpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C4B014C4282346EC90203A /* UpdateView.swift */; };
 		0E2FBEE784B852532424F206 /* TweakPackageBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63708A61AFD3EB99BE1C3359 /* TweakPackageBuilder.swift */; };
+		11D0A0C67D1E7535E8108E77 /* GeneratedPresentationContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFBAED99F1376AC7FE90B523 /* GeneratedPresentationContract.swift */; };
 		20E842FFBE6F22751C5C61E9 /* CodexTweaksApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C054F18E9178A1188A15F944 /* CodexTweaksApp.swift */; };
+		25D7CED87BB3FF932128784D /* TestIsolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 356CA0F6751DCFB03E5A71FF /* TestIsolationTests.swift */; };
+		28FCCB3B972EDF184DA711DB /* BuiltAppBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68689767E171B444813D5B27 /* BuiltAppBundle.swift */; };
+		2E6F7321FDC0E8D91110C9E1 /* BackendJSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E3517257D811F2B1D3625A /* BackendJSON.swift */; };
+		2EE2FDCBD2FE24842E25C45D /* TweakPackageBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63708A61AFD3EB99BE1C3359 /* TweakPackageBuilder.swift */; };
 		444F810FBED64BEF61A48D3D /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F53421B72A4751C046846C60 /* MainWindowView.swift */; };
 		4F40D070B051F7E9E4D2AC5C /* SparkleUpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE948BF0C89AAC647E0A612E /* SparkleUpdateController.swift */; };
 		54B0B6FE5BFFCD0689A620EF /* BackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ECD0C73EE0D60F0F6A53202 /* BackendClient.swift */; };
 		5DBF9AC702A390EB5F6499B2 /* PresentationColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8078C635651B9E12B769538 /* PresentationColor.swift */; };
+		5FE6D726E81A975E1CB72074 /* TweakPackageRemoteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECCE54F4FF81979BBBAB5CC /* TweakPackageRemoteManager.swift */; };
 		6532DEC8D6DCE8C0132E9CE6 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0F5EBF53A71E7D7C218FDA82 /* AppIcon.icon */; };
-		679D7FF97A038DA4D7C90826 /* SparkleLocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD05BAEA4FC2428057D00725 /* SparkleLocalizationTests.swift */; };
+		6731E4E39CE874F8DCDE4299 /* BackendBundleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3586156F50638102CDE5AB2C /* BackendBundleTests.swift */; };
+		694CBBB375BCEEA660DB5163 /* AppStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C58B083F3D76F43FDC45941 /* AppStatus.swift */; };
 		6EE55D663F4BA7C8C133418A /* Tweaks in Resources */ = {isa = PBXBuildFile; fileRef = ED5BA7E20B31B6B736EF5A33 /* Tweaks */; };
 		7824CE3D453FE429FB9B83A2 /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 710989624754350B9549F3B1 /* UpdateChecker.swift */; };
 		801487236AF0F6797A8F1341 /* GeneratedPresentationContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFBAED99F1376AC7FE90B523 /* GeneratedPresentationContract.swift */; };
+		8E9FE8CC865A7D7541AFAF34 /* PresentationText.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDC46BCBEBD8535824D33363 /* PresentationText.swift */; };
+		8F7B53382196600088DFA2F2 /* TestIsolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 356CA0F6751DCFB03E5A71FF /* TestIsolationTests.swift */; };
 		9B6EFD795DE11B522F620A75 /* BackendProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = D46E6EAFFFA8697F8252BAFC /* BackendProtocol.swift */; };
 		9BD95832142FCA6E642F6E68 /* MenuBarContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */; };
+		A0A37D1CE682185A14010D8B /* TweakPackageDependencyResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CB762E9C9F9FD3D4400C65F /* TweakPackageDependencyResolver.swift */; };
 		B89FB6D55F5D0E0CB0EA3E7F /* PresentationText.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDC46BCBEBD8535824D33363 /* PresentationText.swift */; };
+		C14CBB8530ECDC408598896C /* TweakPackageModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED75A85C1B3152DC926A30F /* TweakPackageModels.swift */; };
 		C6EF7C822C1A087A5B678E40 /* Skills in Resources */ = {isa = PBXBuildFile; fileRef = 272C1FF554CEC91593F59C8F /* Skills */; };
 		C90628F61E522C2FC62419A5 /* TweakPackageRemoteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECCE54F4FF81979BBBAB5CC /* TweakPackageRemoteManager.swift */; };
-		D8F49C523471E569DA4B7726 /* BackendBundleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3586156F50638102CDE5AB2C /* BackendBundleTests.swift */; };
+		DA607E1A3C45C42686489B72 /* BackendJSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E3517257D811F2B1D3625A /* BackendJSON.swift */; };
 		DFD5E3A9CB13636716BDF09E /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = DFFFA7035AA0A0B5F1982477 /* Sparkle */; };
 		E33110037A563D6AD07FD34B /* TweakPackageModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED75A85C1B3152DC926A30F /* TweakPackageModels.swift */; };
+		E822BFAD340AA5116454FA0D /* AppStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C58B083F3D76F43FDC45941 /* AppStatus.swift */; };
 		E9018AF1601AFC8EDE07CBAD /* BackendProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 752944AE65CF3C41046BE3B3 /* BackendProtocolTests.swift */; };
+		F493B27D75B9DCF8AEA6273D /* SparkleLocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD05BAEA4FC2428057D00725 /* SparkleLocalizationTests.swift */; };
 		F7A1ECDD4A02A3A692A8694D /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12AEDA74C8286F095B2A4E60 /* AppModel.swift */; };
+		F9BD6403F32C8B53E9D5A3CD /* BackendProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = D46E6EAFFFA8697F8252BAFC /* BackendProtocol.swift */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		CCF2009507300B1BDF514911 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 539903F72BB21F2140A0136F /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 9BFD67925F8886E0CFE2428A;
-			remoteInfo = CodexTweaks;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		0F5EBF53A71E7D7C218FDA82 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		12AEDA74C8286F095B2A4E60 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		25E3517257D811F2B1D3625A /* BackendJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendJSON.swift; sourceTree = "<group>"; };
 		272C1FF554CEC91593F59C8F /* Skills */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Skills; sourceTree = SOURCE_ROOT; };
 		2ED75A85C1B3152DC926A30F /* TweakPackageModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageModels.swift; sourceTree = "<group>"; };
+		356CA0F6751DCFB03E5A71FF /* TestIsolationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestIsolationTests.swift; sourceTree = "<group>"; };
 		3586156F50638102CDE5AB2C /* BackendBundleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendBundleTests.swift; sourceTree = "<group>"; };
 		3F957412A0DB83396B755B2E /* CodexTweaksTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexTweaksTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C58B083F3D76F43FDC45941 /* AppStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStatus.swift; sourceTree = "<group>"; };
 		5CB762E9C9F9FD3D4400C65F /* TweakPackageDependencyResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageDependencyResolver.swift; sourceTree = "<group>"; };
 		5ECD0C73EE0D60F0F6A53202 /* BackendClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendClient.swift; sourceTree = "<group>"; };
 		63708A61AFD3EB99BE1C3359 /* TweakPackageBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageBuilder.swift; sourceTree = "<group>"; };
 		66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContent.swift; sourceTree = "<group>"; };
+		68689767E171B444813D5B27 /* BuiltAppBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuiltAppBundle.swift; sourceTree = "<group>"; };
 		710989624754350B9549F3B1 /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
 		752944AE65CF3C41046BE3B3 /* BackendProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendProtocolTests.swift; sourceTree = "<group>"; };
 		7D31064D54183A1230D1918D /* Codex Tweaks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Codex Tweaks.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -64,6 +72,7 @@
 		DECCE54F4FF81979BBBAB5CC /* TweakPackageRemoteManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageRemoteManager.swift; sourceTree = "<group>"; };
 		ED5BA7E20B31B6B736EF5A33 /* Tweaks */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Tweaks; path = app/Resources/Tweaks; sourceTree = SOURCE_ROOT; };
 		F53421B72A4751C046846C60 /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
+		F659FBB7C357009B1FE4C80E /* CodexTweaksBundleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexTweaksBundleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8078C635651B9E12B769538 /* PresentationColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationColor.swift; sourceTree = "<group>"; };
 		FE948BF0C89AAC647E0A612E /* SparkleUpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdateController.swift; sourceTree = "<group>"; };
 		FFBAED99F1376AC7FE90B523 /* GeneratedPresentationContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratedPresentationContract.swift; sourceTree = "<group>"; };
@@ -86,7 +95,9 @@
 			children = (
 				3586156F50638102CDE5AB2C /* BackendBundleTests.swift */,
 				752944AE65CF3C41046BE3B3 /* BackendProtocolTests.swift */,
+				68689767E171B444813D5B27 /* BuiltAppBundle.swift */,
 				BD05BAEA4FC2428057D00725 /* SparkleLocalizationTests.swift */,
+				356CA0F6751DCFB03E5A71FF /* TestIsolationTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -95,7 +106,9 @@
 			isa = PBXGroup;
 			children = (
 				12AEDA74C8286F095B2A4E60 /* AppModel.swift */,
+				5C58B083F3D76F43FDC45941 /* AppStatus.swift */,
 				5ECD0C73EE0D60F0F6A53202 /* BackendClient.swift */,
+				25E3517257D811F2B1D3625A /* BackendJSON.swift */,
 				D46E6EAFFFA8697F8252BAFC /* BackendProtocol.swift */,
 				C054F18E9178A1188A15F944 /* CodexTweaksApp.swift */,
 				FFBAED99F1376AC7FE90B523 /* GeneratedPresentationContract.swift */,
@@ -154,6 +167,7 @@
 			isa = PBXGroup;
 			children = (
 				7D31064D54183A1230D1918D /* Codex Tweaks.app */,
+				F659FBB7C357009B1FE4C80E /* CodexTweaksBundleTests.xctest */,
 				3F957412A0DB83396B755B2E /* CodexTweaksTests.xctest */,
 			);
 			name = Products;
@@ -162,6 +176,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		3161EEB2C065C7BEE0EED6B3 /* CodexTweaksBundleTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2A54D8F2975340A0DDD5A826 /* Build configuration list for PBXNativeTarget "CodexTweaksBundleTests" */;
+			buildPhases = (
+				33B0F0D5FF40061F33726516 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CodexTweaksBundleTests;
+			packageProductDependencies = (
+			);
+			productName = CodexTweaksBundleTests;
+			productReference = F659FBB7C357009B1FE4C80E /* CodexTweaksBundleTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		9A54BFFCB68651876758D339 /* CodexTweaksTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A465C6DA8DAE9D0ECDD6637F /* Build configuration list for PBXNativeTarget "CodexTweaksTests" */;
@@ -171,7 +202,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				B739263E962750C6AE29B483 /* PBXTargetDependency */,
 			);
 			name = CodexTweaksTests;
 			packageProductDependencies = (
@@ -210,6 +240,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					3161EEB2C065C7BEE0EED6B3 = {
+						ProvisioningStyle = Manual;
+					};
 					9A54BFFCB68651876758D339 = {
 						ProvisioningStyle = Manual;
 					};
@@ -237,6 +270,7 @@
 			targets = (
 				9BFD67925F8886E0CFE2428A /* CodexTweaks */,
 				9A54BFFCB68651876758D339 /* CodexTweaksTests */,
+				3161EEB2C065C7BEE0EED6B3 /* CodexTweaksBundleTests */,
 			);
 		};
 /* End PBXProject section */
@@ -281,9 +315,28 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D8F49C523471E569DA4B7726 /* BackendBundleTests.swift in Sources */,
+				E822BFAD340AA5116454FA0D /* AppStatus.swift in Sources */,
+				DA607E1A3C45C42686489B72 /* BackendJSON.swift in Sources */,
+				F9BD6403F32C8B53E9D5A3CD /* BackendProtocol.swift in Sources */,
 				E9018AF1601AFC8EDE07CBAD /* BackendProtocolTests.swift in Sources */,
-				679D7FF97A038DA4D7C90826 /* SparkleLocalizationTests.swift in Sources */,
+				11D0A0C67D1E7535E8108E77 /* GeneratedPresentationContract.swift in Sources */,
+				8E9FE8CC865A7D7541AFAF34 /* PresentationText.swift in Sources */,
+				25D7CED87BB3FF932128784D /* TestIsolationTests.swift in Sources */,
+				2EE2FDCBD2FE24842E25C45D /* TweakPackageBuilder.swift in Sources */,
+				A0A37D1CE682185A14010D8B /* TweakPackageDependencyResolver.swift in Sources */,
+				C14CBB8530ECDC408598896C /* TweakPackageModels.swift in Sources */,
+				5FE6D726E81A975E1CB72074 /* TweakPackageRemoteManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		33B0F0D5FF40061F33726516 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6731E4E39CE874F8DCDE4299 /* BackendBundleTests.swift in Sources */,
+				28FCCB3B972EDF184DA711DB /* BuiltAppBundle.swift in Sources */,
+				F493B27D75B9DCF8AEA6273D /* SparkleLocalizationTests.swift in Sources */,
+				8F7B53382196600088DFA2F2 /* TestIsolationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -292,7 +345,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				F7A1ECDD4A02A3A692A8694D /* AppModel.swift in Sources */,
+				694CBBB375BCEEA660DB5163 /* AppStatus.swift in Sources */,
 				54B0B6FE5BFFCD0689A620EF /* BackendClient.swift in Sources */,
+				2E6F7321FDC0E8D91110C9E1 /* BackendJSON.swift in Sources */,
 				9B6EFD795DE11B522F620A75 /* BackendProtocol.swift in Sources */,
 				20E842FFBE6F22751C5C61E9 /* CodexTweaksApp.swift in Sources */,
 				801487236AF0F6797A8F1341 /* GeneratedPresentationContract.swift in Sources */,
@@ -312,15 +367,24 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
-/* Begin PBXTargetDependency section */
-		B739263E962750C6AE29B483 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 9BFD67925F8886E0CFE2428A /* CodexTweaks */;
-			targetProxy = CCF2009507300B1BDF514911 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
 /* Begin XCBuildConfiguration section */
+		22968E246A0A84FC0A819FC0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zgccrui.CodexTweaksBundleTests;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		59F438FD57718B7118E81369 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -335,7 +399,6 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zgccrui.CodexTweaksTests;
 				SDKROOT = macosx;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Codex Tweaks.app/Contents/MacOS/Codex Tweaks";
 			};
 			name = Debug;
 		};
@@ -351,7 +414,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.zgccrui.CodexTweaks;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zgccrui.CodexTweaks.Debug;
 				PRODUCT_MODULE_NAME = CodexTweaks;
 				PRODUCT_NAME = "Codex Tweaks";
 				SDKROOT = macosx;
@@ -421,6 +484,23 @@
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
+		};
+		B3A04917FA5906DAFC6EDD6F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zgccrui.CodexTweaksBundleTests;
+				SDKROOT = macosx;
+			};
+			name = Debug;
 		};
 		B4493D277FCFA73A17C54F4E /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -526,7 +606,6 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zgccrui.CodexTweaksTests;
 				SDKROOT = macosx;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Codex Tweaks.app/Contents/MacOS/Codex Tweaks";
 			};
 			name = Release;
 		};
@@ -538,6 +617,15 @@
 			buildConfigurations = (
 				995F7AFFA8C14230E8FBF986 /* Debug */,
 				B4493D277FCFA73A17C54F4E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		2A54D8F2975340A0DDD5A826 /* Build configuration list for PBXNativeTarget "CodexTweaksBundleTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B3A04917FA5906DAFC6EDD6F /* Debug */,
+				22968E246A0A84FC0A819FC0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

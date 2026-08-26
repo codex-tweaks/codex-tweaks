@@ -1,4 +1,4 @@
-module github.com/cr-zhichen/codex-tweaks/backend
+module github.com/codex-tweaks/codex-tweaks/backend
 
 go 1.26.0
 

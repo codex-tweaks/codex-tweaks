@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	UpdateRepository    = "cr-zhichen/codex-tweaks"
+	UpdateRepository    = "codex-tweaks/codex-tweaks"
 	UpdateRepositoryURL = "https://github.com/" + UpdateRepository
 )
 

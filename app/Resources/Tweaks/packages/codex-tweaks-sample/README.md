@@ -28,4 +28,4 @@
 
 ## 许可证
 
-随 Codex Tweaks 项目使用 [MIT License](https://github.com/cr-zhichen/codex-tweaks/blob/main/LICENSE)。
+随 Codex Tweaks 项目使用 [MIT License](https://github.com/codex-tweaks/codex-tweaks/blob/main/LICENSE)。

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cr-zhichen/codex-tweaks/backend/internal/rpc"
+	"github.com/codex-tweaks/codex-tweaks/backend/internal/rpc"
 )
 
 var version = "dev"

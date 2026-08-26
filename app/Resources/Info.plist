@@ -38,7 +38,7 @@
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>SUFeedURL</key>
-    <string>https://raw.githubusercontent.com/cr-zhichen/codex-tweaks/updates/appcast.xml</string>
+    <string>https://raw.githubusercontent.com/codex-tweaks/codex-tweaks/updates/appcast.xml</string>
     <key>SUPublicEDKey</key>
     <string>$(SPARKLE_PUBLIC_ED_KEY)</string>
     <key>SUEnableAutomaticChecks</key>

@@ -2,7 +2,7 @@ name: CodexTweaks
 options:
   bundleIdPrefix: com.zgccrui
   createIntermediateGroups: true
-  developmentLanguage: zh-Hans
+  developmentLanguage: en
   deploymentTarget:
     macOS: "13.0"
 
@@ -32,6 +32,7 @@ targets:
     sources:
       - path: app/Sources
       - path: app/Resources/Icons
+      - path: app/Resources/Localization
       - path: app/Resources/Tweaks
         type: folder
       - path: Skills

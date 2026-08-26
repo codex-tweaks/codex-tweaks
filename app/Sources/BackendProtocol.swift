@@ -5,6 +5,11 @@ enum BackendUpdateChannel: String, Codable, Sendable {
     case beta
 }
 
+struct AppLanguageOption: Identifiable, Hashable, Sendable {
+    let id: String
+    let title: String
+}
+
 struct GitHubAsset: Codable, Equatable, Sendable {
     let name: String
     let browserDownloadURL: URL?
@@ -115,6 +120,7 @@ struct BackendInitializeParams: Encodable, Sendable {
     let cacheDirectory: String?
     let bundledPackagesDirectory: String?
     let skillPath: String?
+    let preferredLanguages: [String]
     let currentVersion: String
     let buildNumber: String
 }

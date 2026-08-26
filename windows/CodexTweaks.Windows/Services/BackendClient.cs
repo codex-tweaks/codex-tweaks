@@ -5,12 +5,13 @@ using System.Text;
 using System.Text.Json;
 using CodexTweaks.Windows.Generated;
 using CodexTweaks.Windows.Models;
+using Windows.System.UserProfile;
 
 namespace CodexTweaks.Windows.Services;
 
 internal sealed class BackendClient : IAsyncDisposable
 {
-    internal const int ProtocolVersion = 8;
+    internal const int ProtocolVersion = 9;
     private static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
     private readonly ConcurrentDictionary<long, TaskCompletionSource<JsonElement>> _pending = new();
@@ -98,6 +99,7 @@ internal sealed class BackendClient : IAsyncDisposable
                 cacheDirectory = cache,
                 bundledPackagesDirectory = Path.Combine(AppContext.BaseDirectory, "Tweaks", "packages"),
                 skillPath = Path.Combine(AppContext.BaseDirectory, "Skills", "develop-codex-tweaks-package", "SKILL.md"),
+                preferredLanguages = GlobalizationPreferences.Languages,
                 currentVersion = version,
                 buildNumber,
             });

@@ -55,6 +55,37 @@
 
                 <Border Style="{StaticResource CodexCardStyle}">
                     <StackPanel Style="{StaticResource CodexSectionStackStyle}">
+                        <TextBlock x:Name="LanguageTitle" Style="{StaticResource CodexSectionTitleTextStyle}" />
+                        <TextBlock
+                            x:Name="LanguageSubtitle"
+                            Style="{StaticResource CodexBodyTextStyle}"
+                            TextWrapping="Wrap" />
+
+                        <Border Style="{StaticResource CodexDividerStyle}" />
+
+                        <Grid ColumnSpacing="24">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="240" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                x:Name="LanguageSelectionLabel"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource CodexBodyTextStyle}"
+                                FontWeight="SemiBold" />
+                            <ComboBox
+                                x:Name="LanguageComboBox"
+                                Grid.Column="1"
+                                HorizontalAlignment="Stretch"
+                                SelectionChanged="LanguageComboBox_SelectionChanged" />
+                        </Grid>
+
+                        <TextBlock x:Name="EffectiveLanguageText" Style="{StaticResource CodexCaptionTextStyle}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CodexCardStyle}">
+                    <StackPanel Style="{StaticResource CodexSectionStackStyle}">
                         <TextBlock x:Name="SoftwareUpdateTitle" Style="{StaticResource CodexSectionTitleTextStyle}" />
 
                         <Grid ColumnSpacing="24">

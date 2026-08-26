@@ -47,7 +47,10 @@ func main() {
 }
 
 func generatedFiles(root string) ([]outputFile, error) {
-	state := core.PresentationState{}
+	state := core.PresentationState{
+		LanguagePreference: core.LanguageAuto,
+		PreferredLanguages: []string{"en"},
+	}
 	contract := core.NewPresentationContractForPlatform(state, "windows", "x64")
 	swiftContract := core.NewPresentationContractForPlatform(state, "darwin", "universal")
 	keys := make([]string, 0, len(contract.Text))
@@ -56,16 +59,22 @@ func generatedFiles(root string) ([]outputFile, error) {
 	}
 	sort.Strings(keys)
 	manifest := struct {
-		Version      int                     `json:"version"`
-		Locale       string                  `json:"locale"`
-		Text         map[string]string       `json:"text"`
-		Tokens       core.PresentationTokens `json:"tokens"`
-		ActionKeys   []string                `json:"actionKeys"`
-		PlatformKeys []string                `json:"platformKeys"`
-		StatusTones  []string                `json:"statusTones"`
+		Version            int                     `json:"version"`
+		Locale             string                  `json:"locale"`
+		LanguagePreference string                  `json:"languagePreference"`
+		LanguageOrder      []string                `json:"languageOrder"`
+		LanguageOptions    map[string]string       `json:"languageOptions"`
+		Text               map[string]string       `json:"text"`
+		Tokens             core.PresentationTokens `json:"tokens"`
+		ActionKeys         []string                `json:"actionKeys"`
+		PlatformKeys       []string                `json:"platformKeys"`
+		StatusTones        []string                `json:"statusTones"`
 	}{
 		contract.Version,
 		contract.Locale,
+		contract.LanguagePreference,
+		contract.LanguageOrder,
+		contract.LanguageOptions,
 		contract.Text,
 		contract.Tokens,
 		jsonFieldNames(reflect.TypeOf(contract.Actions)),
@@ -117,9 +126,12 @@ func generateSwift(keys []string, contract core.PresentationContract) []byte {
 	result.WriteString("    ]\n")
 	fmt.Fprintf(
 		&result,
-		"    static let contract = BackendPresentationContract(version: %d, locale: %s, text: Dictionary(uniqueKeysWithValues: text.map { ($0.key.rawValue, $0.value) }), tokens: %s, actions: %s, status: %s, platform: %s)\n",
+		"    static let contract = BackendPresentationContract(version: %d, locale: %s, languagePreference: %s, languageOrder: %s, languageOptions: %s, text: Dictionary(uniqueKeysWithValues: text.map { ($0.key.rawValue, $0.value) }), tokens: %s, actions: %s, status: %s, platform: %s)\n",
 		contract.Version,
 		quotedString(contract.Locale),
+		quotedString(contract.LanguagePreference),
+		swiftScalarLiteral(reflect.ValueOf(contract.LanguageOrder)),
+		swiftScalarLiteral(reflect.ValueOf(contract.LanguageOptions)),
 		swiftStructLiteral(reflect.ValueOf(contract.Tokens)),
 		swiftStructLiteral(reflect.ValueOf(contract.Actions)),
 		swiftStructLiteral(reflect.ValueOf(contract.Status)),
@@ -149,6 +161,8 @@ func swiftType(value reflect.Type) string {
 		return "String"
 	case reflect.Map:
 		return "[" + swiftType(value.Key()) + ": " + swiftType(value.Elem()) + "]"
+	case reflect.Slice:
+		return "[" + swiftType(value.Elem()) + "]"
 	case reflect.Struct:
 		return "Backend" + value.Name()
 	default:
@@ -182,6 +196,24 @@ func swiftScalarLiteral(value reflect.Value) string {
 		return fmt.Sprintf("%d", value.Int())
 	case reflect.String:
 		return quotedString(value.String())
+	case reflect.Slice:
+		items := make([]string, value.Len())
+		for index := 0; index < value.Len(); index++ {
+			items[index] = swiftScalarLiteral(value.Index(index))
+		}
+		return "[" + strings.Join(items, ", ") + "]"
+	case reflect.Map:
+		keys := value.MapKeys()
+		sort.Slice(keys, func(left, right int) bool {
+			return fmt.Sprint(keys[left].Interface()) < fmt.Sprint(keys[right].Interface())
+		})
+		items := make([]string, 0, len(keys))
+		for _, key := range keys {
+			items = append(items, swiftScalarLiteral(key)+": "+swiftScalarLiteral(value.MapIndex(key)))
+		}
+		return "[" + strings.Join(items, ", ") + "]"
+	case reflect.Struct:
+		return swiftStructLiteral(value)
 	default:
 		panic("unsupported Swift literal type: " + value.Type().String())
 	}
@@ -281,6 +313,8 @@ func csharpType(value reflect.Type) string {
 		return "string"
 	case reflect.Map:
 		return "Dictionary<" + csharpType(value.Key()) + ", " + csharpType(value.Elem()) + ">"
+	case reflect.Slice:
+		return "List<" + csharpType(value.Elem()) + ">"
 	case reflect.Struct:
 		return value.Name()
 	default:
@@ -292,7 +326,7 @@ func csharpInitializer(value reflect.Type) string {
 	switch value.Kind() {
 	case reflect.String:
 		return " = string.Empty;"
-	case reflect.Map, reflect.Struct:
+	case reflect.Map, reflect.Slice, reflect.Struct:
 		return " = new();"
 	default:
 		return ""
@@ -352,11 +386,13 @@ func pascal(value string) string {
 }
 
 func quotedString(value string) string {
-	data, err := json.Marshal(value)
-	if err != nil {
+	var result bytes.Buffer
+	encoder := json.NewEncoder(&result)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(value); err != nil {
 		panic(err)
 	}
-	return string(data)
+	return strings.TrimSuffix(result.String(), "\n")
 }
 
 func fatal(err error) {

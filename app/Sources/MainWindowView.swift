@@ -107,7 +107,9 @@ private struct TweakPackagesView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
+            // Keep this eager: macOS accessibility snapshots can report transient
+            // negative geometry that makes a lazy stack re-enter layout indefinitely.
+            VStack(alignment: .leading, spacing: 0) {
                 header
                     .padding(.bottom, CGFloat(model.tokens.pagePadding))
 

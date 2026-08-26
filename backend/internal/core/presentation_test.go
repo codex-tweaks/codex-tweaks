@@ -7,6 +7,7 @@ import (
 
 func TestPresentationContractOwnsCopyTokensPlatformAndActions(t *testing.T) {
 	contract := NewPresentationContract(PresentationState{
+		LanguagePreference:       LanguageSimplifiedChinese,
 		Status:                   AppStatus{Kind: StatusConnected, TargetCount: 1},
 		Enabled:                  true,
 		GitAvailable:             true,
@@ -41,8 +42,25 @@ func TestPresentationContractOwnsCopyTokensPlatformAndActions(t *testing.T) {
 	if !contract.Actions.RestartCodexUI || !contract.Actions.Reinject || !contract.Actions.InstallRemotePackage || !contract.Actions.ClearLog {
 		t.Fatalf("expected connected actions to be available: %#v", contract.Actions)
 	}
+	if contract.LanguagePreference != string(LanguageSimplifiedChinese) || !contract.Actions.SetLanguage {
+		t.Fatalf("language presentation is incomplete: %#v %#v", contract, contract.Actions)
+	}
 	if runtime.GOOS == "windows" && contract.Platform.UpdateInstallStrategy != "velopack" {
 		t.Fatalf("Windows update strategy = %q", contract.Platform.UpdateInstallStrategy)
+	}
+}
+
+func TestPresentationContractAutomaticallyDetectsPreferredLanguage(t *testing.T) {
+	contract := NewPresentationContract(PresentationState{
+		LanguagePreference: LanguageAuto,
+		PreferredLanguages: []string{"fr-FR", "ja-JP"},
+		Status:             AppStatus{Kind: StatusConnected, TargetCount: 2},
+	})
+	if contract.LanguagePreference != "auto" || contract.Locale != "ja" {
+		t.Fatalf("unexpected automatic language: %#v", contract)
+	}
+	if contract.Status.Title != "2 個のウインドウに接続済み" || contract.Text["language.title"] != "言語" {
+		t.Fatalf("Japanese presentation was not applied: %#v", contract)
 	}
 }
 

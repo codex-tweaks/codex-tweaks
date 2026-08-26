@@ -33,6 +33,26 @@ public sealed partial class UpdatesPage : Page
             RepositoryButtonText.Text = host.Text(PresentationTextKey.UpdateRepository);
             RepositoryButton.IsEnabled = snapshot.Presentation.Actions.OpenRepository;
 
+            LanguageTitle.Text = host.Text(PresentationTextKey.LanguageTitle);
+            LanguageSubtitle.Text = host.Text(PresentationTextKey.LanguageSubtitle);
+            LanguageSelectionLabel.Text = host.Text(PresentationTextKey.LanguageSelection);
+            LanguageComboBox.Items.Clear();
+            foreach (var language in snapshot.Presentation.LanguageOrder)
+            {
+                if (snapshot.Presentation.LanguageOptions.TryGetValue(language, out var title))
+                {
+                    AddLanguage(title, language);
+                }
+            }
+            LanguageComboBox.SelectedValuePath = "Tag";
+            LanguageComboBox.SelectedValue = snapshot.Presentation.LanguagePreference;
+            LanguageComboBox.IsEnabled = snapshot.Presentation.Actions.SetLanguage;
+            var effectiveLanguage = snapshot.Presentation.LanguageOptions
+                .GetValueOrDefault(snapshot.Presentation.Locale, snapshot.Presentation.Locale);
+            EffectiveLanguageText.Text = host.Text(
+                PresentationTextKey.LanguageEffective,
+                ("language", effectiveLanguage));
+
             SoftwareUpdateTitle.Text = host.Text(PresentationTextKey.UpdateSoftwareUpdate);
             ChannelTitle.Text = host.Text(PresentationTextKey.UpdateChannel);
             ChannelDetail.Text = host.Text(snapshot.Update.Channel == "beta"
@@ -97,6 +117,15 @@ public sealed partial class UpdatesPage : Page
         finally
         {
             _rendering = false;
+        }
+
+        void AddLanguage(string title, string value)
+        {
+            LanguageComboBox.Items.Add(new ComboBoxItem
+            {
+                Content = title,
+                Tag = value,
+            });
         }
     }
 
@@ -165,6 +194,19 @@ public sealed partial class UpdatesPage : Page
             return;
         }
         await _host.RunBackendAsync("setUpdateChannel", new { channel });
+    }
+
+    private async void LanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_rendering
+            || _host is null
+            || _snapshot is null
+            || LanguageComboBox.SelectedItem is not ComboBoxItem { Tag: string language }
+            || language == _snapshot.Presentation.LanguagePreference)
+        {
+            return;
+        }
+        await _host.RunBackendAsync("setLanguage", new { language });
     }
 
     private async void AutoCheckToggle_Toggled(object sender, RoutedEventArgs e)

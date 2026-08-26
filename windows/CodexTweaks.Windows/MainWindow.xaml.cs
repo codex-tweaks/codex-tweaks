@@ -748,8 +748,20 @@ public sealed partial class MainWindow : Window
 
     internal string FormatLastCheck(DateTimeOffset? value)
     {
-        return value?.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
+        return value?.ToLocalTime().ToString("g", DisplayCulture())
             ?? Text(PresentationTextKey.UpdateNever);
+    }
+
+    private CultureInfo DisplayCulture()
+    {
+        try
+        {
+            return CultureInfo.GetCultureInfo(Snapshot.Presentation.Locale);
+        }
+        catch (CultureNotFoundException)
+        {
+            return CultureInfo.CurrentCulture;
+        }
     }
 
     internal IReadOnlyList<string> PackageMessages(PackageView package)

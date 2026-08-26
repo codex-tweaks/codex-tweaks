@@ -24,7 +24,8 @@ func (c *Controller) CheckAppUpdate(prompt bool) {
 		if err != nil {
 			message := err.Error()
 			if strings.Contains(strings.ToLower(message), "network is unreachable") || strings.Contains(strings.ToLower(message), "no route to host") {
-				message = "当前无法连接网络。"
+				locale := ResolveAppLanguage(c.config.Language, c.preferredLanguages)
+				message = PresentationTextForLocale(locale)["update.networkUnavailable"]
 			}
 			c.updateLastError = &message
 			c.mu.Unlock()

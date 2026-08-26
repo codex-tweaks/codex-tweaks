@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const ProtocolVersion = 8
+const ProtocolVersion = 9
 
 type Controller struct {
 	mu                  sync.Mutex
@@ -25,21 +25,22 @@ type Controller struct {
 	event               func(AppSnapshot)
 	lastEmittedSnapshot *AppSnapshot
 
-	store             *Store
-	logger            *Logger
-	builder           *Builder
-	nodeRuntime       *NodeRuntimeSupervisor
-	remote            *RemoteManager
-	installer         *LocalInstaller
-	exporter          *PackageExporter
-	cdp               *CDPService
-	platform          Platform
-	updates           *UpdateService
-	configPath        string
-	skillPath         string
-	currentVersion    string
-	buildNumber       string
-	disableBackground bool
+	store              *Store
+	logger             *Logger
+	builder            *Builder
+	nodeRuntime        *NodeRuntimeSupervisor
+	remote             *RemoteManager
+	installer          *LocalInstaller
+	exporter           *PackageExporter
+	cdp                *CDPService
+	platform           Platform
+	updates            *UpdateService
+	configPath         string
+	skillPath          string
+	currentVersion     string
+	buildNumber        string
+	preferredLanguages []string
+	disableBackground  bool
 
 	config                       AppConfiguration
 	status                       AppStatus
@@ -119,6 +120,7 @@ func NewController(params InitializeParams, event func(AppSnapshot), dependencie
 		updates:    NewUpdateService(dependencies.HTTPClient),
 		configPath: filepath.Join(store.StateDirectory, "app-state.json"), skillPath: params.SkillPath,
 		currentVersion: normalizedInstalledVersion(params.CurrentVersion), buildNumber: params.BuildNumber,
+		preferredLanguages: append([]string(nil), params.PreferredLanguages...),
 		disableBackground:  dependencies.DisableBackground,
 		status:             AppStatus{Kind: StatusStarting},
 		disabledPackageIDs: map[string]bool{}, buildingPackageIDs: map[string]bool{},
@@ -190,6 +192,7 @@ func (c *Controller) loadConfiguration() error {
 			SchemaVersion:         1,
 			Enabled:               true,
 			DisabledPackageIDs:    []string{},
+			Language:              LanguageAuto,
 			UpdateChannel:         UpdateStable,
 			UpdateAutoCheck:       true,
 			UpdateSkippedVersions: []string{},
@@ -201,6 +204,7 @@ func (c *Controller) loadConfiguration() error {
 	if configuration.UpdateChannel != UpdateBeta {
 		configuration.UpdateChannel = UpdateStable
 	}
+	configuration.Language = NormalizeAppLanguage(configuration.Language)
 	configuration.DisabledPackageIDs = uniqueSorted(configuration.DisabledPackageIDs)
 	configuration.UpdateSkippedVersions = uniqueSorted(configuration.UpdateSkippedVersions)
 	c.config = configuration
@@ -211,6 +215,13 @@ func (c *Controller) loadConfiguration() error {
 func (c *Controller) persistConfigurationLocked() error {
 	c.config.DisabledPackageIDs = sortedTrueKeys(c.disabledPackageIDs)
 	return writeJSONAtomic(c.configPath, c.config)
+}
+
+func (c *Controller) presentationText() map[string]string {
+	c.mu.Lock()
+	locale := ResolveAppLanguage(c.config.Language, c.preferredLanguages)
+	c.mu.Unlock()
+	return PresentationTextForLocale(locale)
 }
 
 func (c *Controller) monitor() {
@@ -237,7 +248,8 @@ func (c *Controller) Snapshot() AppSnapshot {
 		}
 	}
 	packageViews := make([]PackageView, 0, len(c.packages))
-	presentationText := PresentationText()
+	locale := ResolveAppLanguage(c.config.Language, c.preferredLanguages)
+	presentationText := PresentationTextForLocale(locale)
 	enabledCount := 0
 	for _, pkg := range c.packages {
 		view := packageView(pkg, c.disabledPackageIDs, installedIDs)
@@ -282,6 +294,7 @@ func (c *Controller) Snapshot() AppSnapshot {
 	}
 	updateSnapshot := c.updateSnapshotLocked()
 	presentation := NewPresentationContract(PresentationState{
+		LanguagePreference: c.config.Language, PreferredLanguages: c.preferredLanguages,
 		Status: c.status, Enabled: c.config.Enabled,
 		CheckingNode: c.checkingNode, CheckingGit: c.checkingGit,
 		RestartingCodexUI:      c.restartingCodexUI,

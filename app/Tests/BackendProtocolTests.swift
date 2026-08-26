@@ -114,7 +114,7 @@ final class BackendProtocolTests: XCTestCase {
             BackendAppSnapshot.self,
             """
             {
-              "protocolVersion": 8,
+              "protocolVersion": 9,
               "presentation": \(presentationJSON),
               "status": {"kind": "connected", "targetCount": 1},
               "enabled": true,
@@ -159,8 +159,8 @@ final class BackendProtocolTests: XCTestCase {
             }
             """
         )
-        XCTAssertEqual(snapshot.protocolVersion, 8)
-        XCTAssertEqual(snapshot.presentation.version, 1)
+        XCTAssertEqual(snapshot.protocolVersion, 9)
+        XCTAssertEqual(snapshot.presentation.version, 2)
         XCTAssertEqual(snapshot.status.targetCount, 1)
         XCTAssertFalse(snapshot.developerAllowUnknownNode)
         XCTAssertEqual(snapshot.update.channel, .stable)
@@ -170,11 +170,15 @@ final class BackendProtocolTests: XCTestCase {
     func testGeneratedPresentationContractOwnsSharedCopyTokensAndPlatformConstants() {
         let contract = GeneratedPresentationDefaults.contract
         XCTAssertEqual(contract.text[PresentationTextKey.appName.rawValue], "Codex Tweaks")
+        XCTAssertEqual(contract.languagePreference, "auto")
+        XCTAssertEqual(contract.locale, "en")
+        XCTAssertEqual(contract.languageOrder, ["auto", "zh-CN", "zh-TW", "en", "ja", "ko"])
+        XCTAssertEqual(contract.languageOptions["ko"], "한국어")
         XCTAssertEqual(contract.tokens.accentColor, "#0A84FF")
         XCTAssertEqual(contract.platform.cdpEndpoint, "127.0.0.1:9335")
         XCTAssertEqual(
             contract.text[PresentationTextKey.overviewRestartCodexUI.rawValue],
-            "重启 Codex 界面"
+            "Restart the Codex interface"
         )
         XCTAssertEqual(
             contract.platform.repositoryURL,

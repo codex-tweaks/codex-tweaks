@@ -299,6 +299,14 @@ func (s *Server) dispatch(incoming request) (any, error) {
 			return nil, err
 		}
 		return accepted(c.SetUpdateAutoCheck(params.Enabled))
+	case "setLanguage":
+		var params struct {
+			Language core.AppLanguage `json:"language"`
+		}
+		if err := decodeParams(incoming.Params, &params); err != nil {
+			return nil, err
+		}
+		return accepted(c.SetLanguage(params.Language))
 	case "dismissUpdate":
 		c.DismissUpdate()
 		return accepted(nil)

@@ -26,12 +26,13 @@ type AppStatus struct {
 }
 
 type InitializeParams struct {
-	ApplicationSupportDirectory string `json:"applicationSupportDirectory,omitempty"`
-	CacheDirectory              string `json:"cacheDirectory,omitempty"`
-	BundledPackagesDirectory    string `json:"bundledPackagesDirectory,omitempty"`
-	SkillPath                   string `json:"skillPath,omitempty"`
-	CurrentVersion              string `json:"currentVersion"`
-	BuildNumber                 string `json:"buildNumber"`
+	ApplicationSupportDirectory string   `json:"applicationSupportDirectory,omitempty"`
+	CacheDirectory              string   `json:"cacheDirectory,omitempty"`
+	BundledPackagesDirectory    string   `json:"bundledPackagesDirectory,omitempty"`
+	SkillPath                   string   `json:"skillPath,omitempty"`
+	PreferredLanguages          []string `json:"preferredLanguages,omitempty"`
+	CurrentVersion              string   `json:"currentVersion"`
+	BuildNumber                 string   `json:"buildNumber"`
 }
 
 type AppConfiguration struct {
@@ -40,6 +41,7 @@ type AppConfiguration struct {
 	DeveloperMode         bool          `json:"developerMode"`
 	KnownPackageIDs       *[]string     `json:"knownPackageIDs"`
 	DisabledPackageIDs    []string      `json:"disabledPackageIDs"`
+	Language              AppLanguage   `json:"language"`
 	UpdateChannel         UpdateChannel `json:"updateChannel"`
 	UpdateAutoCheck       bool          `json:"updateAutoCheck"`
 	UpdateLastCheckAt     *CodableTime  `json:"updateLastCheckAt,omitempty"`

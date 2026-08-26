@@ -90,6 +90,33 @@ final class AppModel: ObservableObject {
         presentation?.platform ?? GeneratedPresentationDefaults.contract.platform
     }
 
+    var languagePreference: String {
+        presentation?.languagePreference
+            ?? GeneratedPresentationDefaults.contract.languagePreference
+    }
+
+    var languageOptions: [AppLanguageOption] {
+        let contract = presentation ?? GeneratedPresentationDefaults.contract
+        return contract.languageOrder.compactMap { identifier in
+            guard let title = contract.languageOptions[identifier] else { return nil }
+            return AppLanguageOption(id: identifier, title: title)
+        }
+    }
+
+    var effectiveLanguageTitle: String {
+        let contract = presentation ?? GeneratedPresentationDefaults.contract
+        return contract.languageOptions[contract.locale] ?? contract.locale
+    }
+
+    var displayLocale: Locale {
+        Locale(identifier: presentation?.locale ?? GeneratedPresentationDefaults.contract.locale)
+    }
+
+    func setLanguage(_ language: String) {
+        guard language != languagePreference else { return }
+        command("setLanguage", LanguageParameter(language: language))
+    }
+
     var statusTitle: String {
         if case .error = status {
             return text(.statusErrorTitle)
@@ -437,7 +464,7 @@ final class AppModel: ObservableObject {
     func sendUpdateCommand(_ method: String) { command(method) }
 
     private func apply(_ snapshot: BackendAppSnapshot) {
-        guard snapshot.protocolVersion == 8 else {
+        guard snapshot.protocolVersion == 9 else {
             status = .error(text(.appProtocolMismatch))
             return
         }
@@ -530,6 +557,7 @@ final class AppModel: ObservableObject {
             cacheDirectory: environment["CODEX_TWEAKS_CACHE_DIRECTORY"],
             bundledPackagesDirectory: packagePath,
             skillPath: skillPath,
+            preferredLanguages: Locale.preferredLanguages,
             currentVersion: currentVersion,
             buildNumber: buildNumber
         )
@@ -538,6 +566,7 @@ final class AppModel: ObservableObject {
 
 private struct NoParameter: Encodable, Sendable {}
 private struct BoolParameter: Encodable, Sendable { let enabled: Bool }
+private struct LanguageParameter: Encodable, Sendable { let language: String }
 private struct PackageIDParameter: Encodable, Sendable { let packageID: String }
 private struct PackageEnabledParameter: Encodable, Sendable {
     let packageID: String

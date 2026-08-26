@@ -92,6 +92,48 @@ func TestControllerUsesGoDefaultsReadsSkillAndDisablesNewPackages(t *testing.T) 
 	}
 }
 
+func TestControllerDetectsPersistsAndRestoresLanguagePreference(t *testing.T) {
+	root := t.TempDir()
+	params := InitializeParams{
+		ApplicationSupportDirectory: filepath.Join(root, "support"),
+		CacheDirectory:              filepath.Join(root, "cache"),
+		PreferredLanguages:          []string{"zh-Hant-HK"},
+		CurrentVersion:              "0.1.0",
+		BuildNumber:                 "1",
+	}
+	controller, err := NewController(params, nil, ControllerDependencies{DisableBackground: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	initial := controller.Snapshot().Presentation
+	if initial.LanguagePreference != "auto" || initial.Locale != "zh-TW" || initial.Text["language.title"] != "語言" {
+		t.Fatalf("unexpected automatic language presentation: %#v", initial)
+	}
+	if err := controller.SetLanguage(LanguageEnglish); err != nil {
+		t.Fatal(err)
+	}
+	if got := controller.Snapshot().Presentation; got.LanguagePreference != "en" || got.Locale != "en" || got.Text["language.title"] != "Language" {
+		t.Fatalf("unexpected manual language presentation: %#v", got)
+	}
+	controller.cancel()
+
+	params.PreferredLanguages = []string{"ja-JP"}
+	reopened, err := NewController(params, nil, ControllerDependencies{DisableBackground: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.cancel()
+	if got := reopened.Snapshot().Presentation; got.LanguagePreference != "en" || got.Locale != "en" {
+		t.Fatalf("persisted language was not restored: %#v", got)
+	}
+	if err := reopened.SetLanguage(LanguageAuto); err != nil {
+		t.Fatal(err)
+	}
+	if got := reopened.Snapshot().Presentation; got.LanguagePreference != "auto" || got.Locale != "ja" {
+		t.Fatalf("automatic language was not restored: %#v", got)
+	}
+}
+
 func TestControllerDeletesLocalPackageSourceBuildAndSettings(t *testing.T) {
 	root := t.TempDir()
 	events := make(chan AppSnapshot, 16)

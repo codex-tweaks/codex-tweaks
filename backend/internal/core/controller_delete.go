@@ -57,7 +57,7 @@ func (c *Controller) deletePackage(pkg Package) {
 		err = c.updatePackages()
 	}
 
-	presentationText := PresentationText()
+	presentationText := c.presentationText()
 	c.mu.Lock()
 	delete(c.deletingPackageIDs, pkg.ID)
 	if err != nil {

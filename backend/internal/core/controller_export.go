@@ -23,7 +23,7 @@ func (c *Controller) ExportPackage(packageID, destinationPath string) error {
 
 	go func() {
 		err := c.exporter.Export(c.ctx, pkg, destinationPath)
-		text := PresentationText()
+		text := c.presentationText()
 		c.mu.Lock()
 		delete(c.exportingPackageIDs, packageID)
 		if err != nil {

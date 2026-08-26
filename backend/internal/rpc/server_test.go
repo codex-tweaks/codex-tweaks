@@ -37,6 +37,7 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 	params := `{
       "applicationSupportDirectory": ` + quoted(filepath.Join(root, "support")) + `,
       "cacheDirectory": ` + quoted(filepath.Join(root, "cache")) + `,
+      "preferredLanguages": ["ja-JP"],
       "currentVersion": "0.1.0",
       "buildNumber": "1"
     }`
@@ -48,8 +49,9 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 	}
 	input := strings.NewReader(
 		string(initializeRequest) + "\n" +
-			"{\"id\":2,\"method\":\"getState\"}\n" +
-			"{\"id\":3,\"method\":\"shutdown\"}\n",
+			"{\"id\":2,\"method\":\"setLanguage\",\"params\":{\"language\":\"ko\"}}\n" +
+			"{\"id\":3,\"method\":\"getState\"}\n" +
+			"{\"id\":4,\"method\":\"shutdown\"}\n",
 	)
 	var output bytes.Buffer
 	server := NewServerWithDependencies(
@@ -65,6 +67,10 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 		ID     int `json:"id"`
 		Result struct {
 			ProtocolVersion int `json:"protocolVersion"`
+			Presentation    struct {
+				Locale             string `json:"locale"`
+				LanguagePreference string `json:"languagePreference"`
+			} `json:"presentation"`
 		} `json:"result"`
 	}
 	foundInitialize := false
@@ -73,6 +79,10 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 		Result struct {
 			ProtocolVersion           int  `json:"protocolVersion"`
 			DeveloperAllowUnknownNode bool `json:"developerAllowUnknownNode"`
+			Presentation              struct {
+				Locale             string `json:"locale"`
+				LanguagePreference string `json:"languagePreference"`
+			} `json:"presentation"`
 		} `json:"result"`
 	}
 	foundState := false
@@ -89,18 +99,20 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 			}
 			foundInitialize = true
 		}
-		if header.ID != nil && *header.ID == 2 {
+		if header.ID != nil && *header.ID == 3 {
 			if err := json.Unmarshal([]byte(line), &state); err != nil {
 				t.Fatalf("decode getState: %v", err)
 			}
 			foundState = true
 		}
 	}
-	if !foundInitialize || initialize.Result.ProtocolVersion != core.ProtocolVersion {
+	if !foundInitialize || initialize.Result.ProtocolVersion != core.ProtocolVersion ||
+		initialize.Result.Presentation.Locale != "ja" || initialize.Result.Presentation.LanguagePreference != "auto" {
 		t.Fatalf("initialize response not found in %q", output.String())
 	}
-	if !foundState || state.Result.ProtocolVersion != core.ProtocolVersion || state.Result.DeveloperAllowUnknownNode {
-		t.Fatalf("getState did not expose the v8 non-persistent Node default: %q", output.String())
+	if !foundState || state.Result.ProtocolVersion != core.ProtocolVersion || state.Result.DeveloperAllowUnknownNode ||
+		state.Result.Presentation.Locale != "ko" || state.Result.Presentation.LanguagePreference != "ko" {
+		t.Fatalf("getState did not expose the v9 language and Node defaults: %q", output.String())
 	}
 }
 

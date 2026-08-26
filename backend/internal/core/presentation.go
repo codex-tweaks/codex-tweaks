@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const PresentationContractVersion = 1
+const PresentationContractVersion = 2
 
 type PresentationTokens struct {
 	WindowMinWidth      int    `json:"windowMinWidth"`
@@ -51,6 +51,7 @@ type AvailableActions struct {
 	ReadAuthoringPrompt        bool `json:"readAuthoringPrompt"`
 	CheckAppUpdate             bool `json:"checkAppUpdate"`
 	SetUpdatePreferences       bool `json:"setUpdatePreferences"`
+	SetLanguage                bool `json:"setLanguage"`
 	InstallAppUpdate           bool `json:"installAppUpdate"`
 }
 
@@ -69,16 +70,21 @@ type StatusPresentation struct {
 }
 
 type PresentationContract struct {
-	Version  int                  `json:"version"`
-	Locale   string               `json:"locale"`
-	Text     map[string]string    `json:"text"`
-	Tokens   PresentationTokens   `json:"tokens"`
-	Actions  AvailableActions     `json:"actions"`
-	Status   StatusPresentation   `json:"status"`
-	Platform PlatformPresentation `json:"platform"`
+	Version            int                  `json:"version"`
+	Locale             string               `json:"locale"`
+	LanguagePreference string               `json:"languagePreference"`
+	LanguageOrder      []string             `json:"languageOrder"`
+	LanguageOptions    map[string]string    `json:"languageOptions"`
+	Text               map[string]string    `json:"text"`
+	Tokens             PresentationTokens   `json:"tokens"`
+	Actions            AvailableActions     `json:"actions"`
+	Status             StatusPresentation   `json:"status"`
+	Platform           PlatformPresentation `json:"platform"`
 }
 
 type PresentationState struct {
+	LanguagePreference       AppLanguage
+	PreferredLanguages       []string
 	Status                   AppStatus
 	Enabled                  bool
 	RestartingCodexUI        bool
@@ -101,7 +107,10 @@ func NewPresentationContract(state PresentationState) PresentationContract {
 }
 
 func NewPresentationContractForPlatform(state PresentationState, operatingSystem, architecture string) PresentationContract {
-	text := PresentationText()
+	preference := NormalizeAppLanguage(state.LanguagePreference)
+	locale := ResolveAppLanguage(preference, state.PreferredLanguages)
+	text := PresentationTextForLocale(locale)
+	languageOrder, languageOptions := AppLanguageOptions(text)
 	cdpAvailable := state.Status.Kind == StatusWaitingForPage || state.Status.Kind == StatusConnected || state.Status.Kind == StatusDisabled
 	uiRestartAvailable := state.Status.Kind == StatusConnected || state.Status.Kind == StatusDisabled || state.Status.Kind == StatusError
 	packageTransferBusy := state.InstallingLocalPackage || state.InstallingRemotePackage || state.ExportingPackage || state.DeletingPackage
@@ -112,10 +121,13 @@ func NewPresentationContractForPlatform(state PresentationState, operatingSystem
 		strategy = "velopack"
 	}
 	return PresentationContract{
-		Version: PresentationContractVersion,
-		Locale:  "zh-CN",
-		Text:    text,
-		Tokens:  PresentationTokensForPlatform(operatingSystem),
+		Version:            PresentationContractVersion,
+		Locale:             string(locale),
+		LanguagePreference: string(preference),
+		LanguageOrder:      languageOrder,
+		LanguageOptions:    languageOptions,
+		Text:               text,
+		Tokens:             PresentationTokensForPlatform(operatingSystem),
 		Actions: AvailableActions{
 			OpenCodex:                  true,
 			RestartCodex:               state.Status.Kind == StatusRestartRequired,
@@ -137,6 +149,7 @@ func NewPresentationContractForPlatform(state PresentationState, operatingSystem
 			ReadAuthoringPrompt:        state.AuthoringPromptAvailable,
 			CheckAppUpdate:             !state.UpdateChecking,
 			SetUpdatePreferences:       !state.UpdateChecking,
+			SetLanguage:                true,
 			InstallAppUpdate:           operatingSystem == "windows" || state.UpdateAvailable,
 		},
 		Status: statusPresentation(state.Status, text),
@@ -227,7 +240,7 @@ func PresentationTokensForPlatform(operatingSystem string) PresentationTokens {
 	}
 }
 
-func PresentationText() map[string]string {
+func presentationTextZhCN() map[string]string {
 	return map[string]string{
 		"app.name":                                    "Codex Tweaks",
 		"app.backendMissing":                          "应用目录中缺少 Go 后端可执行文件。",
@@ -320,6 +333,8 @@ func PresentationText() map[string]string {
 		"packages.gitAvailable":                       "{version} 可用",
 		"packages.gitMissing":                         "未找到 Git；本地功能包仍可使用，但不能安装或检查远程包。",
 		"packages.installingLocal":                    "正在安全检查并安装本地功能包…",
+		"packages.installSuccess":                     "已安装 {name}，新包默认保持停用。",
+		"packages.installFailed":                      "安装功能包失败：{message}",
 		"packages.clearMessage":                       "清除操作提示",
 		"packages.clearError":                         "清除操作错误",
 		"packages.exportZip":                          "导出为 ZIP",
@@ -472,6 +487,16 @@ func PresentationText() map[string]string {
 		"common.close":                                "关闭",
 		"common.copy":                                 "复制",
 		"common.open":                                 "打开",
+		"language.title":                              "语言",
+		"language.subtitle":                           "默认跟随系统首选语言，也可以为 Codex Tweaks 单独选择显示语言。",
+		"language.selection":                          "显示语言",
+		"language.auto":                               "自动（系统语言）",
+		"language.simplifiedChinese":                  "简体中文",
+		"language.traditionalChinese":                 "繁體中文",
+		"language.english":                            "English",
+		"language.japanese":                           "日本語",
+		"language.korean":                             "한국어",
+		"language.effective":                          "当前显示语言：{language}",
 		"update.title":                                "关于与更新",
 		"update.subtitle":                             "选择更新通道，并从 GitHub Releases 获取适合当前设备的版本。",
 		"update.versionBuild":                         "版本 {version}（构建 {build}）",
@@ -509,6 +534,7 @@ func PresentationText() map[string]string {
 		"update.checkFailed":                          "检查更新失败：{message}",
 		"update.checkFirst":                           "请先检查更新。",
 		"update.noneAvailable":                        "当前没有可安装的更新。",
+		"update.networkUnavailable":                   "当前无法连接网络。",
 		"menu.show":                                   "显示 Codex Tweaks",
 		"menu.quit":                                   "退出 Codex Tweaks",
 		"dialog.restartTitle":                         "重新启动 Codex？",

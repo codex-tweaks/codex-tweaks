@@ -23,7 +23,9 @@ func (c *Controller) InstallRemotePackage(repositoryURL string, selectorType Rem
 	go func() {
 		result, err := c.remote.Install(c.ctx, source, RemoteInstallOptions{})
 		if err != nil {
-			message := err.Error()
+			message := resolvePresentationText(c.presentationText(), "packages.installFailed", map[string]string{
+				"message": err.Error(),
+			})
 			c.mu.Lock()
 			c.installingRemotePackage = false
 			c.remoteOperationError = &message
@@ -32,7 +34,9 @@ func (c *Controller) InstallRemotePackage(repositoryURL string, selectorType Rem
 			c.emit()
 			return
 		}
-		message := "已安装 " + result.PackageID + "，新包默认保持停用。"
+		message := resolvePresentationText(c.presentationText(), "packages.installSuccess", map[string]string{
+			"name": result.PackageID,
+		})
 		c.mu.Lock()
 		c.installingRemotePackage = false
 		c.remoteOperationMessage = &message
@@ -65,7 +69,9 @@ func (c *Controller) InstallLocalPackage(sourcePath string) {
 	go func() {
 		result, err := c.installer.Install(sourcePath)
 		if err != nil {
-			message := err.Error()
+			message := resolvePresentationText(c.presentationText(), "packages.installFailed", map[string]string{
+				"message": err.Error(),
+			})
 			c.mu.Lock()
 			c.installingLocalPackage = false
 			c.localOperationError = &message
@@ -74,7 +80,9 @@ func (c *Controller) InstallLocalPackage(sourcePath string) {
 			c.emit()
 			return
 		}
-		message := "已安装 " + result.PackageID + "，新包默认保持停用。"
+		message := resolvePresentationText(c.presentationText(), "packages.installSuccess", map[string]string{
+			"name": result.PackageID,
+		})
 		c.mu.Lock()
 		c.installingLocalPackage = false
 		c.localOperationMessage = &message

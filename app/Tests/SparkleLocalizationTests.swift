@@ -2,26 +2,44 @@ import Foundation
 import XCTest
 
 final class SparkleLocalizationTests: XCTestCase {
-    func testSparkleUpdateUIUsesSimplifiedChinese() throws {
+    func testHostAppAndSparkleExposeSupportedLocalizations() throws {
         let appBundle = try BuiltAppBundle.load(for: Self.self)
-        XCTAssertEqual(appBundle.developmentLocalization, "zh-Hans")
-        XCTAssertEqual(appBundle.preferredLocalizations.first, "zh-Hans")
+        XCTAssertEqual(appBundle.developmentLocalization, "en")
+        for localization in ["en", "zh-Hans", "zh-Hant", "ja", "ko"] {
+            XCTAssertTrue(appBundle.localizations.contains(localization), localization)
+        }
+        XCTAssertEqual(
+            Bundle.preferredLocalizations(
+                from: appBundle.localizations,
+                forPreferences: ["zh-Hant-HK"]
+            ).first,
+            "zh-Hant"
+        )
+        XCTAssertEqual(
+            Bundle.preferredLocalizations(
+                from: appBundle.localizations,
+                forPreferences: ["ja-JP"]
+            ).first,
+            "ja"
+        )
 
         let sparkleURL = appBundle.bundleURL
             .appendingPathComponent("Contents/Frameworks/Sparkle.framework", isDirectory: true)
         let sparkleBundle = try XCTUnwrap(Bundle(url: sparkleURL))
-        XCTAssertTrue(sparkleBundle.localizations.contains("zh_CN"))
-        let simplifiedChineseURL = try XCTUnwrap(
-            sparkleBundle.url(forResource: "zh_CN", withExtension: "lproj")
+        for localization in ["en", "zh_CN", "zh_TW", "ja", "ko"] {
+            XCTAssertTrue(sparkleBundle.localizations.contains(localization), localization)
+        }
+        let baseURL = try XCTUnwrap(
+            sparkleBundle.url(forResource: "Base", withExtension: "lproj")
         )
-        let simplifiedChineseBundle = try XCTUnwrap(Bundle(url: simplifiedChineseURL))
+        let baseBundle = try XCTUnwrap(Bundle(url: baseURL))
         XCTAssertEqual(
-            simplifiedChineseBundle.localizedString(
+            baseBundle.localizedString(
                 forKey: "Install Update",
                 value: nil,
                 table: "Sparkle"
             ),
-            "安装更新"
+            "Install Update"
         )
     }
 }

@@ -10,6 +10,7 @@ struct UpdateView: View {
             VStack(alignment: .leading, spacing: CGFloat(model.tokens.sectionSpacing)) {
                 header
                 applicationCard
+                languageCard
                 updateCard
             }
             .frame(maxWidth: CGFloat(model.tokens.contentMaxWidth), alignment: .leading)
@@ -63,6 +64,42 @@ struct UpdateView: View {
                 !model.actions.openRepository
                     || URL(string: model.platform.repositoryURL) == nil
             )
+        }
+        .padding(CGFloat(model.tokens.cardPadding))
+        .cardSurface(tokens: model.tokens)
+    }
+
+    private var languageCard: some View {
+        VStack(alignment: .leading, spacing: CGFloat(model.tokens.controlSpacing)) {
+            Text(model.text(.languageTitle))
+                .font(.title2.weight(.semibold))
+            Text(model.text(.languageSubtitle))
+                .foregroundStyle(.secondary)
+
+            Divider()
+
+            Picker(
+                model.text(.languageSelection),
+                selection: Binding(
+                    get: { model.languagePreference },
+                    set: { model.setLanguage($0) }
+                )
+            ) {
+                ForEach(model.languageOptions) { language in
+                    Text(language.title).tag(language.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .disabled(!model.actions.setLanguage)
+
+            Text(
+                model.text(
+                    .languageEffective,
+                    ["language": model.effectiveLanguageTitle]
+                )
+            )
+            .font(.callout)
+            .foregroundStyle(.secondary)
         }
         .padding(CGFloat(model.tokens.cardPadding))
         .cardSurface(tokens: model.tokens)
@@ -184,14 +221,20 @@ struct UpdateView: View {
     }
 
     private var lastCheckText: String {
-        updateChecker.lastCheckDate?.formatted(date: .abbreviated, time: .shortened)
-            ?? model.text(.updateNever)
+        guard let date = updateChecker.lastCheckDate else {
+            return model.text(.updateNever)
+        }
+        let formatter = DateFormatter()
+        formatter.locale = model.displayLocale
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 
 }
 
-private extension View {
-    func cardSurface(tokens: BackendPresentationTokens) -> some View {
+extension View {
+    fileprivate func cardSurface(tokens: BackendPresentationTokens) -> some View {
         background(Color(nsColor: .controlBackgroundColor))
             .clipShape(RoundedRectangle(
                 cornerRadius: CGFloat(tokens.cardCornerRadius),

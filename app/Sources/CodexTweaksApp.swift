@@ -13,6 +13,7 @@ struct CodexTweaksApp: App {
     var body: some Scene {
         Window(model.text(.appName), id: "main") {
             MainWindowView(model: model, updateChecker: updateChecker)
+                .environment(\.locale, model.displayLocale)
                 .frame(
                     minWidth: CGFloat(model.tokens.windowMinWidth),
                     minHeight: CGFloat(model.tokens.windowMinHeight)
@@ -25,6 +26,7 @@ struct CodexTweaksApp: App {
 
         MenuBarExtra(isInserted: $isMenuBarExtraInserted) {
             MenuBarContent(model: model, updateChecker: updateChecker)
+                .environment(\.locale, model.displayLocale)
         } label: {
             Image(systemName: model.menuBarSymbol)
                 .accessibilityLabel(model.statusTitle)

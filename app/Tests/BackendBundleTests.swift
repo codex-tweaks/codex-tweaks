@@ -1,19 +1,27 @@
 import Foundation
 import XCTest
-@testable import CodexTweaks
 
 final class BackendBundleTests: XCTestCase {
-    func testBundledBackendVersionMatchesTheHostApp() throws {
-        let executable = try XCTUnwrap(backendExecutableURL())
+    func testDebugAppUsesAnIsolatedBundleIdentifier() throws {
+        let appBundle = try BuiltAppBundle.load(for: Self.self)
+        let configuration = appBundle.bundleURL.deletingLastPathComponent().lastPathComponent
+        try XCTSkipUnless(configuration == "Debug")
+        XCTAssertEqual(appBundle.bundleIdentifier, "com.zgccrui.CodexTweaks.Debug")
+    }
+
+    func testBundledBackendVersionMatchesTheBuiltApp() throws {
+        let appBundle = try BuiltAppBundle.load(for: Self.self)
+        let executable = try XCTUnwrap(backendExecutableURL(in: appBundle))
         let output = try run(executable, arguments: ["--version"])
-        let expected = Bundle.main.object(
+        let expected = appBundle.object(
             forInfoDictionaryKey: "CodexTweaksReleaseVersion"
         ) as? String
         XCTAssertEqual(output.trimmingCharacters(in: .whitespacesAndNewlines), expected)
     }
 
     func testBundledBackendIsExecutableAndAnswersPing() throws {
-        let executable = try XCTUnwrap(backendExecutableURL())
+        let appBundle = try BuiltAppBundle.load(for: Self.self)
+        let executable = try XCTUnwrap(backendExecutableURL(in: appBundle))
         XCTAssertTrue(FileManager.default.isExecutableFile(atPath: executable.path))
 
         let process = Process()
@@ -46,18 +54,8 @@ final class BackendBundleTests: XCTestCase {
         XCTAssertEqual(response.result.backend, "go")
     }
 
-    private func backendExecutableURL() -> URL? {
-        if let value = Bundle.main.url(forResource: "codex-tweaks-backend", withExtension: nil) {
-            return value
-        }
-        if let testHost = ProcessInfo.processInfo.environment["TEST_HOST"] {
-            let appURL = URL(fileURLWithPath: testHost)
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
-            return appURL
-                .appendingPathComponent("Contents/Resources/codex-tweaks-backend")
-        }
-        return nil
+    private func backendExecutableURL(in appBundle: Bundle) -> URL? {
+        appBundle.url(forResource: "codex-tweaks-backend", withExtension: nil)
     }
 
     private func run(_ executable: URL, arguments: [String]) throws -> String {

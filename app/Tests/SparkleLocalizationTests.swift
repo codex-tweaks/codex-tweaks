@@ -1,16 +1,22 @@
 import Foundation
 import XCTest
-@testable import CodexTweaks
 
 final class SparkleLocalizationTests: XCTestCase {
     func testSparkleUpdateUIUsesSimplifiedChinese() throws {
-        XCTAssertEqual(Bundle.main.developmentLocalization, "zh-Hans")
-        XCTAssertEqual(Bundle.main.preferredLocalizations.first, "zh-Hans")
+        let appBundle = try BuiltAppBundle.load(for: Self.self)
+        XCTAssertEqual(appBundle.developmentLocalization, "zh-Hans")
+        XCTAssertEqual(appBundle.preferredLocalizations.first, "zh-Hans")
 
-        let sparkleBundle = try XCTUnwrap(Bundle(identifier: "org.sparkle-project.Sparkle"))
+        let sparkleURL = appBundle.bundleURL
+            .appendingPathComponent("Contents/Frameworks/Sparkle.framework", isDirectory: true)
+        let sparkleBundle = try XCTUnwrap(Bundle(url: sparkleURL))
         XCTAssertTrue(sparkleBundle.localizations.contains("zh_CN"))
+        let simplifiedChineseURL = try XCTUnwrap(
+            sparkleBundle.url(forResource: "zh_CN", withExtension: "lproj")
+        )
+        let simplifiedChineseBundle = try XCTUnwrap(Bundle(url: simplifiedChineseURL))
         XCTAssertEqual(
-            sparkleBundle.localizedString(
+            simplifiedChineseBundle.localizedString(
                 forKey: "Install Update",
                 value: nil,
                 table: "Sparkle"

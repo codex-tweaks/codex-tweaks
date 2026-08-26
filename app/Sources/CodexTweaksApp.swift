@@ -6,6 +6,9 @@ struct CodexTweaksApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var model = AppModel.shared
     @StateObject private var updateChecker = UpdateChecker.shared
+    // A test host must never register a second status item for the installed app.
+    @State private var isMenuBarExtraInserted =
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
 
     var body: some Scene {
         Window(model.text(.appName), id: "main") {
@@ -20,7 +23,7 @@ struct CodexTweaksApp: App {
             height: CGFloat(model.tokens.windowDefaultHeight)
         )
 
-        MenuBarExtra {
+        MenuBarExtra(isInserted: $isMenuBarExtraInserted) {
             MenuBarContent(model: model, updateChecker: updateChecker)
         } label: {
             Image(systemName: model.menuBarSymbol)

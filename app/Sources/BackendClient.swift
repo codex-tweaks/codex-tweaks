@@ -75,11 +75,11 @@ final class BackendClient: @unchecked Sendable {
                 nextRequestID &+= 1
                 do {
                     let envelope = BackendRequest(id: requestID, method: method, params: params)
-                    var data = try Self.makeEncoder().encode(envelope)
+                    var data = try BackendJSON.makeEncoder().encode(envelope)
                     data.append(0x0A)
                     pending[requestID] = { responseData in
                         do {
-                            let response = try Self.makeDecoder().decode(
+                            let response = try BackendJSON.makeDecoder().decode(
                                 BackendResponse<Result>.self,
                                 from: responseData
                             )
@@ -162,11 +162,11 @@ final class BackendClient: @unchecked Sendable {
     }
 
     private func handleLine(_ data: Data) {
-        guard let header = try? Self.makeDecoder().decode(BackendMessageHeader.self, from: data) else {
+        guard let header = try? BackendJSON.makeDecoder().decode(BackendMessageHeader.self, from: data) else {
             return
         }
         if header.event == "state",
-           let message = try? Self.makeDecoder().decode(BackendStateEvent.self, from: data) {
+           let message = try? BackendJSON.makeDecoder().decode(BackendStateEvent.self, from: data) {
             let handler = storedStateHandler
             Task { @MainActor in
                 handler?(message.data)
@@ -210,32 +210,6 @@ final class BackendClient: @unchecked Sendable {
         return Bundle.main.url(forResource: "codex-tweaks-backend", withExtension: nil)
     }
 
-    static func makeDecoder() -> JSONDecoder {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .custom { decoder in
-            let container = try decoder.singleValueContainer()
-            let value = try container.decode(String.self)
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let date = formatter.date(from: value) { return date }
-            formatter.formatOptions = [.withInternetDateTime]
-            if let date = formatter.date(from: value) { return date }
-            throw DecodingError.dataCorruptedError(
-                in: container,
-                debugDescription: PresentationText.resolve(
-                    .appBackendDateMalformed,
-                    replacements: ["value": value]
-                )
-            )
-        }
-        return decoder
-    }
-
-    static func makeEncoder() -> JSONEncoder {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        return encoder
-    }
 }
 
 private struct EmptyParams: Encodable, Sendable {}

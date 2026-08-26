@@ -25,6 +25,26 @@ final class TestIsolationTests: XCTestCase {
         XCTAssertTrue(packageSource.contains("VStack(alignment: .leading, spacing: 0)"))
     }
 
+    func testMainWindowCloseKeepsTheApplicationRunning() throws {
+        let source = try source(named: "CodexTweaksApp.swift")
+        let closeStart = try XCTUnwrap(
+            source.range(of: "func windowShouldClose(_ sender: NSWindow) -> Bool")
+        )
+        let terminateStart = try XCTUnwrap(
+            source.range(of: "func applicationShouldTerminateAfterLastWindowClosed")
+        )
+        let reopenStart = try XCTUnwrap(
+            source.range(of: "func applicationShouldHandleReopen")
+        )
+        let closeSource = source[closeStart.lowerBound..<terminateStart.lowerBound]
+        let terminateSource = source[terminateStart.lowerBound..<reopenStart.lowerBound]
+
+        XCTAssertTrue(source.contains("NSWindowDelegate"))
+        XCTAssertTrue(closeSource.contains("sender.orderOut(nil)"))
+        XCTAssertTrue(closeSource.contains("return false"))
+        XCTAssertTrue(terminateSource.contains("false"))
+    }
+
     private func source(named name: String) throws -> String {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

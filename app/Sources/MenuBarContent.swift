@@ -3,6 +3,7 @@ import SwiftUI
 
 struct MenuBarContent: View {
     @Environment(\.openWindow) private var openWindow
+    let appDelegate: AppDelegate
     @ObservedObject var model: AppModel
     @ObservedObject var updateChecker: UpdateChecker
 
@@ -17,8 +18,10 @@ struct MenuBarContent: View {
         Divider()
 
         Button(model.text(.menuShow)) {
-            NSApplication.shared.activate(ignoringOtherApps: true)
-            openWindow(id: "main")
+            if !appDelegate.showMainWindow() {
+                NSApplication.shared.activate(ignoringOtherApps: true)
+                openWindow(id: "main")
+            }
         }
         .keyboardShortcut("1")
 

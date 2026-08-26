@@ -293,6 +293,9 @@ func TestControllerRevokesExplicitNodeAuthorizationOnDisableAndRevisionChange(t 
 	if node == nil || node.AuthorizationID == "" || node.Authorized {
 		t.Fatalf("unexpected initial Node authorization state: %#v", node)
 	}
+	if !snapshot.Packages[0].AvailableActions.AuthorizeNode {
+		t.Fatal("disabled Node package did not expose the authorization flow")
+	}
 	if err := controller.AuthorizeNodePackage("node-lifecycle", node.AuthorizationID); err == nil {
 		t.Fatal("disabled Node package accepted an authorization")
 	}

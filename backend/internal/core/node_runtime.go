@@ -387,7 +387,7 @@ func startNodeRuntimeProcess(
 		return nil, errors.New("Node 编译产物不存在。")
 	}
 	processContext, cancel := context.WithCancel(ctx)
-	command := exec.CommandContext(processContext, environment.NodePath, "-e", nodeRuntimeRunnerSource,
+	command := newNodeRuntimeCommand(processContext, environment.NodePath, "-e", nodeRuntimeRunnerSource,
 		pkg.ActiveBuild.NodeJavaScriptPath(), pkg.Directory, dataDirectory)
 	command.Dir = pkg.Directory
 	environmentValues := environmentMap()
@@ -443,6 +443,12 @@ func startNodeRuntimeProcess(
 		process.stop()
 		return nil, ctx.Err()
 	}
+}
+
+func newNodeRuntimeCommand(ctx context.Context, executable string, arguments ...string) *exec.Cmd {
+	command := exec.CommandContext(ctx, executable, arguments...)
+	configureCommand(command)
+	return command
 }
 
 func (p *nodeRuntimeProcess) readStdout(reader io.Reader) {

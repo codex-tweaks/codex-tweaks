@@ -461,8 +461,7 @@ public sealed partial class PackagesPage : Page
 
     private async void PackageToggle_Toggled(object sender, RoutedEventArgs e)
     {
-        if (_rendering
-            || sender is not ToggleSwitch { DataContext: PackageRowViewModel row } toggle
+        if (sender is not ToggleSwitch { DataContext: PackageRowViewModel row } toggle
             || _snapshot is null)
         {
             return;
@@ -475,35 +474,43 @@ public sealed partial class PackagesPage : Page
 
         var requestedEnabled = toggle.IsOn;
         row.BeginEnablementChange(requestedEnabled);
-        string? error = null;
         var requiresNodeAuthorization = requestedEnabled
             && row.Package.Node is not null
             && !row.Package.Node.ExplicitlyAuthorized
             && !_snapshot.DeveloperAllowUnknownNode;
-        if (requiresNodeAuthorization)
-        {
-            if (!await ConfirmNodeAuthorizationAsync(row.Package))
-            {
-                error = "cancelled";
-            }
-        }
-        if (error is null)
-        {
-            error = await Host.RunBackendAsync(
+        var error = requiresNodeAuthorization
+            ? await AuthorizeNodePackageAsync(row, enableAfterAuthorization: true)
+            : await Host.RunBackendAsync(
                 "setPackageEnabled",
                 new { packageID = row.Id, enabled = requestedEnabled });
-        }
-        if (error is null && requiresNodeAuthorization)
-        {
-            error = await Host.RunBackendAsync(
-                "authorizeNodePackage",
-                new
-                {
-                    packageID = row.Id,
-                    authorizationID = row.Package.Node!.AuthorizationId,
-                });
-        }
         row.EndEnablementChange(error is null);
+    }
+
+    private async Task<string?> AuthorizeNodePackageAsync(
+        PackageRowViewModel row,
+        bool enableAfterAuthorization)
+    {
+        if (!await ConfirmNodeAuthorizationAsync(row.Package))
+        {
+            return "cancelled";
+        }
+        if (enableAfterAuthorization)
+        {
+            var enableError = await Host.RunBackendAsync(
+                "setPackageEnabled",
+                new { packageID = row.Id, enabled = true });
+            if (enableError is not null)
+            {
+                return enableError;
+            }
+        }
+        return await Host.RunBackendAsync(
+            "authorizeNodePackage",
+            new
+            {
+                packageID = row.Id,
+                authorizationID = row.Package.Node!.AuthorizationId,
+            });
     }
 
     private async Task<bool> ConfirmNodeAuthorizationAsync(PackageView package)
@@ -553,17 +560,13 @@ public sealed partial class PackagesPage : Page
     private async void AuthorizeNodeButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { DataContext: PackageRowViewModel row }
-            || !await ConfirmNodeAuthorizationAsync(row.Package))
+            || _snapshot is null)
         {
             return;
         }
-        await Host.RunBackendAsync(
-            "authorizeNodePackage",
-            new
-            {
-                packageID = row.Id,
-                authorizationID = row.Package.Node!.AuthorizationId,
-            });
+        await AuthorizeNodePackageAsync(
+            row,
+            enableAfterAuthorization: _snapshot.DisabledPackageIds.Contains(row.Id));
     }
 
     private async void PriorityTextBox_KeyDown(object sender, KeyRoutedEventArgs e)

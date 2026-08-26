@@ -258,7 +258,7 @@ func (c *Controller) Snapshot() AppSnapshot {
 			EnableDependencies:         view.CanEnableDependencies && !deletingAnyPackage,
 			UpdateManagedPackage:       hasRemoteUpdate && remoteUpdate.Installable() && c.gitEnvironment != nil && !c.installingPackageIDs[pkg.ID] && !deletingAnyPackage,
 			Build:                      view.ValidationError == nil && view.BuildRequestKey != nil && c.nodeEnvironment != nil && !c.buildingPackageIDs[pkg.ID] && !deletingAnyPackage,
-			AuthorizeNode:              view.Node != nil && view.Node.AuthorizationID != "" && !view.Node.Authorized && !c.disabledPackageIDs[pkg.ID] && !deletingAnyPackage,
+			AuthorizeNode:              view.Node != nil && view.Node.AuthorizationID != "" && !view.Node.Authorized && !deletingAnyPackage,
 		}
 		view.Presentation = c.packagePresentation(view, presentationText)
 		packageViews = append(packageViews, view)

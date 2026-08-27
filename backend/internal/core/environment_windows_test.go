@@ -6,6 +6,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -79,6 +80,9 @@ func TestWindowsNodeDetectionAcceptsCommandAndExecutableCompanions(t *testing.T)
 					t.Fatal(err)
 				}
 			}
+			if extension == ".cmd" {
+				writeWindowsNodeCLIEntrypoints(t, binDirectory)
+			}
 			t.Setenv("PATH", binDirectory)
 
 			runner := nodeDetectionRunnerFunc(func(_ context.Context, executable string, arguments []string, directory string, _ []string) (CommandResult, error) {
@@ -95,6 +99,78 @@ func TestWindowsNodeDetectionAcceptsCommandAndExecutableCompanions(t *testing.T)
 				t.Fatalf("unexpected Node environment: %#v", environment)
 			}
 		})
+	}
+}
+
+func TestWindowsNodeDetectionPrefersNativeCompanions(t *testing.T) {
+	binDirectory := t.TempDir()
+	for _, name := range []string{"npm.cmd", "npm.exe", "npx.cmd", "npx.exe"} {
+		if err := os.WriteFile(filepath.Join(binDirectory, name), []byte("fixture"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	npmPath, npxPath, ok := nodeCompanionPaths(binDirectory)
+	if !ok || npmPath != filepath.Join(binDirectory, "npm.exe") || npxPath != filepath.Join(binDirectory, "npx.exe") {
+		t.Fatalf("native package manager shims were not preferred: npm=%q npx=%q ok=%v", npmPath, npxPath, ok)
+	}
+}
+
+func TestWindowsNodeDetectionRejectsCommandShimsWithoutCLIEntrypoints(t *testing.T) {
+	binDirectory := t.TempDir()
+	for _, name := range []string{"npm.cmd", "npx.cmd"} {
+		if err := os.WriteFile(filepath.Join(binDirectory, name), []byte("fixture"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if npmPath, npxPath, ok := nodeCompanionPaths(binDirectory); ok || npmPath != "" || npxPath != "" {
+		t.Fatalf("command shims without trusted CLI entrypoints were accepted: npm=%q npx=%q", npmPath, npxPath)
+	}
+}
+
+func TestWindowsNodePackageManagerInvocationsBypassCommandShell(t *testing.T) {
+	binDirectory := filepath.Join(t.TempDir(), "Program Files", "nodejs")
+	if err := os.MkdirAll(binDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	writeWindowsNodeCLIEntrypoints(t, binDirectory)
+	environment := NodeEnvironment{
+		NodePath: filepath.Join(binDirectory, "node.exe"),
+		NPMPath:  filepath.Join(binDirectory, "npm.cmd"),
+		NPXPath:  filepath.Join(binDirectory, "npx.cmd"),
+	}
+	tests := []struct {
+		name       string
+		invocation func([]string) (string, []string)
+		cliName    string
+		arguments  []string
+	}{
+		{name: "npm", invocation: environment.npmInvocation, cliName: "npm-cli.js", arguments: []string{"ci", "--ignore-scripts"}},
+		{name: "npx", invocation: environment.npxInvocation, cliName: "npx-cli.js", arguments: []string{"--yes", `C:\\Package Source\\index.ts`, `--define:process.env.NODE_ENV="production"`, `--outfile=C:\\Build Output\\bundle.js`}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			executable, arguments := test.invocation(test.arguments)
+			if executable != environment.NodePath {
+				t.Fatalf("invocation executable = %q, want node executable %q", executable, environment.NodePath)
+			}
+			expectedArguments := append([]string{nodePackageManagerCLIPath(filepath.Join(binDirectory, test.name+".cmd"), test.cliName)}, test.arguments...)
+			if !reflect.DeepEqual(arguments, expectedArguments) {
+				t.Fatalf("invocation arguments = %#v, want %#v", arguments, expectedArguments)
+			}
+		})
+	}
+}
+
+func writeWindowsNodeCLIEntrypoints(t *testing.T, binDirectory string) {
+	t.Helper()
+	cliDirectory := filepath.Join(binDirectory, "node_modules", "npm", "bin")
+	if err := os.MkdirAll(cliDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"npm-cli.js", "npx-cli.js"} {
+		if err := os.WriteFile(filepath.Join(cliDirectory, name), []byte("fixture"), 0o600); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

@@ -73,7 +73,8 @@ func (b *Builder) Build(ctx context.Context, pkg Package, installDependencies, a
 		if !isRegularNonSymlink(filepath.Join(pkg.Directory, "package-lock.json")) {
 			return PackageBuildRecord{}, errors.New("包含 npm 依赖的包必须提供 package-lock.json。")
 		}
-		result, err := b.runner.Run(ctx, node.NPMPath, DependencyInstallArguments, pkg.Directory, environment)
+		executable, arguments := node.npmInvocation(DependencyInstallArguments)
+		result, err := b.runner.Run(ctx, executable, arguments, pkg.Directory, environment)
 		if err != nil {
 			return PackageBuildRecord{}, err
 		}
@@ -93,7 +94,8 @@ func (b *Builder) Build(ctx context.Context, pkg Package, installDependencies, a
 	defer os.RemoveAll(stagingDirectory)
 	entryPath := filepath.Join(pkg.Directory, filepath.FromSlash(pkg.Manifest.CodexTweaks.Entrypoints.Renderer))
 	javaScriptPath := filepath.Join(stagingDirectory, "bundle.js")
-	result, err := b.runner.Run(ctx, node.NPXPath, EsbuildArguments(entryPath, javaScriptPath, allowCompilerDownload), pkg.Directory, environment)
+	executable, arguments := node.npxInvocation(EsbuildArguments(entryPath, javaScriptPath, allowCompilerDownload))
+	result, err := b.runner.Run(ctx, executable, arguments, pkg.Directory, environment)
 	if err != nil {
 		return PackageBuildRecord{}, err
 	}
@@ -122,7 +124,8 @@ func (b *Builder) Build(ctx context.Context, pkg Package, installDependencies, a
 	if hasNode {
 		nodeEntryPath := filepath.Join(pkg.Directory, filepath.FromSlash(*pkg.Manifest.CodexTweaks.Entrypoints.Node))
 		nodeJavaScriptPath := filepath.Join(stagingDirectory, "node-bundle.cjs")
-		result, err := b.runner.Run(ctx, node.NPXPath, EsbuildNodeArguments(nodeEntryPath, nodeJavaScriptPath, allowCompilerDownload), pkg.Directory, environment)
+		executable, arguments := node.npxInvocation(EsbuildNodeArguments(nodeEntryPath, nodeJavaScriptPath, allowCompilerDownload))
+		result, err := b.runner.Run(ctx, executable, arguments, pkg.Directory, environment)
 		if err != nil {
 			return PackageBuildRecord{}, err
 		}
@@ -235,12 +238,50 @@ func installedNodeCandidates(root, executable, binDirectory string) []string {
 func nodeCompanionPaths(binDirectory string) (string, string, bool) {
 	npmNames, npxNames := []string{"npm"}, []string{"npx"}
 	if runtime.GOOS == "windows" {
-		npmNames = []string{"npm.cmd", "npm.exe"}
-		npxNames = []string{"npx.cmd", "npx.exe"}
+		// Native shims preserve argv without cmd.exe's separate and unsafe
+		// quoting rules, so prefer them whenever a version manager provides one.
+		npmNames = []string{"npm.exe", "npm.cmd"}
+		npxNames = []string{"npx.exe", "npx.cmd"}
 	}
 	npmPath := firstExecutablePath(binDirectory, npmNames)
 	npxPath := firstExecutablePath(binDirectory, npxNames)
-	return npmPath, npxPath, npmPath != "" && npxPath != ""
+	if npmPath == "" || npxPath == "" {
+		return "", "", false
+	}
+	if runtime.GOOS == "windows" {
+		for _, companion := range []struct {
+			launcher string
+			cliName  string
+		}{{npmPath, "npm-cli.js"}, {npxPath, "npx-cli.js"}} {
+			if strings.EqualFold(filepath.Ext(companion.launcher), ".cmd") && !isRegularNonSymlink(nodePackageManagerCLIPath(companion.launcher, companion.cliName)) {
+				return "", "", false
+			}
+		}
+	}
+	return npmPath, npxPath, true
+}
+
+func (environment NodeEnvironment) npmInvocation(arguments []string) (string, []string) {
+	return environment.packageManagerInvocation(environment.NPMPath, "npm-cli.js", arguments)
+}
+
+func (environment NodeEnvironment) npxInvocation(arguments []string) (string, []string) {
+	return environment.packageManagerInvocation(environment.NPXPath, "npx-cli.js", arguments)
+}
+
+func (environment NodeEnvironment) packageManagerInvocation(launcher, cliName string, arguments []string) (string, []string) {
+	if runtime.GOOS == "windows" && strings.EqualFold(filepath.Ext(launcher), ".cmd") {
+		// npm.cmd/npx.cmd are wrappers around these JavaScript entry points.
+		// Run them through node.exe directly so Program Files and package paths
+		// containing spaces never pass through cmd.exe's incompatible parser.
+		cliPath := nodePackageManagerCLIPath(launcher, cliName)
+		return environment.NodePath, append([]string{cliPath}, arguments...)
+	}
+	return launcher, arguments
+}
+
+func nodePackageManagerCLIPath(launcher, cliName string) string {
+	return filepath.Join(filepath.Dir(launcher), "node_modules", "npm", "bin", cliName)
 }
 
 func firstExecutablePath(directory string, names []string) string {

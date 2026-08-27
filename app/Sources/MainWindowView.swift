@@ -40,6 +40,7 @@ struct MainWindowView: View {
 
     @ObservedObject var model: AppModel
     @ObservedObject var updateChecker: UpdateChecker
+    @ObservedObject var agentModeController: MacOSAgentModeController
     @State private var selection: Section? = .overview
 
     var body: some View {
@@ -61,6 +62,7 @@ struct MainWindowView: View {
             case .overview:
                 OverviewView(
                     model: model,
+                    agentModeController: agentModeController,
                     showPackages: { selection = .packages },
                     showLogs: { selection = .logs }
                 )
@@ -1187,6 +1189,7 @@ private struct GitPackageInstallView: View {
 
 private struct OverviewView: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var agentModeController: MacOSAgentModeController
     let showPackages: () -> Void
     let showLogs: () -> Void
 
@@ -1277,6 +1280,58 @@ private struct OverviewView: View {
                     .accessibilityLabel(model.text(.overviewEnable))
                     .accessibilityHint(model.text(.overviewEnableDetail))
                     .disabled(!model.actions.setEnabled)
+            }
+
+            Divider()
+
+            HStack(alignment: .center, spacing: 20) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(model.text(.overviewAgentMode))
+                        .font(.body.weight(.medium))
+                    Text(model.text(.overviewAgentModeDetail))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Toggle(
+                    model.text(.overviewAgentMode),
+                    isOn: Binding(
+                        get: { agentModeController.isEnabled },
+                        set: { agentModeController.setEnabled($0) }
+                    )
+                )
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .accessibilityLabel(model.text(.overviewAgentMode))
+                .accessibilityHint(model.text(.overviewAgentModeDetail))
+            }
+
+            if agentModeController.isEnabled {
+                Divider()
+
+                HStack(alignment: .center, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(model.text(.overviewAgentModeHideMenuBar))
+                            .font(.body.weight(.medium))
+                        Text(model.text(.overviewAgentModeHideMenuBarDetail))
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer()
+                    Toggle(
+                        model.text(.overviewAgentModeHideMenuBar),
+                        isOn: Binding(
+                            get: { agentModeController.hidesMenuBarIcon },
+                            set: { agentModeController.setHidesMenuBarIcon($0) }
+                        )
+                    )
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .accessibilityLabel(model.text(.overviewAgentModeHideMenuBar))
+                    .accessibilityHint(model.text(.overviewAgentModeHideMenuBarDetail))
+                }
             }
 
             Divider()

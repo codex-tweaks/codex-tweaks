@@ -50,6 +50,10 @@ internal static class PresentationTextKey
     internal const string NavOverview = "nav.overview";
     internal const string NavPackages = "nav.packages";
     internal const string NavUpdates = "nav.updates";
+    internal const string OverviewAgentMode = "overview.agentMode";
+    internal const string OverviewAgentModeDetail = "overview.agentModeDetail";
+    internal const string OverviewAgentModeHideMenuBar = "overview.agentModeHideMenuBar";
+    internal const string OverviewAgentModeHideMenuBarDetail = "overview.agentModeHideMenuBarDetail";
     internal const string OverviewAiAuthoring = "overview.aiAuthoring";
     internal const string OverviewAppPagesOnly = "overview.appPagesOnly";
     internal const string OverviewCdpEndpoint = "overview.cdpEndpoint";
@@ -552,6 +556,10 @@ internal static class PresentationDefaults
         [PresentationTextKey.NavOverview] = "Overview",
         [PresentationTextKey.NavPackages] = "Packages",
         [PresentationTextKey.NavUpdates] = "About & Updates",
+        [PresentationTextKey.OverviewAgentMode] = "macOS Agent mode",
+        [PresentationTextKey.OverviewAgentModeDetail] = "Run as a background accessory and hide the app from the Dock and app switcher. Reopen Codex Tweaks to restore the main window.",
+        [PresentationTextKey.OverviewAgentModeHideMenuBar] = "Hide menu bar icon",
+        [PresentationTextKey.OverviewAgentModeHideMenuBarDetail] = "Injection continues while the icon is hidden. Reopen Codex Tweaks from Applications to restore the window.",
         [PresentationTextKey.OverviewAiAuthoring] = "Create with AI",
         [PresentationTextKey.OverviewAppPagesOnly] = "app:// pages only",
         [PresentationTextKey.OverviewCdpEndpoint] = "CDP endpoint",

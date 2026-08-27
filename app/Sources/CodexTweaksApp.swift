@@ -6,13 +6,15 @@ struct CodexTweaksApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var model = AppModel.shared
     @StateObject private var updateChecker = UpdateChecker.shared
-    // A test host must never register a second status item for the installed app.
-    @State private var isMenuBarExtraInserted =
-        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
+    @StateObject private var agentModeController = MacOSAgentModeController.shared
 
     var body: some Scene {
         Window(model.text(.appName), id: "main") {
-            MainWindowView(model: model, updateChecker: updateChecker)
+            MainWindowView(
+                model: model,
+                updateChecker: updateChecker,
+                agentModeController: agentModeController
+            )
                 .environment(\.locale, model.displayLocale)
                 .frame(
                     minWidth: CGFloat(model.tokens.windowMinWidth),
@@ -24,7 +26,7 @@ struct CodexTweaksApp: App {
             height: CGFloat(model.tokens.windowDefaultHeight)
         )
 
-        MenuBarExtra(isInserted: $isMenuBarExtraInserted) {
+        MenuBarExtra(isInserted: menuBarExtraInsertion) {
             MenuBarContent(
                 appDelegate: appDelegate,
                 model: model,
@@ -37,6 +39,16 @@ struct CodexTweaksApp: App {
         }
         .menuBarExtraStyle(.menu)
     }
+
+    private var menuBarExtraInsertion: Binding<Bool> {
+        Binding(
+            get: {
+                ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
+                    && agentModeController.shouldShowMenuBarIcon
+            },
+            set: { _ in }
+        )
+    }
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
@@ -48,6 +60,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             NSApplication.shared.setActivationPolicy(.prohibited)
             return
         }
+
+        // 在窗口创建前应用激活策略，避免 Agent 模式启动时短暂出现 Dock 图标
+        MacOSAgentModeController.shared.applyCurrentActivationPolicy()
 
         NotificationCenter.default.addObserver(
             self,

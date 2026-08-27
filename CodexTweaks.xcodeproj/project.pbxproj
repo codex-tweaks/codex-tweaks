@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		011657CA192D77BD6934112A /* MacOSAgentModePreferencesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E202B713496DE7CB62897FCF /* MacOSAgentModePreferencesTests.swift */; };
 		0AD62E2F7A6F5259A737C7E7 /* TweakPackageDependencyResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CB762E9C9F9FD3D4400C65F /* TweakPackageDependencyResolver.swift */; };
 		0C1AA02F95574A89518B4FFF /* UpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C4B014C4282346EC90203A /* UpdateView.swift */; };
 		0E2FBEE784B852532424F206 /* TweakPackageBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63708A61AFD3EB99BE1C3359 /* TweakPackageBuilder.swift */; };
@@ -17,12 +18,14 @@
 		2E6F7321FDC0E8D91110C9E1 /* BackendJSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25E3517257D811F2B1D3625A /* BackendJSON.swift */; };
 		2EE2FDCBD2FE24842E25C45D /* TweakPackageBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63708A61AFD3EB99BE1C3359 /* TweakPackageBuilder.swift */; };
 		444F810FBED64BEF61A48D3D /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F53421B72A4751C046846C60 /* MainWindowView.swift */; };
+		449D39639DA5A3CAA538DE84 /* MacOSAgentModeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22B7DEBE5FBCE9231E54815 /* MacOSAgentModeController.swift */; };
 		4F40D070B051F7E9E4D2AC5C /* SparkleUpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE948BF0C89AAC647E0A612E /* SparkleUpdateController.swift */; };
 		54B0B6FE5BFFCD0689A620EF /* BackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ECD0C73EE0D60F0F6A53202 /* BackendClient.swift */; };
 		5DBF9AC702A390EB5F6499B2 /* PresentationColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8078C635651B9E12B769538 /* PresentationColor.swift */; };
 		5FE6D726E81A975E1CB72074 /* TweakPackageRemoteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECCE54F4FF81979BBBAB5CC /* TweakPackageRemoteManager.swift */; };
 		6532DEC8D6DCE8C0132E9CE6 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0F5EBF53A71E7D7C218FDA82 /* AppIcon.icon */; };
 		6731E4E39CE874F8DCDE4299 /* BackendBundleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3586156F50638102CDE5AB2C /* BackendBundleTests.swift */; };
+		6849FFE28185FF575CCF57F7 /* MacOSAgentModeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22B7DEBE5FBCE9231E54815 /* MacOSAgentModeController.swift */; };
 		694CBBB375BCEEA660DB5163 /* AppStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C58B083F3D76F43FDC45941 /* AppStatus.swift */; };
 		6EE55D663F4BA7C8C133418A /* Tweaks in Resources */ = {isa = PBXBuildFile; fileRef = ED5BA7E20B31B6B736EF5A33 /* Tweaks */; };
 		7824CE3D453FE429FB9B83A2 /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 710989624754350B9549F3B1 /* UpdateChecker.swift */; };
@@ -69,6 +72,7 @@
 		752944AE65CF3C41046BE3B3 /* BackendProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendProtocolTests.swift; sourceTree = "<group>"; };
 		7D31064D54183A1230D1918D /* Codex Tweaks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Codex Tweaks.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A272C33590B17E3938559A23 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		B22B7DEBE5FBCE9231E54815 /* MacOSAgentModeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacOSAgentModeController.swift; sourceTree = "<group>"; };
 		BD05BAEA4FC2428057D00725 /* SparkleLocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleLocalizationTests.swift; sourceTree = "<group>"; };
 		C054F18E9178A1188A15F944 /* CodexTweaksApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTweaksApp.swift; sourceTree = "<group>"; };
 		C4404C8473050E6EB8C45541 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -76,6 +80,7 @@
 		D46E6EAFFFA8697F8252BAFC /* BackendProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendProtocol.swift; sourceTree = "<group>"; };
 		DDC46BCBEBD8535824D33363 /* PresentationText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationText.swift; sourceTree = "<group>"; };
 		DECCE54F4FF81979BBBAB5CC /* TweakPackageRemoteManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageRemoteManager.swift; sourceTree = "<group>"; };
+		E202B713496DE7CB62897FCF /* MacOSAgentModePreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacOSAgentModePreferencesTests.swift; sourceTree = "<group>"; };
 		ED5BA7E20B31B6B736EF5A33 /* Tweaks */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Tweaks; path = app/Resources/Tweaks; sourceTree = SOURCE_ROOT; };
 		F53421B72A4751C046846C60 /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
 		F659FBB7C357009B1FE4C80E /* CodexTweaksBundleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexTweaksBundleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -102,6 +107,7 @@
 				3586156F50638102CDE5AB2C /* BackendBundleTests.swift */,
 				752944AE65CF3C41046BE3B3 /* BackendProtocolTests.swift */,
 				68689767E171B444813D5B27 /* BuiltAppBundle.swift */,
+				E202B713496DE7CB62897FCF /* MacOSAgentModePreferencesTests.swift */,
 				BD05BAEA4FC2428057D00725 /* SparkleLocalizationTests.swift */,
 				356CA0F6751DCFB03E5A71FF /* TestIsolationTests.swift */,
 			);
@@ -118,6 +124,7 @@
 				D46E6EAFFFA8697F8252BAFC /* BackendProtocol.swift */,
 				C054F18E9178A1188A15F944 /* CodexTweaksApp.swift */,
 				FFBAED99F1376AC7FE90B523 /* GeneratedPresentationContract.swift */,
+				B22B7DEBE5FBCE9231E54815 /* MacOSAgentModeController.swift */,
 				F53421B72A4751C046846C60 /* MainWindowView.swift */,
 				66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */,
 				F8078C635651B9E12B769538 /* PresentationColor.swift */,
@@ -340,6 +347,8 @@
 				F9BD6403F32C8B53E9D5A3CD /* BackendProtocol.swift in Sources */,
 				E9018AF1601AFC8EDE07CBAD /* BackendProtocolTests.swift in Sources */,
 				11D0A0C67D1E7535E8108E77 /* GeneratedPresentationContract.swift in Sources */,
+				449D39639DA5A3CAA538DE84 /* MacOSAgentModeController.swift in Sources */,
+				011657CA192D77BD6934112A /* MacOSAgentModePreferencesTests.swift in Sources */,
 				8E9FE8CC865A7D7541AFAF34 /* PresentationText.swift in Sources */,
 				25D7CED87BB3FF932128784D /* TestIsolationTests.swift in Sources */,
 				2EE2FDCBD2FE24842E25C45D /* TweakPackageBuilder.swift in Sources */,
@@ -371,6 +380,7 @@
 				9B6EFD795DE11B522F620A75 /* BackendProtocol.swift in Sources */,
 				20E842FFBE6F22751C5C61E9 /* CodexTweaksApp.swift in Sources */,
 				801487236AF0F6797A8F1341 /* GeneratedPresentationContract.swift in Sources */,
+				6849FFE28185FF575CCF57F7 /* MacOSAgentModeController.swift in Sources */,
 				444F810FBED64BEF61A48D3D /* MainWindowView.swift in Sources */,
 				9BD95832142FCA6E642F6E68 /* MenuBarContent.swift in Sources */,
 				5DBF9AC702A390EB5F6499B2 /* PresentationColor.swift in Sources */,

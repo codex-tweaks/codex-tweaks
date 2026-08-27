@@ -46,6 +46,10 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case navOverview = "nav.overview"
     case navPackages = "nav.packages"
     case navUpdates = "nav.updates"
+    case overviewAgentMode = "overview.agentMode"
+    case overviewAgentModeDetail = "overview.agentModeDetail"
+    case overviewAgentModeHideMenuBar = "overview.agentModeHideMenuBar"
+    case overviewAgentModeHideMenuBarDetail = "overview.agentModeHideMenuBarDetail"
     case overviewAiAuthoring = "overview.aiAuthoring"
     case overviewAppPagesOnly = "overview.appPagesOnly"
     case overviewCdpEndpoint = "overview.cdpEndpoint"
@@ -423,6 +427,10 @@ enum GeneratedPresentationDefaults {
         .navOverview: "Overview",
         .navPackages: "Packages",
         .navUpdates: "About & Updates",
+        .overviewAgentMode: "macOS Agent mode",
+        .overviewAgentModeDetail: "Run as a background accessory and hide the app from the Dock and app switcher. Reopen Codex Tweaks to restore the main window.",
+        .overviewAgentModeHideMenuBar: "Hide menu bar icon",
+        .overviewAgentModeHideMenuBarDetail: "Injection continues while the icon is hidden. Reopen Codex Tweaks from Applications to restore the window.",
         .overviewAiAuthoring: "Create with AI",
         .overviewAppPagesOnly: "app:// pages only",
         .overviewCdpEndpoint: "CDP endpoint",

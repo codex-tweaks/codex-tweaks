@@ -63,11 +63,13 @@ targets:
     # Compile the pure Swift sources directly so XCTest never launches the app.
     sources:
       - path: app/Tests/BackendProtocolTests.swift
+      - path: app/Tests/MacOSAgentModePreferencesTests.swift
       - path: app/Tests/TestIsolationTests.swift
       - path: app/Sources/AppStatus.swift
       - path: app/Sources/BackendJSON.swift
       - path: app/Sources/BackendProtocol.swift
       - path: app/Sources/GeneratedPresentationContract.swift
+      - path: app/Sources/MacOSAgentModeController.swift
       - path: app/Sources/PresentationText.swift
       - path: app/Sources/TweakPackageBuilder.swift
       - path: app/Sources/TweakPackageDependencyResolver.swift

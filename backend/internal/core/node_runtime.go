@@ -263,7 +263,8 @@ func (s *NodeRuntimeSupervisor) runAuthorizedInstallScripts(
 		return err
 	}
 	environmentValues := processEnvironment(filepath.Dir(environment.NodePath), environmentMap())
-	result, err := s.runner.Run(ctx, environment.NPMPath, DependencyInstallWithScriptsArguments, pkg.Directory, environmentValues)
+	executable, arguments := environment.npmInvocation(DependencyInstallWithScriptsArguments)
+	result, err := s.runner.Run(ctx, executable, arguments, pkg.Directory, environmentValues)
 	if err != nil {
 		return err
 	}

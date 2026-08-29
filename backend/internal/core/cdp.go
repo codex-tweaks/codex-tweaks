@@ -20,6 +20,10 @@ var (
 	ErrNoCodexUITargets       = errors.New("没有发现可重启的 Codex 界面")
 )
 
+const targetDOMReadyProbeScript = `(() => ({
+  ready: Boolean(document.documentElement && document.head && document.body)
+}))()`
+
 type CDPTarget struct {
 	ID                   string  `json:"id"`
 	Type                 string  `json:"type"`
@@ -96,8 +100,17 @@ func (s *CDPService) Inject(ctx context.Context, payload Payload, forceGeneratio
 		return CDPInjectionResult{}, err
 	}
 	s.reconcileRendererSessionsLocked(targets)
-	result := CDPInjectionResult{TargetCount: len(targets), PackageErrors: map[string]string{}}
+	result := CDPInjectionResult{PackageErrors: map[string]string{}}
 	for _, target := range targets {
+		ready, err := s.targetDOMReady(ctx, *target.WebSocketDebuggerURL)
+		if err != nil {
+			s.logError(fmt.Sprintf("目标 %s 页面就绪检查失败：%v", target.ID, err))
+			continue
+		}
+		if !ready {
+			continue
+		}
+		result.TargetCount++
 		bridgeSessionID, nodeTokens, settingsAdapter, err := s.rendererBridgeForTargetLocked(ctx, target, payload)
 		if err != nil {
 			s.logError(fmt.Sprintf("目标 %s 无法建立能力通道：%v", target.ID, err))
@@ -122,6 +135,15 @@ func (s *CDPService) Inject(ctx context.Context, payload Payload, forceGeneratio
 		mergeInjectionPackageErrors(result.PackageErrors, value)
 	}
 	return result, nil
+}
+
+func (s *CDPService) targetDOMReady(ctx context.Context, debuggerURL string) (bool, error) {
+	value, err := s.evaluate(ctx, targetDOMReadyProbeScript, debuggerURL)
+	if err != nil {
+		return false, err
+	}
+	ready, _ := value["ready"].(bool)
+	return ready, nil
 }
 
 func mergeInjectionPackageErrors(destination map[string]string, value map[string]any) {

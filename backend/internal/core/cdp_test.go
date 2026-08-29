@@ -57,6 +57,14 @@ func TestInjectUsesSmallProbeAfterInitialRuntimeSetup(t *testing.T) {
 			expression, _ := params["expression"].(string)
 			mutex.Lock()
 			expressions = append(expressions, expression)
+			if expression == targetDOMReadyProbeScript {
+				mutex.Unlock()
+				_ = connection.WriteJSON(map[string]any{
+					"id":     command["id"],
+					"result": map[string]any{"result": map[string]any{"value": map[string]any{"ready": true}}},
+				})
+				return
+			}
 			isFullInjection := strings.Contains(expression, packageMarker)
 			status := "stale"
 			if isFullInjection {
@@ -97,14 +105,80 @@ func TestInjectUsesSmallProbeAfterInitialRuntimeSetup(t *testing.T) {
 
 	mutex.Lock()
 	defer mutex.Unlock()
-	if len(expressions) != 3 {
-		t.Fatalf("CDP evaluate count = %d, want probe + initial injection + probe", len(expressions))
+	if len(expressions) != 5 {
+		t.Fatalf("CDP evaluate count = %d, want readiness + probe + initial injection + readiness + probe", len(expressions))
 	}
-	if strings.Contains(expressions[0], packageMarker) || !strings.Contains(expressions[1], packageMarker) || strings.Contains(expressions[2], packageMarker) {
+	if expressions[0] != targetDOMReadyProbeScript || strings.Contains(expressions[1], packageMarker) || !strings.Contains(expressions[2], packageMarker) || expressions[3] != targetDOMReadyProbeScript || strings.Contains(expressions[4], packageMarker) {
 		t.Fatalf("unexpected probe/full injection sequence: %#v", expressions)
 	}
-	if len(expressions[2]) >= len(expressions[1])/4 {
-		t.Fatalf("unchanged runtime probe is not lightweight: probe=%d full=%d", len(expressions[2]), len(expressions[1]))
+	if len(expressions[4]) >= len(expressions[2])/4 {
+		t.Fatalf("unchanged runtime probe is not lightweight: probe=%d full=%d", len(expressions[4]), len(expressions[2]))
+	}
+}
+
+func TestInjectWaitsForDOMReady(t *testing.T) {
+	upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
+	ready := false
+	fullInjectionCount := 0
+	var server *httptest.Server
+	server = httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/json/list":
+			debuggerURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/devtools/page/codex-main"
+			_ = json.NewEncoder(writer).Encode([]CDPTarget{{
+				ID: "codex-main", Type: "page", URL: "app://-/index.html", WebSocketDebuggerURL: &debuggerURL,
+			}})
+		case "/devtools/page/codex-main":
+			connection, err := upgrader.Upgrade(writer, request, nil)
+			if err != nil {
+				return
+			}
+			defer connection.Close()
+			command := map[string]any{}
+			if connection.ReadJSON(&command) != nil {
+				return
+			}
+			params, _ := command["params"].(map[string]any)
+			expression, _ := params["expression"].(string)
+			value := map[string]any{"status": "stale", "packageErrors": []any{}}
+			if expression == targetDOMReadyProbeScript {
+				value = map[string]any{"ready": ready}
+			} else if strings.Contains(expression, "slow-start-package") {
+				fullInjectionCount++
+				value = map[string]any{"status": "injected", "packageErrors": []any{}}
+			}
+			_ = connection.WriteJSON(map[string]any{
+				"id": command["id"], "result": map[string]any{"result": map[string]any{"value": value}},
+			})
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	defer server.Close()
+
+	service := NewCDPService(nil)
+	service.Endpoint = server.URL + "/json/list"
+	service.AllowedOrigin = server.URL
+	payload := Payload{Version: "stable", Packages: []CompiledPackage{{
+		ID: "sample", Name: "sample", Version: "1.0.0",
+		JavaScript: "module.exports.activate = () => {}; /* slow-start-package */",
+	}}}
+
+	result, err := service.Inject(context.Background(), payload, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.TargetCount != 0 || result.SuccessCount != 0 || fullInjectionCount != 0 {
+		t.Fatalf("unready target was injected: result=%#v full=%d", result, fullInjectionCount)
+	}
+
+	ready = true
+	result, err = service.Inject(context.Background(), payload, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.TargetCount != 1 || result.SuccessCount != 1 || fullInjectionCount != 1 {
+		t.Fatalf("ready target was not injected: result=%#v full=%d", result, fullInjectionCount)
 	}
 }
 

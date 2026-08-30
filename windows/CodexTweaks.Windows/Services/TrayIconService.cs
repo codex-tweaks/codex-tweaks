@@ -35,6 +35,8 @@ internal sealed class TrayIconService : IDisposable
     private readonly MenuFlyoutItem _checkUpdatesItem = new();
     private readonly MenuFlyoutItem _quitItem = new();
     private bool _disposed;
+    private bool _registered;
+    private bool _reregistering;
 
     internal TrayIconService(MainWindow window, Func<Task> quitAsync)
     {
@@ -49,6 +51,7 @@ internal sealed class TrayIconService : IDisposable
             _window.TrayStateChanged += Window_TrayStateChanged;
             Refresh();
             _notifyIcon.ForceCreate(enablesEfficiencyMode: false);
+            _registered = true;
         }
         catch
         {
@@ -155,6 +158,10 @@ internal sealed class TrayIconService : IDisposable
         _notifyIcon.LeftClickCommand = _showWindowCommand;
         _notifyIcon.RightClickCommand = _refreshMenuCommand;
         _notifyIcon.NoLeftClickDelay = true;
+
+        // Explorer announces its own restart with the TaskbarCreated message; the shell record is
+        // gone at that point and has to be added again.
+        _notifyIcon.TrayIcon.MessageWindow.TaskbarCreated += MessageWindow_TaskbarCreated;
     }
 
     private void ShowWindowCommand_ExecuteRequested(
@@ -239,9 +246,89 @@ internal sealed class TrayIconService : IDisposable
             && !_window.ApplyingUpdate;
         _quitItem.Text = Text(PresentationTextKey.MenuQuit);
 
-        _notifyIcon.ToolTipText = Limit(
+        ApplyToolTip(Limit(
             $"{Text(PresentationTextKey.AppName)} — {statusTitle}",
-            MaximumTooltipLength);
+            MaximumTooltipLength));
+    }
+
+    private void ApplyToolTip(string tooltip)
+    {
+        if (!_registered || _reregistering)
+        {
+            // The icon is being created right now; creation sends this tooltip to the shell.
+            _notifyIcon.ToolTipText = tooltip;
+            return;
+        }
+
+        if (!_notifyIcon.TrayIcon.IsCreated)
+        {
+            EnsureRegistered("the notification area icon is not registered");
+            return;
+        }
+
+        try
+        {
+            _notifyIcon.ToolTipText = tooltip;
+
+            // ToolTipText only reaches the shell when the value changes, so ask the shell on every
+            // refresh instead: modifying the icon fails once the shell forgot our record.
+            _notifyIcon.TrayIcon.UpdateToolTip(tooltip);
+        }
+        catch (InvalidOperationException exception)
+        {
+            App.Log($"The shell rejected a tray tooltip update: {exception.Message}");
+            EnsureRegistered("the shell no longer knows our notification area icon");
+        }
+    }
+
+    private void EnsureRegistered(string reason)
+    {
+        if (_disposed || _reregistering)
+        {
+            return;
+        }
+
+        App.Log($"Re-adding the notification area icon because {reason}.");
+        _reregistering = true;
+        try
+        {
+            // Create() does nothing while the library still believes the icon exists, so the record
+            // has to be dropped first; that also clears a record the shell may still be holding.
+            _ = _notifyIcon.TrayIcon.TryRemove();
+            _notifyIcon.TrayIcon.Create();
+            // Restores the menu text, enabled state and tooltip on the fresh record; the icon,
+            // context flyout and click commands live on the TaskbarIcon and survive re-creation.
+            Refresh();
+            _notifyIcon.TrayIcon.UpdateToolTip(_notifyIcon.ToolTipText ?? string.Empty);
+            App.Log("Notification area icon re-added.");
+        }
+        catch (InvalidOperationException exception)
+        {
+            App.Log($"Re-adding the notification area icon failed: {exception.Message}");
+        }
+        finally
+        {
+            _reregistering = false;
+        }
+    }
+
+    private void MessageWindow_TaskbarCreated(object? sender, EventArgs args)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        App.Log("Taskbar was recreated; restoring the notification area icon.");
+        if (_notifyIcon.TrayIcon.IsCreated)
+        {
+            // H.NotifyIcon already re-added the icon but swallows failures and leaves the record
+            // without our tooltip; Refresh() reapplies it and repairs a failed re-add.
+            Refresh();
+            return;
+        }
+
+        EnsureRegistered("the taskbar was recreated");
     }
 
     private async Task RunBackendFromTrayAsync(string method, object? parameters = null)
@@ -362,6 +449,7 @@ internal sealed class TrayIconService : IDisposable
         _window.TrayStateChanged -= Window_TrayStateChanged;
         _showWindowCommand.ExecuteRequested -= ShowWindowCommand_ExecuteRequested;
         _refreshMenuCommand.ExecuteRequested -= RefreshMenuCommand_ExecuteRequested;
+        _notifyIcon.TrayIcon.MessageWindow.TaskbarCreated -= MessageWindow_TaskbarCreated;
         _notifyIcon.LeftClickCommand = null;
         _notifyIcon.RightClickCommand = null;
         _notifyIcon.Dispose();

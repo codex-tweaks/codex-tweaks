@@ -443,7 +443,7 @@ enum GeneratedPresentationDefaults {
         .overviewCopySkill: "Copy the Codex Tweaks package-development Skill",
         .overviewCopySkillDetail: "The copied content comes directly from the project's shared SKILL.md, so it always uses the same package protocol, dependencies, and validation rules. Add your specific request after pasting it.",
         .overviewDisableGPUAcceleration: "Disable Codex GPU acceleration",
-        .overviewDisableGPUAccelerationDetail: "Off by default. Enable only if the Codex interface or pet animation freezes because of GPU compositing issues. Takes effect the next time Codex starts or restarts; it switches to CPU software rendering and may reduce graphics performance or increase CPU usage.",
+        .overviewDisableGPUAccelerationDetail: "Off by default. Try enabling it only when Codex has graphics-rendering, transparent-window, or interface-compositing issues. It takes effect the next time Codex starts or restarts, switches to CPU software rendering, and may reduce graphics performance or increase CPU usage.",
         .overviewDisabledDetail: "Codex remains open, but no custom content is applied.",
         .overviewEnable: "Enable interface enhancements",
         .overviewEnableDetail: "Turning this off removes injected styles, components, and event listeners.",

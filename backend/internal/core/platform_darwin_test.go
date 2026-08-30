@@ -47,8 +47,8 @@ func TestDarwinPlatformUsesNonInteractiveProcessControlsAndLoopbackLaunch(t *tes
 			t.Fatalf("launch omitted %q: %#v", argument, launch.arguments)
 		}
 	}
-	if containsString(launch.arguments, "--disable-gpu") {
-		t.Fatalf("macOS launch must ignore the Windows-only GPU option: %#v", launch.arguments)
+	if !containsString(launch.arguments, "--disable-gpu") {
+		t.Fatalf("macOS launch omitted the configured GPU option: %#v", launch.arguments)
 	}
 }
 
@@ -93,8 +93,8 @@ func TestDarwinPlatformRestartUsesApplicationNameAndWaitsForLaunchServicesExit(t
 	if invocations[1].executable != "/usr/bin/lsappinfo" || invocations[2].executable != "/usr/bin/open" {
 		t.Fatalf("unexpected restart sequence: %#v", invocations)
 	}
-	if containsString(invocations[2].arguments, "--disable-gpu") {
-		t.Fatalf("macOS restart must ignore the Windows-only GPU option: %#v", invocations[2].arguments)
+	if !containsString(invocations[2].arguments, "--disable-gpu") {
+		t.Fatalf("macOS restart omitted the configured GPU option: %#v", invocations[2].arguments)
 	}
 }
 

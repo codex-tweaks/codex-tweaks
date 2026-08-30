@@ -41,8 +41,9 @@ func (p *darwinPlatform) ActivateCodex(ctx context.Context) error {
 	return requireCommandSuccess(result, "激活 Codex")
 }
 
-func (p *darwinPlatform) LaunchCodex(ctx context.Context, _ CodexLaunchOptions) error {
-	arguments := append([]string{"-n", "-b", CodexBundleIdentifier, "--args"}, CodexDebuggingArguments...)
+func (p *darwinPlatform) LaunchCodex(ctx context.Context, options CodexLaunchOptions) error {
+	launchArguments := codexLaunchArguments(options)
+	arguments := append([]string{"-n", "-b", CodexBundleIdentifier, "--args"}, launchArguments...)
 	result, err := p.runner.Run(ctx, "/usr/bin/open", arguments, "", environmentSlice(environmentMap()))
 	if err != nil {
 		return err
@@ -52,7 +53,7 @@ func (p *darwinPlatform) LaunchCodex(ctx context.Context, _ CodexLaunchOptions) 
 	}
 	const fallback = "/Applications/ChatGPT.app"
 	if directoryExists(fallback) {
-		arguments = append([]string{"-n", fallback, "--args"}, CodexDebuggingArguments...)
+		arguments = append([]string{"-n", fallback, "--args"}, launchArguments...)
 		result, err = p.runner.Run(ctx, "/usr/bin/open", arguments, "", environmentSlice(environmentMap()))
 		if err != nil {
 			return err

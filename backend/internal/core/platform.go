@@ -20,6 +20,14 @@ type CodexLaunchOptions struct {
 	DisableGPUAcceleration bool
 }
 
+func codexLaunchArguments(options CodexLaunchOptions) []string {
+	arguments := append([]string(nil), CodexDebuggingArguments...)
+	if options.DisableGPUAcceleration {
+		arguments = append(arguments, "--disable-gpu")
+	}
+	return arguments
+}
+
 type Platform interface {
 	IsCodexRunning(ctx context.Context) (bool, error)
 	ActivateCodex(ctx context.Context) error

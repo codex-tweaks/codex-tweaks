@@ -59,7 +59,7 @@ func (p *windowsPlatform) ActivateCodex(ctx context.Context) error {
 }
 
 func (p *windowsPlatform) LaunchCodex(ctx context.Context, options CodexLaunchOptions) error {
-	launchArguments := windowsCodexLaunchArguments(options)
+	launchArguments := codexLaunchArguments(options)
 	if executable := p.locateUnpackagedCodex(); executable != "" {
 		return p.launchUnpackagedCodex(ctx, executable, launchArguments)
 	}
@@ -107,14 +107,6 @@ func (p *windowsPlatform) RestartCodex(ctx context.Context, options CodexLaunchO
 	}
 	_, _ = p.runner.Run(ctx, "taskkill.exe", []string{"/F", "/IM", "ChatGPT.exe", "/T"}, "", environmentSlice(environmentMap()))
 	return p.LaunchCodex(ctx, options)
-}
-
-func windowsCodexLaunchArguments(options CodexLaunchOptions) []string {
-	arguments := append([]string(nil), CodexDebuggingArguments...)
-	if options.DisableGPUAcceleration {
-		arguments = append(arguments, "--disable-gpu")
-	}
-	return arguments
 }
 
 func (*windowsPlatform) Architecture() string { return runtime.GOARCH }

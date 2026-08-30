@@ -92,7 +92,6 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.zgccrui.CodexTweaksBundleTests
         GENERATE_INFOPLIST_FILE: YES
         MACOSX_DEPLOYMENT_TARGET: "14.0"
-
 schemes:
   CodexTweaks:
     build:

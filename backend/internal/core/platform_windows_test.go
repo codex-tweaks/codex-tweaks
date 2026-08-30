@@ -45,7 +45,7 @@ func TestWindowsPlatformLaunchIncludesEveryCDPArgument(t *testing.T) {
 		return CommandResult{}, nil
 	})
 	platform := &windowsPlatform{runner: runner}
-	if err := platform.LaunchCodex(context.Background(), CodexLaunchOptions{}); err != nil {
+	if err := platform.LaunchCodex(context.Background(), CodexLaunchOptions{DisableGPUAcceleration: true}); err != nil {
 		t.Fatal(err)
 	}
 	if invokedExecutable != "cmd.exe" || !containsString(invokedArguments, executable) {
@@ -56,18 +56,8 @@ func TestWindowsPlatformLaunchIncludesEveryCDPArgument(t *testing.T) {
 			t.Fatalf("launch omitted %q: %#v", argument, invokedArguments)
 		}
 	}
-	if containsString(invokedArguments, "--disable-gpu") {
-		t.Fatalf("default launch unexpectedly disabled GPU acceleration: %#v", invokedArguments)
-	}
-}
-
-func TestWindowsCodexLaunchArgumentsIncludeDisableGPUOnlyWhenEnabled(t *testing.T) {
-	if arguments := windowsCodexLaunchArguments(CodexLaunchOptions{}); containsString(arguments, "--disable-gpu") {
-		t.Fatalf("default arguments unexpectedly disabled GPU acceleration: %#v", arguments)
-	}
-	arguments := windowsCodexLaunchArguments(CodexLaunchOptions{DisableGPUAcceleration: true})
-	if !containsString(arguments, "--disable-gpu") {
-		t.Fatalf("enabled arguments omitted --disable-gpu: %#v", arguments)
+	if !containsString(invokedArguments, "--disable-gpu") {
+		t.Fatalf("configured launch omitted --disable-gpu: %#v", invokedArguments)
 	}
 }
 

@@ -44,6 +44,16 @@ final class AppModel: ObservableObject {
         }
     }
 
+    @Published var isGPUAccelerationDisabled = false {
+        didSet {
+            guard !isApplyingSnapshot, oldValue != isGPUAccelerationDisabled else { return }
+            command(
+                "setDisableGPUAcceleration",
+                BoolParameter(enabled: isGPUAccelerationDisabled)
+            )
+        }
+    }
+
     @Published var isDeveloperMode = false {
         didSet {
             guard !isApplyingSnapshot, oldValue != isDeveloperMode else { return }
@@ -471,6 +481,7 @@ final class AppModel: ObservableObject {
         presentation = snapshot.presentation
         isApplyingSnapshot = true
         isEnabled = snapshot.enabled
+        isGPUAccelerationDisabled = snapshot.disableGPUAcceleration
         isDeveloperMode = snapshot.developerMode
         isDeveloperAllowUnknownNode = snapshot.developerAllowUnknownNode
         isApplyingSnapshot = false

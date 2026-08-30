@@ -80,6 +80,7 @@ struct BackendAppSnapshot: Codable, Equatable, Sendable {
     let presentation: BackendPresentationContract
     let status: BackendAppStatus
     let enabled: Bool
+    let disableGPUAcceleration: Bool
     let developerMode: Bool
     let developerAllowUnknownNode: Bool
     let packages: [TweakPackage]

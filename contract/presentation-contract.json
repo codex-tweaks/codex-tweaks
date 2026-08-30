@@ -75,6 +75,8 @@
     "overview.copyHint": "Paste it into Codex or another agent after copying",
     "overview.copySkill": "Copy the Codex Tweaks package-development Skill",
     "overview.copySkillDetail": "The copied content comes directly from the project's shared SKILL.md, so it always uses the same package protocol, dependencies, and validation rules. Add your specific request after pasting it.",
+    "overview.disableGPUAcceleration": "Disable Codex GPU acceleration",
+    "overview.disableGPUAccelerationDetail": "Off by default. Try enabling it only when Codex has graphics-rendering, transparent-window, or interface-compositing issues. It takes effect the next time Codex starts or restarts, switches to CPU software rendering, and may reduce graphics performance or increase CPU usage.",
     "overview.disabledDetail": "Codex remains open, but no custom content is applied.",
     "overview.enable": "Enable interface enhancements",
     "overview.enableDetail": "Turning this off removes injected styles, components, and event listeners.",
@@ -364,6 +366,7 @@
     "restartCodex",
     "restartCodexUI",
     "setDeveloperMode",
+    "setDisableGPUAcceleration",
     "setEnabled",
     "setLanguage",
     "setUpdatePreferences"

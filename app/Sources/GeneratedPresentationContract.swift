@@ -58,6 +58,8 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case overviewCopyHint = "overview.copyHint"
     case overviewCopySkill = "overview.copySkill"
     case overviewCopySkillDetail = "overview.copySkillDetail"
+    case overviewDisableGPUAcceleration = "overview.disableGPUAcceleration"
+    case overviewDisableGPUAccelerationDetail = "overview.disableGPUAccelerationDetail"
     case overviewDisabledDetail = "overview.disabledDetail"
     case overviewEnable = "overview.enable"
     case overviewEnableDetail = "overview.enableDetail"
@@ -338,6 +340,7 @@ struct BackendAvailableActions: Codable, Equatable, Sendable {
     let openLogFile: Bool
     let openRepository: Bool
     let setEnabled: Bool
+    let setDisableGPUAcceleration: Bool
     let setDeveloperMode: Bool
     let reloadPackages: Bool
     let installLocalPackage: Bool
@@ -439,6 +442,8 @@ enum GeneratedPresentationDefaults {
         .overviewCopyHint: "Paste it into Codex or another agent after copying",
         .overviewCopySkill: "Copy the Codex Tweaks package-development Skill",
         .overviewCopySkillDetail: "The copied content comes directly from the project's shared SKILL.md, so it always uses the same package protocol, dependencies, and validation rules. Add your specific request after pasting it.",
+        .overviewDisableGPUAcceleration: "Disable Codex GPU acceleration",
+        .overviewDisableGPUAccelerationDetail: "Off by default. Try enabling it only when Codex has graphics-rendering, transparent-window, or interface-compositing issues. It takes effect the next time Codex starts or restarts, switches to CPU software rendering, and may reduce graphics performance or increase CPU usage.",
         .overviewDisabledDetail: "Codex remains open, but no custom content is applied.",
         .overviewEnable: "Enable interface enhancements",
         .overviewEnableDetail: "Turning this off removes injected styles, components, and event listeners.",
@@ -687,5 +692,5 @@ enum GeneratedPresentationDefaults {
         .updateVersionBuild: "Version {version} (Build {build})",
         .updateViewRelease: "View Release",
     ]
-    static let contract = BackendPresentationContract(version: 2, locale: "en", languagePreference: "auto", languageOrder: ["auto", "zh-CN", "zh-TW", "en", "ja", "ko"], languageOptions: ["auto": "Automatic (System Language)", "en": "English", "ja": "日本語", "ko": "한국어", "zh-CN": "简体中文", "zh-TW": "繁體中文"], text: Dictionary(uniqueKeysWithValues: text.map { ($0.key.rawValue, $0.value) }), tokens: BackendPresentationTokens(windowMinWidth: 820, windowMinHeight: 560, windowDefaultWidth: 920, windowDefaultHeight: 640, navigationWidth: 220, contentMaxWidth: 1120, pagePadding: 32, sectionSpacing: 28, cardPadding: 20, cardCornerRadius: 14, controlSpacing: 12, compactSpacing: 7, statusIconSize: 36, animationFastMS: 120, animationStandardMS: 220, accentColor: "#0A84FF", successColor: "#30D158", warningColor: "#FF9F0A", dangerColor: "#FF453A"), actions: BackendAvailableActions(openCodex: true, restartCodex: false, restartCodexUI: false, reinject: false, openPackagesDirectory: true, openLogFile: true, openRepository: true, setEnabled: true, setDeveloperMode: true, reloadPackages: true, installLocalPackage: true, installRemotePackage: false, checkNodeEnvironment: true, checkGitEnvironment: true, checkManagedPackageUpdates: false, refreshLog: true, clearLog: false, readAuthoringPrompt: false, checkAppUpdate: true, setUpdatePreferences: true, setLanguage: true, installAppUpdate: false), status: BackendStatusPresentation(title: "Starting", detail: "Codex Tweaks is establishing a local connection.", tone: "accent"), platform: BackendPlatformPresentation(operatingSystem: "darwin", architecture: "universal", cdpEndpoint: "127.0.0.1:9335", repositoryURL: "https://github.com/codex-tweaks/codex-tweaks", updateInstallStrategy: "sparkle"))
+    static let contract = BackendPresentationContract(version: 2, locale: "en", languagePreference: "auto", languageOrder: ["auto", "zh-CN", "zh-TW", "en", "ja", "ko"], languageOptions: ["auto": "Automatic (System Language)", "en": "English", "ja": "日本語", "ko": "한국어", "zh-CN": "简体中文", "zh-TW": "繁體中文"], text: Dictionary(uniqueKeysWithValues: text.map { ($0.key.rawValue, $0.value) }), tokens: BackendPresentationTokens(windowMinWidth: 820, windowMinHeight: 560, windowDefaultWidth: 920, windowDefaultHeight: 640, navigationWidth: 220, contentMaxWidth: 1120, pagePadding: 32, sectionSpacing: 28, cardPadding: 20, cardCornerRadius: 14, controlSpacing: 12, compactSpacing: 7, statusIconSize: 36, animationFastMS: 120, animationStandardMS: 220, accentColor: "#0A84FF", successColor: "#30D158", warningColor: "#FF9F0A", dangerColor: "#FF453A"), actions: BackendAvailableActions(openCodex: true, restartCodex: false, restartCodexUI: false, reinject: false, openPackagesDirectory: true, openLogFile: true, openRepository: true, setEnabled: true, setDisableGPUAcceleration: true, setDeveloperMode: true, reloadPackages: true, installLocalPackage: true, installRemotePackage: false, checkNodeEnvironment: true, checkGitEnvironment: true, checkManagedPackageUpdates: false, refreshLog: true, clearLog: false, readAuthoringPrompt: false, checkAppUpdate: true, setUpdatePreferences: true, setLanguage: true, installAppUpdate: false), status: BackendStatusPresentation(title: "Starting", detail: "Codex Tweaks is establishing a local connection.", tone: "accent"), platform: BackendPlatformPresentation(operatingSystem: "darwin", architecture: "universal", cdpEndpoint: "127.0.0.1:9335", repositoryURL: "https://github.com/codex-tweaks/codex-tweaks", updateInstallStrategy: "sparkle"))
 }

@@ -123,6 +123,14 @@ func (s *Server) dispatch(incoming request) (any, error) {
 			return nil, err
 		}
 		return accepted(c.SetEnabled(params.Enabled))
+	case "setDisableGPUAcceleration":
+		var params struct {
+			Enabled bool `json:"enabled"`
+		}
+		if err := decodeParams(incoming.Params, &params); err != nil {
+			return nil, err
+		}
+		return accepted(c.SetDisableGPUAcceleration(params.Enabled))
 	case "setDeveloperMode":
 		var params struct {
 			Enabled bool `json:"enabled"`

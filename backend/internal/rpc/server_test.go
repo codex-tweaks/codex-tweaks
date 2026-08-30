@@ -49,9 +49,10 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 	}
 	input := strings.NewReader(
 		string(initializeRequest) + "\n" +
-			"{\"id\":2,\"method\":\"setLanguage\",\"params\":{\"language\":\"ko\"}}\n" +
-			"{\"id\":3,\"method\":\"getState\"}\n" +
-			"{\"id\":4,\"method\":\"shutdown\"}\n",
+			"{\"id\":2,\"method\":\"setDisableGPUAcceleration\",\"params\":{\"enabled\":true}}\n" +
+			"{\"id\":3,\"method\":\"setLanguage\",\"params\":{\"language\":\"ko\"}}\n" +
+			"{\"id\":4,\"method\":\"getState\"}\n" +
+			"{\"id\":5,\"method\":\"shutdown\"}\n",
 	)
 	var output bytes.Buffer
 	server := NewServerWithDependencies(
@@ -79,6 +80,7 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 		Result struct {
 			ProtocolVersion           int  `json:"protocolVersion"`
 			DeveloperAllowUnknownNode bool `json:"developerAllowUnknownNode"`
+			DisableGPUAcceleration    bool `json:"disableGPUAcceleration"`
 			Presentation              struct {
 				Locale             string `json:"locale"`
 				LanguagePreference string `json:"languagePreference"`
@@ -99,7 +101,7 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 			}
 			foundInitialize = true
 		}
-		if header.ID != nil && *header.ID == 3 {
+		if header.ID != nil && *header.ID == 4 {
 			if err := json.Unmarshal([]byte(line), &state); err != nil {
 				t.Fatalf("decode getState: %v", err)
 			}
@@ -111,8 +113,9 @@ func TestServerInitializesControllerWithoutBackgroundSideEffects(t *testing.T) {
 		t.Fatalf("initialize response not found in %q", output.String())
 	}
 	if !foundState || state.Result.ProtocolVersion != core.ProtocolVersion || state.Result.DeveloperAllowUnknownNode ||
+		!state.Result.DisableGPUAcceleration ||
 		state.Result.Presentation.Locale != "ko" || state.Result.Presentation.LanguagePreference != "ko" {
-		t.Fatalf("getState did not expose the v9 language and Node defaults: %q", output.String())
+		t.Fatalf("getState did not expose the v10 settings and Node defaults: %q", output.String())
 	}
 }
 

@@ -1276,6 +1276,16 @@ private struct OverviewView: View {
             Divider()
 
             OverviewToggleRow(
+                title: model.text(.overviewDisableGPUAcceleration),
+                detail: model.text(.overviewDisableGPUAccelerationDetail),
+                accessibilityIdentifier: AppAccessibilityIdentifier.disableGPUAccelerationToggle,
+                isOn: $model.isGPUAccelerationDisabled
+            )
+            .disabled(!model.actions.setDisableGPUAcceleration)
+
+            Divider()
+
+            OverviewToggleRow(
                 title: model.text(.overviewHideDockIcon),
                 detail: model.text(.overviewHideDockIconDetail),
                 accessibilityIdentifier: AppAccessibilityIdentifier.hideDockIconToggle,

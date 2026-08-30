@@ -45,7 +45,7 @@ func TestWindowsPlatformLaunchIncludesEveryCDPArgument(t *testing.T) {
 		return CommandResult{}, nil
 	})
 	platform := &windowsPlatform{runner: runner}
-	if err := platform.LaunchCodex(context.Background()); err != nil {
+	if err := platform.LaunchCodex(context.Background(), CodexLaunchOptions{DisableGPUAcceleration: true}); err != nil {
 		t.Fatal(err)
 	}
 	if invokedExecutable != "cmd.exe" || !containsString(invokedArguments, executable) {
@@ -55,6 +55,9 @@ func TestWindowsPlatformLaunchIncludesEveryCDPArgument(t *testing.T) {
 		if !containsString(invokedArguments, argument) {
 			t.Fatalf("launch omitted %q: %#v", argument, invokedArguments)
 		}
+	}
+	if !containsString(invokedArguments, "--disable-gpu") {
+		t.Fatalf("configured launch omitted --disable-gpu: %#v", invokedArguments)
 	}
 }
 
@@ -88,7 +91,7 @@ func TestWindowsPlatformDiscoversAndActivatesPackagedCodex(t *testing.T) {
 			return 42, nil
 		},
 	}
-	if err := platform.LaunchCodex(context.Background()); err != nil {
+	if err := platform.LaunchCodex(context.Background(), CodexLaunchOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if invokedCommand != "powershell.exe" || activatedID != appUserModelID {
@@ -111,7 +114,7 @@ func TestWindowsPackagedCodexActivationIntegration(t *testing.T) {
 	if appUserModelID := platform.locatePackagedCodex(ctx); appUserModelID == "" {
 		t.Fatal("Microsoft Store Codex package was not discovered")
 	}
-	if err := platform.RestartCodex(ctx); err != nil {
+	if err := platform.RestartCodex(ctx, CodexLaunchOptions{}); err != nil {
 		t.Fatal(err)
 	}
 

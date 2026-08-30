@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 enum AppAccessibilityIdentifier {
+    static let disableGPUAccelerationToggle = "overview.disableGPUAcceleration.toggle"
     static let hideDockIconToggle = "overview.hideDockIcon.toggle"
     static let hideMenuBarIconToggle = "overview.hideMenuBarIcon.toggle"
     static let interfaceEnhancementsToggle = "overview.interfaceEnhancements.toggle"

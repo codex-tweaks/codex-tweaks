@@ -41,8 +41,9 @@ func (p *darwinPlatform) ActivateCodex(ctx context.Context) error {
 	return requireCommandSuccess(result, "激活 Codex")
 }
 
-func (p *darwinPlatform) LaunchCodex(ctx context.Context) error {
-	arguments := append([]string{"-n", "-b", CodexBundleIdentifier, "--args"}, CodexDebuggingArguments...)
+func (p *darwinPlatform) LaunchCodex(ctx context.Context, options CodexLaunchOptions) error {
+	launchArguments := codexLaunchArguments(options, runtime.GOOS)
+	arguments := append([]string{"-n", "-b", CodexBundleIdentifier, "--args"}, launchArguments...)
 	result, err := p.runner.Run(ctx, "/usr/bin/open", arguments, "", environmentSlice(environmentMap()))
 	if err != nil {
 		return err
@@ -52,7 +53,7 @@ func (p *darwinPlatform) LaunchCodex(ctx context.Context) error {
 	}
 	const fallback = "/Applications/ChatGPT.app"
 	if directoryExists(fallback) {
-		arguments = append([]string{"-n", fallback, "--args"}, CodexDebuggingArguments...)
+		arguments = append([]string{"-n", fallback, "--args"}, launchArguments...)
 		result, err = p.runner.Run(ctx, "/usr/bin/open", arguments, "", environmentSlice(environmentMap()))
 		if err != nil {
 			return err
@@ -64,12 +65,12 @@ func (p *darwinPlatform) LaunchCodex(ctx context.Context) error {
 	return errors.New("没有找到 ChatGPT.app（Codex 桌面客户端），或 Codex 启动失败。")
 }
 
-func (p *darwinPlatform) RestartCodex(ctx context.Context) error {
+func (p *darwinPlatform) RestartCodex(ctx context.Context, options CodexLaunchOptions) error {
 	_, _ = p.runner.Run(ctx, "/usr/bin/killall", []string{"-TERM", "ChatGPT"}, "", environmentSlice(environmentMap()))
 	for range 25 {
 		running, _ := p.IsCodexRunning(ctx)
 		if !running {
-			return p.LaunchCodex(ctx)
+			return p.LaunchCodex(ctx, options)
 		}
 		if err := waitContext(ctx, 200*time.Millisecond); err != nil {
 			return err
@@ -79,7 +80,7 @@ func (p *darwinPlatform) RestartCodex(ctx context.Context) error {
 	for range 15 {
 		running, _ := p.IsCodexRunning(ctx)
 		if !running {
-			return p.LaunchCodex(ctx)
+			return p.LaunchCodex(ctx, options)
 		}
 		if err := waitContext(ctx, 200*time.Millisecond); err != nil {
 			return err

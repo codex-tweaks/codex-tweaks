@@ -39,6 +39,7 @@ type AvailableActions struct {
 	OpenLogFile                bool `json:"openLogFile"`
 	OpenRepository             bool `json:"openRepository"`
 	SetEnabled                 bool `json:"setEnabled"`
+	SetDisableGPUAcceleration  bool `json:"setDisableGPUAcceleration"`
 	SetDeveloperMode           bool `json:"setDeveloperMode"`
 	ReloadPackages             bool `json:"reloadPackages"`
 	InstallLocalPackage        bool `json:"installLocalPackage"`
@@ -137,6 +138,7 @@ func NewPresentationContractForPlatform(state PresentationState, operatingSystem
 			OpenLogFile:                true,
 			OpenRepository:             true,
 			SetEnabled:                 !state.DeletingPackage,
+			SetDisableGPUAcceleration:  operatingSystem == "darwin" || operatingSystem == "windows",
 			SetDeveloperMode:           !state.DeletingPackage,
 			ReloadPackages:             !state.DeletingPackage,
 			InstallLocalPackage:        !packageTransferBusy,
@@ -273,6 +275,8 @@ func presentationTextZhCN() map[string]string {
 		"overview.control":                            "控制",
 		"overview.enable":                             "启用界面增强",
 		"overview.enableDetail":                       "停用后会清理已注入的样式、组件和事件监听器。",
+		"overview.disableGPUAcceleration":             "禁用 Codex GPU 加速",
+		"overview.disableGPUAccelerationDetail":       "默认关闭；仅在 Codex 出现图形渲染、透明窗口或界面合成异常时尝试启用。下次启动或重启 Codex 生效；会切换到 CPU 软件渲染，可能降低图形性能并增加 CPU 占用。",
 		"overview.hideDockIcon":                       "隐藏 Dock 图标",
 		"overview.hideDockIconDetail":                 "同时从 Command-Tab 应用切换器中隐藏；关闭窗口后仍会继续后台注入，重新打开 Codex Tweaks 可恢复窗口。",
 		"overview.hideMenuBarIcon":                    "隐藏菜单栏图标",

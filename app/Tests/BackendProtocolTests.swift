@@ -114,10 +114,11 @@ final class BackendProtocolTests: XCTestCase {
             BackendAppSnapshot.self,
             """
             {
-              "protocolVersion": 9,
+              "protocolVersion": 10,
               "presentation": \(presentationJSON),
               "status": {"kind": "connected", "targetCount": 1},
               "enabled": true,
+              "disableGPUAcceleration": false,
               "developerMode": false,
               "developerAllowUnknownNode": false,
               "packages": [],
@@ -159,7 +160,8 @@ final class BackendProtocolTests: XCTestCase {
             }
             """
         )
-        XCTAssertEqual(snapshot.protocolVersion, 9)
+        XCTAssertEqual(snapshot.protocolVersion, 10)
+        XCTAssertFalse(snapshot.disableGPUAcceleration)
         XCTAssertEqual(snapshot.presentation.version, 2)
         XCTAssertEqual(snapshot.status.targetCount, 1)
         XCTAssertFalse(snapshot.developerAllowUnknownNode)

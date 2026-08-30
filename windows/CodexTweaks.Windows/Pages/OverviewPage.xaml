@@ -97,6 +97,27 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel Spacing="3">
                             <TextBlock
+                                x:Name="DisableGPUAccelerationTitle"
+                                Style="{StaticResource CodexBodyTextStyle}"
+                                FontWeight="SemiBold" />
+                            <TextBlock
+                                x:Name="DisableGPUAccelerationDetail"
+                                Style="{StaticResource CodexCaptionTextStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch
+                            x:Name="DisableGPUAccelerationToggle"
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Toggled="DisableGPUAccelerationToggle_Toggled" />
+                    </Grid>
+                    <Border Style="{StaticResource CodexDividerStyle}" />
+                    <Grid ColumnSpacing="20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="3">
+                            <TextBlock
                                 x:Name="RestartCodexUITitle"
                                 Style="{StaticResource CodexBodyTextStyle}"
                                 FontWeight="SemiBold" />

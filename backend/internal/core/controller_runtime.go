@@ -131,7 +131,7 @@ func (c *Controller) Refresh() {
 			c.setStatus(AppStatus{Kind: StatusCodexNotRunning})
 			return
 		}
-		if err := c.platform.LaunchCodex(c.ctx); err != nil {
+		if err := c.platform.LaunchCodex(c.ctx, c.codexLaunchOptions()); err != nil {
 			message := err.Error()
 			c.logger.Error("自动启动 Codex 失败：" + message)
 			c.setStatus(AppStatus{Kind: StatusError, Message: &message})
@@ -219,7 +219,7 @@ func (c *Controller) OpenCodex() error {
 	c.status = AppStatus{Kind: StatusLaunchingCodex}
 	c.mu.Unlock()
 	c.emit()
-	if err := c.platform.LaunchCodex(c.ctx); err != nil {
+	if err := c.platform.LaunchCodex(c.ctx, c.codexLaunchOptions()); err != nil {
 		message := err.Error()
 		c.setStatus(AppStatus{Kind: StatusError, Message: &message})
 		return err
@@ -235,8 +235,9 @@ func (c *Controller) RestartCodex() {
 	c.status = AppStatus{Kind: StatusLaunchingCodex}
 	c.mu.Unlock()
 	c.emit()
+	options := c.codexLaunchOptions()
 	go func() {
-		if err := c.platform.RestartCodex(c.ctx); err != nil {
+		if err := c.platform.RestartCodex(c.ctx, options); err != nil {
 			message := err.Error()
 			c.logger.Error("重启 Codex 失败：" + message)
 			c.setStatus(AppStatus{Kind: StatusError, Message: &message})

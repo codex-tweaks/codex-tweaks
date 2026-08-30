@@ -40,6 +40,7 @@ struct MainWindowView: View {
 
     @ObservedObject var model: AppModel
     @ObservedObject var updateChecker: UpdateChecker
+    @ObservedObject var appVisibilityController: MacOSAppVisibilityController
     @State private var selection: Section? = .overview
 
     var body: some View {
@@ -61,6 +62,7 @@ struct MainWindowView: View {
             case .overview:
                 OverviewView(
                     model: model,
+                    appVisibilityController: appVisibilityController,
                     showPackages: { selection = .packages },
                     showLogs: { selection = .logs }
                 )
@@ -1187,6 +1189,7 @@ private struct GitPackageInstallView: View {
 
 private struct OverviewView: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var appVisibilityController: MacOSAppVisibilityController
     let showPackages: () -> Void
     let showLogs: () -> Void
 
@@ -1262,22 +1265,47 @@ private struct OverviewView: View {
             Text(model.text(.overviewControl))
                 .font(.title2.weight(.semibold))
 
-            HStack(alignment: .center, spacing: 20) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(model.text(.overviewEnable))
-                        .font(.body.weight(.medium))
-                    Text(model.text(.overviewEnableDetail))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Toggle(model.text(.overviewEnable), isOn: $model.isEnabled)
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .accessibilityLabel(model.text(.overviewEnable))
-                    .accessibilityHint(model.text(.overviewEnableDetail))
-                    .disabled(!model.actions.setEnabled)
-            }
+            OverviewToggleRow(
+                title: model.text(.overviewEnable),
+                detail: model.text(.overviewEnableDetail),
+                accessibilityIdentifier: AppAccessibilityIdentifier.interfaceEnhancementsToggle,
+                isOn: $model.isEnabled
+            )
+            .disabled(!model.actions.setEnabled)
+
+            Divider()
+
+            OverviewToggleRow(
+                title: model.text(.overviewDisableGPUAcceleration),
+                detail: model.text(.overviewDisableGPUAccelerationDetail),
+                accessibilityIdentifier: AppAccessibilityIdentifier.disableGPUAccelerationToggle,
+                isOn: $model.isGPUAccelerationDisabled
+            )
+            .disabled(!model.actions.setDisableGPUAcceleration)
+
+            Divider()
+
+            OverviewToggleRow(
+                title: model.text(.overviewHideDockIcon),
+                detail: model.text(.overviewHideDockIconDetail),
+                accessibilityIdentifier: AppAccessibilityIdentifier.hideDockIconToggle,
+                isOn: Binding(
+                    get: { appVisibilityController.hidesDockIcon },
+                    set: { appVisibilityController.setHidesDockIcon($0) }
+                )
+            )
+
+            Divider()
+
+            OverviewToggleRow(
+                title: model.text(.overviewHideMenuBarIcon),
+                detail: model.text(.overviewHideMenuBarIconDetail),
+                accessibilityIdentifier: AppAccessibilityIdentifier.hideMenuBarIconToggle,
+                isOn: Binding(
+                    get: { appVisibilityController.hidesMenuBarIcon },
+                    set: { appVisibilityController.setHidesMenuBarIcon($0) }
+                )
+            )
 
             Divider()
 
@@ -1447,6 +1475,33 @@ private struct OverviewView: View {
             return .secondary
         default:
             return model.tokens.accentColorValue
+        }
+    }
+}
+
+private struct OverviewToggleRow: View {
+    let title: String
+    let detail: String
+    let accessibilityIdentifier: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 20) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.body.weight(.medium))
+                Text(detail)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            Toggle(title, isOn: $isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .accessibilityIdentifier(accessibilityIdentifier)
+                .accessibilityLabel(title)
+                .accessibilityHint(detail)
         }
     }
 }

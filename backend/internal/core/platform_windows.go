@@ -65,12 +65,13 @@ func (p *windowsPlatform) IsCodexRunning(ctx context.Context) (bool, error) {
 func (p *windowsPlatform) ActivateCodex(ctx context.Context) error {
 	// Starting the registered executable activates an existing single-instance
 	// Electron app and is also the safe fallback when no window is present.
-	return p.LaunchCodex(ctx)
+	return p.LaunchCodex(ctx, CodexLaunchOptions{})
 }
 
-func (p *windowsPlatform) LaunchCodex(ctx context.Context) error {
+func (p *windowsPlatform) LaunchCodex(ctx context.Context, options CodexLaunchOptions) error {
+	launchArguments := codexLaunchArguments(options, runtime.GOOS)
 	if executable := p.locateUnpackagedCodex(); executable != "" {
-		if err := p.launchUnpackagedCodex(ctx, executable); err != nil {
+		if err := p.launchUnpackagedCodex(ctx, executable, launchArguments); err != nil {
 			return err
 		}
 		// cmd.exe starts Codex detached, so the executable is the only thing known about the new
@@ -87,7 +88,7 @@ func (p *windowsPlatform) LaunchCodex(ctx context.Context) error {
 	if activate == nil {
 		activate = activatePackagedApplication
 	}
-	processID, err := activate(appUserModelID, strings.Join(CodexDebuggingArguments, " "))
+	processID, err := activate(appUserModelID, strings.Join(launchArguments, " "))
 	if err != nil {
 		return fmt.Errorf("启动 Codex Windows 应用失败：%w", err)
 	}
@@ -129,9 +130,9 @@ func (p *windowsPlatform) scheduleNotifyIconRestore(target codexNotifyIconTarget
 	}()
 }
 
-func (p *windowsPlatform) launchUnpackagedCodex(ctx context.Context, executable string) error {
+func (p *windowsPlatform) launchUnpackagedCodex(ctx context.Context, executable string, launchArguments []string) error {
 	arguments := []string{"/D", "/C", "start", "", "/B", executable}
-	arguments = append(arguments, CodexDebuggingArguments...)
+	arguments = append(arguments, launchArguments...)
 	result, err := p.runner.Run(
 		ctx,
 		"cmd.exe",
@@ -145,19 +146,19 @@ func (p *windowsPlatform) launchUnpackagedCodex(ctx context.Context, executable 
 	return requireCommandSuccess(result, "启动 Codex")
 }
 
-func (p *windowsPlatform) RestartCodex(ctx context.Context) error {
+func (p *windowsPlatform) RestartCodex(ctx context.Context, options CodexLaunchOptions) error {
 	_, _ = p.runner.Run(ctx, "taskkill.exe", []string{"/IM", "ChatGPT.exe", "/T"}, "", environmentSlice(environmentMap()))
 	for range 25 {
 		running, _ := p.IsCodexRunning(ctx)
 		if !running {
-			return p.LaunchCodex(ctx)
+			return p.LaunchCodex(ctx, options)
 		}
 		if err := waitContext(ctx, 200*time.Millisecond); err != nil {
 			return err
 		}
 	}
 	_, _ = p.runner.Run(ctx, "taskkill.exe", []string{"/F", "/IM", "ChatGPT.exe", "/T"}, "", environmentSlice(environmentMap()))
-	return p.LaunchCodex(ctx)
+	return p.LaunchCodex(ctx, options)
 }
 
 func (*windowsPlatform) Architecture() string { return runtime.GOARCH }

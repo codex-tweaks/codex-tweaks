@@ -16,10 +16,10 @@ func (unsupportedPlatform) IsCodexRunning(context.Context) (bool, error) { retur
 func (unsupportedPlatform) ActivateCodex(context.Context) error {
 	return errors.New("当前系统尚未实现 Codex 桌面控制")
 }
-func (unsupportedPlatform) LaunchCodex(context.Context) error {
+func (unsupportedPlatform) LaunchCodex(context.Context, CodexLaunchOptions) error {
 	return errors.New("当前系统尚未实现 Codex 桌面控制")
 }
-func (unsupportedPlatform) RestartCodex(context.Context) error {
+func (unsupportedPlatform) RestartCodex(context.Context, CodexLaunchOptions) error {
 	return errors.New("当前系统尚未实现 Codex 桌面控制")
 }
 func (unsupportedPlatform) Architecture() string { return runtime.GOARCH }

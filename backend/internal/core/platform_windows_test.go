@@ -49,7 +49,7 @@ func TestWindowsPlatformLaunchIncludesEveryCDPArgument(t *testing.T) {
 		runner:            runner,
 		restoreNotifyIcon: func(context.Context, codexNotifyIconTarget) error { return nil },
 	}
-	if err := platform.LaunchCodex(context.Background()); err != nil {
+	if err := platform.LaunchCodex(context.Background(), CodexLaunchOptions{DisableGPUAcceleration: true}); err != nil {
 		t.Fatal(err)
 	}
 	if invokedExecutable != "cmd.exe" || !containsString(invokedArguments, executable) {
@@ -59,6 +59,9 @@ func TestWindowsPlatformLaunchIncludesEveryCDPArgument(t *testing.T) {
 		if !containsString(invokedArguments, argument) {
 			t.Fatalf("launch omitted %q: %#v", argument, invokedArguments)
 		}
+	}
+	if !containsString(invokedArguments, "--disable-gpu") {
+		t.Fatalf("configured launch omitted --disable-gpu: %#v", invokedArguments)
 	}
 }
 
@@ -97,7 +100,7 @@ func TestWindowsPlatformDiscoversAndActivatesPackagedCodex(t *testing.T) {
 			return nil
 		},
 	}
-	if err := platform.LaunchCodex(context.Background()); err != nil {
+	if err := platform.LaunchCodex(context.Background(), CodexLaunchOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if invokedCommand != "powershell.exe" || activatedID != appUserModelID {
@@ -144,7 +147,7 @@ func TestWindowsPlatformSchedulesCodexNotifyIconRepairAfterRestart(t *testing.T)
 			return nil
 		},
 	}
-	if err := platform.RestartCodex(context.Background()); err != nil {
+	if err := platform.RestartCodex(context.Background(), CodexLaunchOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	select {
@@ -183,7 +186,7 @@ func TestWindowsPlatformLogsAFailedCodexNotifyIconRepair(t *testing.T) {
 		},
 	}
 	platform.useBackgroundRepairContext(context.Background(), logger)
-	if err := platform.LaunchCodex(context.Background()); err != nil {
+	if err := platform.LaunchCodex(context.Background(), CodexLaunchOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.Now().Add(5 * time.Second)
@@ -210,7 +213,7 @@ func TestWindowsPackagedCodexActivationIntegration(t *testing.T) {
 	if appUserModelID := platform.locatePackagedCodex(ctx); appUserModelID == "" {
 		t.Fatal("Microsoft Store Codex package was not discovered")
 	}
-	if err := platform.RestartCodex(ctx); err != nil {
+	if err := platform.RestartCodex(ctx, CodexLaunchOptions{}); err != nil {
 		t.Fatal(err)
 	}
 

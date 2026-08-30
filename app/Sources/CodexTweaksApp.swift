@@ -1,18 +1,28 @@
 import AppKit
 import SwiftUI
 
+enum AppAccessibilityIdentifier {
+    static let disableGPUAccelerationToggle = "overview.disableGPUAcceleration.toggle"
+    static let hideDockIconToggle = "overview.hideDockIcon.toggle"
+    static let hideMenuBarIconToggle = "overview.hideMenuBarIcon.toggle"
+    static let interfaceEnhancementsToggle = "overview.interfaceEnhancements.toggle"
+    static let menuBarExtra = "menuBarExtra"
+}
+
 @main
 struct CodexTweaksApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var model = AppModel.shared
     @StateObject private var updateChecker = UpdateChecker.shared
-    // A test host must never register a second status item for the installed app.
-    @State private var isMenuBarExtraInserted =
-        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
+    @StateObject private var appVisibilityController = MacOSAppVisibilityController.shared
 
     var body: some Scene {
         Window(model.text(.appName), id: "main") {
-            MainWindowView(model: model, updateChecker: updateChecker)
+            MainWindowView(
+                model: model,
+                updateChecker: updateChecker,
+                appVisibilityController: appVisibilityController
+            )
                 .environment(\.locale, model.displayLocale)
                 .frame(
                     minWidth: CGFloat(model.tokens.windowMinWidth),
@@ -24,7 +34,7 @@ struct CodexTweaksApp: App {
             height: CGFloat(model.tokens.windowDefaultHeight)
         )
 
-        MenuBarExtra(isInserted: $isMenuBarExtraInserted) {
+        MenuBarExtra(isInserted: menuBarExtraInsertion) {
             MenuBarContent(
                 appDelegate: appDelegate,
                 model: model,
@@ -34,8 +44,23 @@ struct CodexTweaksApp: App {
         } label: {
             Image(systemName: model.menuBarSymbol)
                 .accessibilityLabel(model.statusTitle)
+                .accessibilityIdentifier(AppAccessibilityIdentifier.menuBarExtra)
         }
         .menuBarExtraStyle(.menu)
+    }
+
+    private var menuBarExtraInsertion: Binding<Bool> {
+        Binding(
+            get: {
+                ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
+                    && appVisibilityController.shouldShowMenuBarIcon
+            },
+            set: { inserted in
+                guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
+                      !inserted else { return }
+                appVisibilityController.setHidesMenuBarIcon(true)
+            }
+        )
     }
 }
 
@@ -48,6 +73,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             NSApplication.shared.setActivationPolicy(.prohibited)
             return
         }
+
+        // 在窗口创建前应用激活策略，避免启动时短暂出现 Dock 图标。
+        MacOSAppVisibilityController.shared.applyCurrentActivationPolicy()
 
         NotificationCenter.default.addObserver(
             self,
@@ -99,10 +127,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationShouldHandleReopen(
         _ sender: NSApplication,
-        hasVisibleWindows visibleWindows: Bool
+        hasVisibleWindows _: Bool
     ) -> Bool {
-        guard !visibleWindows else { return true }
-        return !showMainWindow()
+        !showMainWindow()
     }
 
     @objc

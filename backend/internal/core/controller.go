@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const ProtocolVersion = 9
+const ProtocolVersion = 10
 
 type Controller struct {
 	mu                  sync.Mutex
@@ -192,13 +192,14 @@ func (c *Controller) loadConfiguration() error {
 		return err
 	} else {
 		configuration = AppConfiguration{
-			SchemaVersion:         1,
-			Enabled:               true,
-			DisabledPackageIDs:    []string{},
-			Language:              LanguageAuto,
-			UpdateChannel:         UpdateStable,
-			UpdateAutoCheck:       true,
-			UpdateSkippedVersions: []string{},
+			SchemaVersion:          1,
+			Enabled:                true,
+			DisableGPUAcceleration: false,
+			DisabledPackageIDs:     []string{},
+			Language:               LanguageAuto,
+			UpdateChannel:          UpdateStable,
+			UpdateAutoCheck:        true,
+			UpdateSkippedVersions:  []string{},
 		}
 	}
 	if configuration.SchemaVersion != 1 {
@@ -311,7 +312,8 @@ func (c *Controller) Snapshot() AppSnapshot {
 	})
 	return AppSnapshot{
 		ProtocolVersion: ProtocolVersion, Presentation: presentation, Status: c.status,
-		Enabled: c.config.Enabled, DeveloperMode: c.config.DeveloperMode,
+		Enabled: c.config.Enabled, DisableGPUAcceleration: c.config.DisableGPUAcceleration,
+		DeveloperMode:             c.config.DeveloperMode,
 		DeveloperAllowUnknownNode: c.developerAllowUnknownNode, Packages: packageViews,
 		DisabledPackageIDs: sortedTrueKeys(c.disabledPackageIDs), BuildingPackageIDs: sortedTrueKeys(c.buildingPackageIDs),
 		ExportingPackageIDs: sortedTrueKeys(c.exportingPackageIDs),

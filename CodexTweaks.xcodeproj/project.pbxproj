@@ -23,6 +23,7 @@
 		5FE6D726E81A975E1CB72074 /* TweakPackageRemoteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECCE54F4FF81979BBBAB5CC /* TweakPackageRemoteManager.swift */; };
 		6532DEC8D6DCE8C0132E9CE6 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 0F5EBF53A71E7D7C218FDA82 /* AppIcon.icon */; };
 		6731E4E39CE874F8DCDE4299 /* BackendBundleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3586156F50638102CDE5AB2C /* BackendBundleTests.swift */; };
+		6877641669E4507083E30A63 /* MacOSAppVisibilityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 627661EEB9F033E025CC5AC1 /* MacOSAppVisibilityController.swift */; };
 		694CBBB375BCEEA660DB5163 /* AppStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C58B083F3D76F43FDC45941 /* AppStatus.swift */; };
 		6EE55D663F4BA7C8C133418A /* Tweaks in Resources */ = {isa = PBXBuildFile; fileRef = ED5BA7E20B31B6B736EF5A33 /* Tweaks */; };
 		7824CE3D453FE429FB9B83A2 /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 710989624754350B9549F3B1 /* UpdateChecker.swift */; };
@@ -61,6 +62,7 @@
 		5CB762E9C9F9FD3D4400C65F /* TweakPackageDependencyResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageDependencyResolver.swift; sourceTree = "<group>"; };
 		5D1399191FB6A71DF433F592 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
 		5ECD0C73EE0D60F0F6A53202 /* BackendClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendClient.swift; sourceTree = "<group>"; };
+		627661EEB9F033E025CC5AC1 /* MacOSAppVisibilityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacOSAppVisibilityController.swift; sourceTree = "<group>"; };
 		63708A61AFD3EB99BE1C3359 /* TweakPackageBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakPackageBuilder.swift; sourceTree = "<group>"; };
 		66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarContent.swift; sourceTree = "<group>"; };
 		68689767E171B444813D5B27 /* BuiltAppBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuiltAppBundle.swift; sourceTree = "<group>"; };
@@ -118,6 +120,7 @@
 				D46E6EAFFFA8697F8252BAFC /* BackendProtocol.swift */,
 				C054F18E9178A1188A15F944 /* CodexTweaksApp.swift */,
 				FFBAED99F1376AC7FE90B523 /* GeneratedPresentationContract.swift */,
+				627661EEB9F033E025CC5AC1 /* MacOSAppVisibilityController.swift */,
 				F53421B72A4751C046846C60 /* MainWindowView.swift */,
 				66D2C341CFA9C0CFC0CCB4EE /* MenuBarContent.swift */,
 				F8078C635651B9E12B769538 /* PresentationColor.swift */,
@@ -371,6 +374,7 @@
 				9B6EFD795DE11B522F620A75 /* BackendProtocol.swift in Sources */,
 				20E842FFBE6F22751C5C61E9 /* CodexTweaksApp.swift in Sources */,
 				801487236AF0F6797A8F1341 /* GeneratedPresentationContract.swift in Sources */,
+				6877641669E4507083E30A63 /* MacOSAppVisibilityController.swift in Sources */,
 				444F810FBED64BEF61A48D3D /* MainWindowView.swift in Sources */,
 				9BD95832142FCA6E642F6E68 /* MenuBarContent.swift in Sources */,
 				5DBF9AC702A390EB5F6499B2 /* PresentationColor.swift in Sources */,

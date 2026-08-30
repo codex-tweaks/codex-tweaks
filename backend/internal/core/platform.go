@@ -16,11 +16,28 @@ var CodexDebuggingArguments = []string{
 	"--remote-allow-origins=" + CodexCDPOrigin,
 }
 
+type CodexLaunchOptions struct {
+	DisableGPUAcceleration bool
+}
+
+func codexLaunchArguments(options CodexLaunchOptions, operatingSystem string) []string {
+	arguments := append([]string(nil), CodexDebuggingArguments...)
+	if !options.DisableGPUAcceleration {
+		return arguments
+	}
+	if operatingSystem == "darwin" {
+		arguments = append(arguments, "--use-gl=angle", "--use-angle=swiftshader")
+	} else {
+		arguments = append(arguments, "--disable-gpu")
+	}
+	return arguments
+}
+
 type Platform interface {
 	IsCodexRunning(ctx context.Context) (bool, error)
 	ActivateCodex(ctx context.Context) error
-	LaunchCodex(ctx context.Context) error
-	RestartCodex(ctx context.Context) error
+	LaunchCodex(ctx context.Context, options CodexLaunchOptions) error
+	RestartCodex(ctx context.Context, options CodexLaunchOptions) error
 	Architecture() string
 }
 

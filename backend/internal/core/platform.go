@@ -20,9 +20,14 @@ type CodexLaunchOptions struct {
 	DisableGPUAcceleration bool
 }
 
-func codexLaunchArguments(options CodexLaunchOptions) []string {
+func codexLaunchArguments(options CodexLaunchOptions, operatingSystem string) []string {
 	arguments := append([]string(nil), CodexDebuggingArguments...)
-	if options.DisableGPUAcceleration {
+	if !options.DisableGPUAcceleration {
+		return arguments
+	}
+	if operatingSystem == "darwin" {
+		arguments = append(arguments, "--use-gl=angle", "--use-angle=swiftshader")
+	} else {
 		arguments = append(arguments, "--disable-gpu")
 	}
 	return arguments

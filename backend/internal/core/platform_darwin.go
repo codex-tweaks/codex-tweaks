@@ -42,7 +42,7 @@ func (p *darwinPlatform) ActivateCodex(ctx context.Context) error {
 }
 
 func (p *darwinPlatform) LaunchCodex(ctx context.Context, options CodexLaunchOptions) error {
-	launchArguments := codexLaunchArguments(options)
+	launchArguments := codexLaunchArguments(options, runtime.GOOS)
 	arguments := append([]string{"-n", "-b", CodexBundleIdentifier, "--args"}, launchArguments...)
 	result, err := p.runner.Run(ctx, "/usr/bin/open", arguments, "", environmentSlice(environmentMap()))
 	if err != nil {

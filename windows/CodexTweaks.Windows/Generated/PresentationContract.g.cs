@@ -574,7 +574,7 @@ internal static class PresentationDefaults
         [PresentationTextKey.OverviewCopySkill] = "Copy the Codex Tweaks package-development Skill",
         [PresentationTextKey.OverviewCopySkillDetail] = "The copied content comes directly from the project's shared SKILL.md, so it always uses the same package protocol, dependencies, and validation rules. Add your specific request after pasting it.",
         [PresentationTextKey.OverviewDisableGPUAcceleration] = "Disable Codex GPU acceleration",
-        [PresentationTextKey.OverviewDisableGPUAccelerationDetail] = "Off by default. Enable only if the Codex interface or pet animation freezes because of GPU compositing issues. Takes effect the next time Codex starts or restarts; it may reduce graphics performance and increase CPU usage.",
+        [PresentationTextKey.OverviewDisableGPUAccelerationDetail] = "Off by default. Enable only if the Codex interface or pet animation freezes because of GPU compositing issues. Takes effect the next time Codex starts or restarts; it switches to CPU software rendering and may reduce graphics performance or increase CPU usage.",
         [PresentationTextKey.OverviewDisabledDetail] = "Codex remains open, but no custom content is applied.",
         [PresentationTextKey.OverviewEnable] = "Enable interface enhancements",
         [PresentationTextKey.OverviewEnableDetail] = "Turning this off removes injected styles, components, and event listeners.",

@@ -59,7 +59,7 @@ func (p *windowsPlatform) ActivateCodex(ctx context.Context) error {
 }
 
 func (p *windowsPlatform) LaunchCodex(ctx context.Context, options CodexLaunchOptions) error {
-	launchArguments := codexLaunchArguments(options)
+	launchArguments := codexLaunchArguments(options, runtime.GOOS)
 	if executable := p.locateUnpackagedCodex(); executable != "" {
 		return p.launchUnpackagedCodex(ctx, executable, launchArguments)
 	}

@@ -3,6 +3,16 @@
     <channel>
         <title>Codex Tweaks</title>
         <item>
+            <title>3.5.5</title>
+            <pubDate>Sun, 30 Aug 2026 13:52:43 +0000</pubDate>
+            <link>https://github.com/codex-tweaks/codex-tweaks/releases/tag/v3.5.5-beta.1</link>
+            <sparkle:channel>beta</sparkle:channel>
+            <sparkle:version>40</sparkle:version>
+            <sparkle:shortVersionString>3.5.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/codex-tweaks/codex-tweaks/releases/download/v3.5.5-beta.1/Codex-Tweaks-v3.5.5-beta.1-sparkle.zip" length="11674545" type="application/octet-stream" sparkle:edSignature="q5Qb90kPemkuRMcQbbaHcZhf75PIc+SSwedCRs/rkGH2dighi/jPI9Twjmj5BChrix9B7o83yIpQQ8VoU5G7Cg=="/>
+        </item>
+        <item>
             <title>3.5.4</title>
             <pubDate>Sun, 30 Aug 2026 12:08:38 +0000</pubDate>
             <link>https://github.com/codex-tweaks/codex-tweaks/releases/tag/v3.5.4-beta.1</link>
@@ -125,6 +135,6 @@
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: LiuVX3qqmFvM7ALl0pKK9712SULBf+uckC1gCQ9BLol+OZwCpm864sRcjPbbhVms/DL2/5NPexTJIrjKoAHNAg==
-length: 9688
+edSignature: 2HFdZau6Q6dUQ6inakpCwnWF0bq937x3arXwzFncXJqNGoTtpgrX9uPnSrvE7KrtTcVluGEpfcmrxKPNf0ZMDg==
+length: 10475
 -->

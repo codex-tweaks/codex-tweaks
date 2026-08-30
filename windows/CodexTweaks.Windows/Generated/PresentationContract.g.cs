@@ -66,6 +66,10 @@ internal static class PresentationTextKey
     internal const string OverviewEnable = "overview.enable";
     internal const string OverviewEnableDetail = "overview.enableDetail";
     internal const string OverviewErrorDetail = "overview.errorDetail";
+    internal const string OverviewHideDockIcon = "overview.hideDockIcon";
+    internal const string OverviewHideDockIconDetail = "overview.hideDockIconDetail";
+    internal const string OverviewHideMenuBarIcon = "overview.hideMenuBarIcon";
+    internal const string OverviewHideMenuBarIconDetail = "overview.hideMenuBarIconDetail";
     internal const string OverviewInjectionScope = "overview.injectionScope";
     internal const string OverviewLoadOrder = "overview.loadOrder";
     internal const string OverviewLoadOrderDetail = "overview.loadOrderDetail";
@@ -568,6 +572,10 @@ internal static class PresentationDefaults
         [PresentationTextKey.OverviewEnable] = "Enable interface enhancements",
         [PresentationTextKey.OverviewEnableDetail] = "Turning this off removes injected styles, components, and event listeners.",
         [PresentationTextKey.OverviewErrorDetail] = "See the runtime logs for details.",
+        [PresentationTextKey.OverviewHideDockIcon] = "Hide Dock icon",
+        [PresentationTextKey.OverviewHideDockIconDetail] = "Also hides the app from the Command-Tab app switcher. Background injection continues after closing the window; reopen Codex Tweaks to restore it.",
+        [PresentationTextKey.OverviewHideMenuBarIcon] = "Hide menu bar icon",
+        [PresentationTextKey.OverviewHideMenuBarIconDetail] = "Injection continues while the icon is hidden. Reopen Codex Tweaks from Applications to restore the window.",
         [PresentationTextKey.OverviewInjectionScope] = "Injection scope",
         [PresentationTextKey.OverviewLoadOrder] = "Package load order",
         [PresentationTextKey.OverviewLoadOrderDetail] = "Dependency topology first, then effective user priority from lowest to highest",

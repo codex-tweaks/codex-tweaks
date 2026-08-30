@@ -33,8 +33,9 @@ if ($null -ne $package) {
 type windowsPackageActivator func(appUserModelID, arguments string) (uint32, error)
 
 type windowsPlatform struct {
-	runner           CommandRunner
-	activatePackaged windowsPackageActivator
+	runner            CommandRunner
+	activatePackaged  windowsPackageActivator
+	restoreNotifyIcon func(context.Context) error
 }
 
 func NewPlatform(runner CommandRunner) Platform {
@@ -60,7 +61,11 @@ func (p *windowsPlatform) ActivateCodex(ctx context.Context) error {
 
 func (p *windowsPlatform) LaunchCodex(ctx context.Context) error {
 	if executable := p.locateUnpackagedCodex(); executable != "" {
-		return p.launchUnpackagedCodex(ctx, executable)
+		if err := p.launchUnpackagedCodex(ctx, executable); err != nil {
+			return err
+		}
+		p.scheduleNotifyIconRestore(ctx)
+		return nil
 	}
 
 	appUserModelID := p.locatePackagedCodex(ctx)
@@ -74,7 +79,21 @@ func (p *windowsPlatform) LaunchCodex(ctx context.Context) error {
 	if _, err := activate(appUserModelID, strings.Join(CodexDebuggingArguments, " ")); err != nil {
 		return fmt.Errorf("启动 Codex Windows 应用失败：%w", err)
 	}
+	p.scheduleNotifyIconRestore(ctx)
 	return nil
+}
+
+// Codex adds its notification area icon while it starts up, so the repair has to wait for the new
+// instance. It runs in the background because starting Codex must neither block on it nor fail when
+// the icon cannot be repaired.
+func (p *windowsPlatform) scheduleNotifyIconRestore(ctx context.Context) {
+	restore := p.restoreNotifyIcon
+	if restore == nil {
+		restore = restoreCodexNotifyIcon
+	}
+	go func() {
+		_ = restore(ctx)
+	}()
 }
 
 func (p *windowsPlatform) launchUnpackagedCodex(ctx context.Context, executable string) error {

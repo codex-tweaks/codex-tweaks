@@ -44,7 +44,10 @@ func TestWindowsPlatformLaunchIncludesEveryCDPArgument(t *testing.T) {
 		invokedArguments = append([]string(nil), arguments...)
 		return CommandResult{}, nil
 	})
-	platform := &windowsPlatform{runner: runner}
+	platform := &windowsPlatform{
+		runner:            runner,
+		restoreNotifyIcon: func(context.Context) error { return nil },
+	}
 	if err := platform.LaunchCodex(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -87,6 +90,7 @@ func TestWindowsPlatformDiscoversAndActivatesPackagedCodex(t *testing.T) {
 			activatedArguments = arguments
 			return 42, nil
 		},
+		restoreNotifyIcon: func(context.Context) error { return nil },
 	}
 	if err := platform.LaunchCodex(context.Background()); err != nil {
 		t.Fatal(err)
@@ -98,6 +102,39 @@ func TestWindowsPlatformDiscoversAndActivatesPackagedCodex(t *testing.T) {
 		if !strings.Contains(activatedArguments, argument) {
 			t.Fatalf("activation omitted %q: %q", argument, activatedArguments)
 		}
+	}
+}
+
+func TestWindowsPlatformRepairsCodexNotifyIconAfterRestart(t *testing.T) {
+	executable := filepath.Join(t.TempDir(), "ChatGPT.exe")
+	if err := os.WriteFile(executable, []byte("test"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CODEX_APP_PATH", executable)
+	runner := windowsCommandRunnerFunc(func(
+		_ context.Context,
+		_ string,
+		_ []string,
+		_ string,
+		_ []string,
+	) (CommandResult, error) {
+		return CommandResult{}, nil
+	})
+	restored := make(chan struct{}, 1)
+	platform := &windowsPlatform{
+		runner: runner,
+		restoreNotifyIcon: func(context.Context) error {
+			restored <- struct{}{}
+			return nil
+		},
+	}
+	if err := platform.RestartCodex(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-restored:
+	case <-time.After(5 * time.Second):
+		t.Fatal("restarting Codex did not ask Codex to add its notification area icon again")
 	}
 }
 

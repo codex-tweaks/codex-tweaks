@@ -464,7 +464,7 @@ final class AppModel: ObservableObject {
     func sendUpdateCommand(_ method: String) { command(method) }
 
     private func apply(_ snapshot: BackendAppSnapshot) {
-        guard snapshot.protocolVersion == 9 else {
+        guard snapshot.protocolVersion == 10 else {
             status = .error(text(.appProtocolMismatch))
             return
         }

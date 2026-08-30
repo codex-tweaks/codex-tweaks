@@ -248,6 +248,9 @@ internal sealed class BackendAppSnapshot
     [JsonPropertyName("enabled")]
     public bool Enabled { get; init; }
 
+    [JsonPropertyName("disableGPUAcceleration")]
+    public bool DisableGPUAcceleration { get; init; }
+
     [JsonPropertyName("developerMode")]
     public bool DeveloperMode { get; init; }
 

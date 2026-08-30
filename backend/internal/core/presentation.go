@@ -39,6 +39,7 @@ type AvailableActions struct {
 	OpenLogFile                bool `json:"openLogFile"`
 	OpenRepository             bool `json:"openRepository"`
 	SetEnabled                 bool `json:"setEnabled"`
+	SetDisableGPUAcceleration  bool `json:"setDisableGPUAcceleration"`
 	SetDeveloperMode           bool `json:"setDeveloperMode"`
 	ReloadPackages             bool `json:"reloadPackages"`
 	InstallLocalPackage        bool `json:"installLocalPackage"`
@@ -137,6 +138,7 @@ func NewPresentationContractForPlatform(state PresentationState, operatingSystem
 			OpenLogFile:                true,
 			OpenRepository:             true,
 			SetEnabled:                 !state.DeletingPackage,
+			SetDisableGPUAcceleration:  operatingSystem == "windows",
 			SetDeveloperMode:           !state.DeletingPackage,
 			ReloadPackages:             !state.DeletingPackage,
 			InstallLocalPackage:        !packageTransferBusy,
@@ -273,6 +275,8 @@ func presentationTextZhCN() map[string]string {
 		"overview.control":                            "控制",
 		"overview.enable":                             "启用界面增强",
 		"overview.enableDetail":                       "停用后会清理已注入的样式、组件和事件监听器。",
+		"overview.disableGPUAcceleration":             "禁用 Codex GPU 加速（Windows）",
+		"overview.disableGPUAccelerationDetail":       "默认关闭；仅在透明宠物冻结时启用。下次启动或重启 Codex 生效；会关闭硬件加速，可能降低图形性能并增加 CPU 占用。",
 		"overview.reinject":                           "重新注入",
 		"overview.restartCodexUI":                     "重启 Codex 界面",
 		"overview.restartCodexUIDetail":               "只重新加载界面，不退出 Codex；界面被功能包卡住时可用来恢复。",

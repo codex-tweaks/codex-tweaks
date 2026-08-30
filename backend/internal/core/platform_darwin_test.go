@@ -28,7 +28,7 @@ func TestDarwinPlatformUsesNonInteractiveProcessControlsAndLoopbackLaunch(t *tes
 	if err := platform.ActivateCodex(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if err := platform.LaunchCodex(context.Background()); err != nil {
+	if err := platform.LaunchCodex(context.Background(), CodexLaunchOptions{DisableGPUAcceleration: true}); err != nil {
 		t.Fatal(err)
 	}
 	if len(invocations) != 3 || invocations[0].executable != "/usr/bin/lsappinfo" || invocations[1].executable != "/usr/bin/open" {
@@ -46,6 +46,9 @@ func TestDarwinPlatformUsesNonInteractiveProcessControlsAndLoopbackLaunch(t *tes
 		if !containsString(launch.arguments, argument) {
 			t.Fatalf("launch omitted %q: %#v", argument, launch.arguments)
 		}
+	}
+	if containsString(launch.arguments, "--disable-gpu") {
+		t.Fatalf("macOS launch must ignore the Windows-only GPU option: %#v", launch.arguments)
 	}
 }
 
@@ -77,7 +80,7 @@ func TestDarwinPlatformRestartUsesApplicationNameAndWaitsForLaunchServicesExit(t
 		return CommandResult{}, nil
 	})
 
-	if err := NewPlatform(runner).RestartCodex(context.Background()); err != nil {
+	if err := NewPlatform(runner).RestartCodex(context.Background(), CodexLaunchOptions{DisableGPUAcceleration: true}); err != nil {
 		t.Fatal(err)
 	}
 	if len(invocations) != 3 {
@@ -89,6 +92,9 @@ func TestDarwinPlatformRestartUsesApplicationNameAndWaitsForLaunchServicesExit(t
 	}
 	if invocations[1].executable != "/usr/bin/lsappinfo" || invocations[2].executable != "/usr/bin/open" {
 		t.Fatalf("unexpected restart sequence: %#v", invocations)
+	}
+	if containsString(invocations[2].arguments, "--disable-gpu") {
+		t.Fatalf("macOS restart must ignore the Windows-only GPU option: %#v", invocations[2].arguments)
 	}
 }
 

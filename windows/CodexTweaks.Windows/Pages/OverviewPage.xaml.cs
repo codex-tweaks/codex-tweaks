@@ -53,6 +53,10 @@ public sealed partial class OverviewPage : Page
             EnableDetail.Text = host.Text(PresentationTextKey.OverviewEnableDetail);
             EnableToggle.IsOn = snapshot.Enabled;
             EnableToggle.IsEnabled = snapshot.Presentation.Actions.SetEnabled;
+            DisableGPUAccelerationTitle.Text = host.Text(PresentationTextKey.OverviewDisableGPUAcceleration);
+            DisableGPUAccelerationDetail.Text = host.Text(PresentationTextKey.OverviewDisableGPUAccelerationDetail);
+            DisableGPUAccelerationToggle.IsOn = snapshot.DisableGPUAcceleration;
+            DisableGPUAccelerationToggle.IsEnabled = snapshot.Presentation.Actions.SetDisableGPUAcceleration;
             OpenCodexButtonText.Text = host.Text(snapshot.Presentation.Actions.OpenCodex
                 ? PresentationTextKey.OverviewOpenCodex
                 : PresentationTextKey.StatusLaunchingCodexTitle);
@@ -109,6 +113,18 @@ public sealed partial class OverviewPage : Page
             return;
         }
         await _host.RunBackendAsync("setEnabled", new { enabled = EnableToggle.IsOn });
+    }
+
+    private async void DisableGPUAccelerationToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_rendering || _host is null || _snapshot is null
+            || DisableGPUAccelerationToggle.IsOn == _snapshot.DisableGPUAcceleration)
+        {
+            return;
+        }
+        await _host.RunBackendAsync(
+            "setDisableGPUAcceleration",
+            new { enabled = DisableGPUAccelerationToggle.IsOn });
     }
 
     private async void OpenCodexButton_Click(object sender, RoutedEventArgs e) =>

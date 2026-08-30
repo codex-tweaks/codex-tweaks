@@ -136,6 +136,9 @@ func TestPresentationContractCanBeGeneratedForAnExplicitPlatform(t *testing.T) {
 	if contract.Platform.UpdateInstallStrategy != "velopack" || !contract.Actions.InstallAppUpdate {
 		t.Fatalf("Windows update presentation is incomplete: %#v %#v", contract.Platform, contract.Actions)
 	}
+	if !contract.Actions.SetDisableGPUAcceleration {
+		t.Fatalf("Windows GPU compatibility action is unavailable: %#v", contract.Actions)
+	}
 }
 
 func TestPresentationContractUsesSparkleForMacOSUpdates(t *testing.T) {
@@ -146,6 +149,9 @@ func TestPresentationContractUsesSparkleForMacOSUpdates(t *testing.T) {
 	)
 	if contract.Platform.UpdateInstallStrategy != "sparkle" || !contract.Actions.InstallAppUpdate {
 		t.Fatalf("macOS update presentation is incomplete: %#v %#v", contract.Platform, contract.Actions)
+	}
+	if contract.Actions.SetDisableGPUAcceleration {
+		t.Fatalf("macOS must not expose the Windows-only GPU action: %#v", contract.Actions)
 	}
 }
 

@@ -16,10 +16,14 @@ var CodexDebuggingArguments = []string{
 	"--remote-allow-origins=" + CodexCDPOrigin,
 }
 
+type CodexLaunchOptions struct {
+	DisableGPUAcceleration bool
+}
+
 type Platform interface {
 	IsCodexRunning(ctx context.Context) (bool, error)
 	ActivateCodex(ctx context.Context) error
-	LaunchCodex(ctx context.Context) error
-	RestartCodex(ctx context.Context) error
+	LaunchCodex(ctx context.Context, options CodexLaunchOptions) error
+	RestartCodex(ctx context.Context, options CodexLaunchOptions) error
 	Architecture() string
 }

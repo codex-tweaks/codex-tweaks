@@ -16,9 +16,13 @@ type idleControllerTestPlatform struct{}
 
 func (idleControllerTestPlatform) IsCodexRunning(context.Context) (bool, error) { return false, nil }
 func (idleControllerTestPlatform) ActivateCodex(context.Context) error          { return nil }
-func (idleControllerTestPlatform) LaunchCodex(context.Context) error            { return nil }
-func (idleControllerTestPlatform) RestartCodex(context.Context) error           { return nil }
-func (idleControllerTestPlatform) Architecture() string                         { return "amd64" }
+func (idleControllerTestPlatform) LaunchCodex(context.Context, CodexLaunchOptions) error {
+	return nil
+}
+func (idleControllerTestPlatform) RestartCodex(context.Context, CodexLaunchOptions) error {
+	return nil
+}
+func (idleControllerTestPlatform) Architecture() string { return "amd64" }
 
 func TestControllerUsesGoDefaultsReadsSkillAndDisablesNewPackages(t *testing.T) {
 	root := t.TempDir()
@@ -131,6 +135,39 @@ func TestControllerDetectsPersistsAndRestoresLanguagePreference(t *testing.T) {
 	}
 	if got := reopened.Snapshot().Presentation; got.LanguagePreference != "auto" || got.Locale != "ja" {
 		t.Fatalf("automatic language was not restored: %#v", got)
+	}
+}
+
+func TestControllerPersistsDisableGPUAccelerationPreference(t *testing.T) {
+	root := t.TempDir()
+	params := InitializeParams{
+		ApplicationSupportDirectory: filepath.Join(root, "support"),
+		CacheDirectory:              filepath.Join(root, "cache"),
+		CurrentVersion:              "0.1.0",
+		BuildNumber:                 "1",
+	}
+	controller, err := NewController(params, nil, ControllerDependencies{DisableBackground: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if controller.Snapshot().DisableGPUAcceleration {
+		t.Fatal("GPU acceleration must remain enabled by default")
+	}
+	if err := controller.SetDisableGPUAcceleration(true); err != nil {
+		t.Fatal(err)
+	}
+	if snapshot := controller.Snapshot(); !snapshot.DisableGPUAcceleration {
+		t.Fatalf("snapshot did not expose the GPU preference: %#v", snapshot)
+	}
+	controller.cancel()
+
+	restarted, err := NewController(params, nil, ControllerDependencies{DisableBackground: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restarted.cancel()
+	if !restarted.Snapshot().DisableGPUAcceleration {
+		t.Fatal("GPU preference was not restored from app-state.json")
 	}
 }
 

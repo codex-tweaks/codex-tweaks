@@ -45,7 +45,7 @@ func TestWindowsPlatformLaunchIncludesEveryCDPArgument(t *testing.T) {
 		return CommandResult{}, nil
 	})
 	platform := &windowsPlatform{runner: runner}
-	if err := platform.LaunchCodex(context.Background()); err != nil {
+	if err := platform.LaunchCodex(context.Background(), CodexLaunchOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if invokedExecutable != "cmd.exe" || !containsString(invokedArguments, executable) {
@@ -55,6 +55,19 @@ func TestWindowsPlatformLaunchIncludesEveryCDPArgument(t *testing.T) {
 		if !containsString(invokedArguments, argument) {
 			t.Fatalf("launch omitted %q: %#v", argument, invokedArguments)
 		}
+	}
+	if containsString(invokedArguments, "--disable-gpu") {
+		t.Fatalf("default launch unexpectedly disabled GPU acceleration: %#v", invokedArguments)
+	}
+}
+
+func TestWindowsCodexLaunchArgumentsIncludeDisableGPUOnlyWhenEnabled(t *testing.T) {
+	if arguments := windowsCodexLaunchArguments(CodexLaunchOptions{}); containsString(arguments, "--disable-gpu") {
+		t.Fatalf("default arguments unexpectedly disabled GPU acceleration: %#v", arguments)
+	}
+	arguments := windowsCodexLaunchArguments(CodexLaunchOptions{DisableGPUAcceleration: true})
+	if !containsString(arguments, "--disable-gpu") {
+		t.Fatalf("enabled arguments omitted --disable-gpu: %#v", arguments)
 	}
 }
 
@@ -88,7 +101,7 @@ func TestWindowsPlatformDiscoversAndActivatesPackagedCodex(t *testing.T) {
 			return 42, nil
 		},
 	}
-	if err := platform.LaunchCodex(context.Background()); err != nil {
+	if err := platform.LaunchCodex(context.Background(), CodexLaunchOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if invokedCommand != "powershell.exe" || activatedID != appUserModelID {
@@ -111,7 +124,7 @@ func TestWindowsPackagedCodexActivationIntegration(t *testing.T) {
 	if appUserModelID := platform.locatePackagedCodex(ctx); appUserModelID == "" {
 		t.Fatal("Microsoft Store Codex package was not discovered")
 	}
-	if err := platform.RestartCodex(ctx); err != nil {
+	if err := platform.RestartCodex(ctx, CodexLaunchOptions{}); err != nil {
 		t.Fatal(err)
 	}
 

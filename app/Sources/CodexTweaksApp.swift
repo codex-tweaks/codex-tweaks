@@ -1,19 +1,26 @@
 import AppKit
 import SwiftUI
 
+enum AppAccessibilityIdentifier {
+    static let hideDockIconToggle = "overview.hideDockIcon.toggle"
+    static let hideMenuBarIconToggle = "overview.hideMenuBarIcon.toggle"
+    static let interfaceEnhancementsToggle = "overview.interfaceEnhancements.toggle"
+    static let menuBarExtra = "menuBarExtra"
+}
+
 @main
 struct CodexTweaksApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var model = AppModel.shared
     @StateObject private var updateChecker = UpdateChecker.shared
-    @StateObject private var agentModeController = MacOSAgentModeController.shared
+    @StateObject private var appVisibilityController = MacOSAppVisibilityController.shared
 
     var body: some Scene {
         Window(model.text(.appName), id: "main") {
             MainWindowView(
                 model: model,
                 updateChecker: updateChecker,
-                agentModeController: agentModeController
+                appVisibilityController: appVisibilityController
             )
                 .environment(\.locale, model.displayLocale)
                 .frame(
@@ -36,6 +43,7 @@ struct CodexTweaksApp: App {
         } label: {
             Image(systemName: model.menuBarSymbol)
                 .accessibilityLabel(model.statusTitle)
+                .accessibilityIdentifier(AppAccessibilityIdentifier.menuBarExtra)
         }
         .menuBarExtraStyle(.menu)
     }
@@ -44,9 +52,13 @@ struct CodexTweaksApp: App {
         Binding(
             get: {
                 ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
-                    && agentModeController.shouldShowMenuBarIcon
+                    && appVisibilityController.shouldShowMenuBarIcon
             },
-            set: { _ in }
+            set: { inserted in
+                guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
+                      !inserted else { return }
+                appVisibilityController.setHidesMenuBarIcon(true)
+            }
         )
     }
 }
@@ -61,8 +73,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             return
         }
 
-        // 在窗口创建前应用激活策略，避免 Agent 模式启动时短暂出现 Dock 图标
-        MacOSAgentModeController.shared.applyCurrentActivationPolicy()
+        // 在窗口创建前应用激活策略，避免启动时短暂出现 Dock 图标。
+        MacOSAppVisibilityController.shared.applyCurrentActivationPolicy()
 
         NotificationCenter.default.addObserver(
             self,
@@ -114,10 +126,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationShouldHandleReopen(
         _ sender: NSApplication,
-        hasVisibleWindows visibleWindows: Bool
+        hasVisibleWindows _: Bool
     ) -> Bool {
-        guard !visibleWindows else { return true }
-        return !showMainWindow()
+        !showMainWindow()
     }
 
     @objc

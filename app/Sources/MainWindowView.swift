@@ -40,7 +40,7 @@ struct MainWindowView: View {
 
     @ObservedObject var model: AppModel
     @ObservedObject var updateChecker: UpdateChecker
-    @ObservedObject var agentModeController: MacOSAgentModeController
+    @ObservedObject var appVisibilityController: MacOSAppVisibilityController
     @State private var selection: Section? = .overview
 
     var body: some View {
@@ -62,7 +62,7 @@ struct MainWindowView: View {
             case .overview:
                 OverviewView(
                     model: model,
-                    agentModeController: agentModeController,
+                    appVisibilityController: appVisibilityController,
                     showPackages: { selection = .packages },
                     showLogs: { selection = .logs }
                 )
@@ -1189,7 +1189,7 @@ private struct GitPackageInstallView: View {
 
 private struct OverviewView: View {
     @ObservedObject var model: AppModel
-    @ObservedObject var agentModeController: MacOSAgentModeController
+    @ObservedObject var appVisibilityController: MacOSAppVisibilityController
     let showPackages: () -> Void
     let showLogs: () -> Void
 
@@ -1265,74 +1265,37 @@ private struct OverviewView: View {
             Text(model.text(.overviewControl))
                 .font(.title2.weight(.semibold))
 
-            HStack(alignment: .center, spacing: 20) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(model.text(.overviewEnable))
-                        .font(.body.weight(.medium))
-                    Text(model.text(.overviewEnableDetail))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Toggle(model.text(.overviewEnable), isOn: $model.isEnabled)
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .accessibilityLabel(model.text(.overviewEnable))
-                    .accessibilityHint(model.text(.overviewEnableDetail))
-                    .disabled(!model.actions.setEnabled)
-            }
+            OverviewToggleRow(
+                title: model.text(.overviewEnable),
+                detail: model.text(.overviewEnableDetail),
+                accessibilityIdentifier: AppAccessibilityIdentifier.interfaceEnhancementsToggle,
+                isOn: $model.isEnabled
+            )
+            .disabled(!model.actions.setEnabled)
 
             Divider()
 
-            HStack(alignment: .center, spacing: 20) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(model.text(.overviewAgentMode))
-                        .font(.body.weight(.medium))
-                    Text(model.text(.overviewAgentModeDetail))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer()
-                Toggle(
-                    model.text(.overviewAgentMode),
-                    isOn: Binding(
-                        get: { agentModeController.isEnabled },
-                        set: { agentModeController.setEnabled($0) }
-                    )
+            OverviewToggleRow(
+                title: model.text(.overviewHideDockIcon),
+                detail: model.text(.overviewHideDockIconDetail),
+                accessibilityIdentifier: AppAccessibilityIdentifier.hideDockIconToggle,
+                isOn: Binding(
+                    get: { appVisibilityController.hidesDockIcon },
+                    set: { appVisibilityController.setHidesDockIcon($0) }
                 )
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .accessibilityLabel(model.text(.overviewAgentMode))
-                .accessibilityHint(model.text(.overviewAgentModeDetail))
-            }
+            )
 
-            if agentModeController.isEnabled {
-                Divider()
+            Divider()
 
-                HStack(alignment: .center, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(model.text(.overviewAgentModeHideMenuBar))
-                            .font(.body.weight(.medium))
-                        Text(model.text(.overviewAgentModeHideMenuBarDetail))
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer()
-                    Toggle(
-                        model.text(.overviewAgentModeHideMenuBar),
-                        isOn: Binding(
-                            get: { agentModeController.hidesMenuBarIcon },
-                            set: { agentModeController.setHidesMenuBarIcon($0) }
-                        )
-                    )
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .accessibilityLabel(model.text(.overviewAgentModeHideMenuBar))
-                    .accessibilityHint(model.text(.overviewAgentModeHideMenuBarDetail))
-                }
-            }
+            OverviewToggleRow(
+                title: model.text(.overviewHideMenuBarIcon),
+                detail: model.text(.overviewHideMenuBarIconDetail),
+                accessibilityIdentifier: AppAccessibilityIdentifier.hideMenuBarIconToggle,
+                isOn: Binding(
+                    get: { appVisibilityController.hidesMenuBarIcon },
+                    set: { appVisibilityController.setHidesMenuBarIcon($0) }
+                )
+            )
 
             Divider()
 
@@ -1502,6 +1465,33 @@ private struct OverviewView: View {
             return .secondary
         default:
             return model.tokens.accentColorValue
+        }
+    }
+}
+
+private struct OverviewToggleRow: View {
+    let title: String
+    let detail: String
+    let accessibilityIdentifier: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 20) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.body.weight(.medium))
+                Text(detail)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            Toggle(title, isOn: $isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .accessibilityIdentifier(accessibilityIdentifier)
+                .accessibilityLabel(title)
+                .accessibilityHint(detail)
         }
     }
 }

@@ -46,10 +46,6 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case navOverview = "nav.overview"
     case navPackages = "nav.packages"
     case navUpdates = "nav.updates"
-    case overviewAgentMode = "overview.agentMode"
-    case overviewAgentModeDetail = "overview.agentModeDetail"
-    case overviewAgentModeHideMenuBar = "overview.agentModeHideMenuBar"
-    case overviewAgentModeHideMenuBarDetail = "overview.agentModeHideMenuBarDetail"
     case overviewAiAuthoring = "overview.aiAuthoring"
     case overviewAppPagesOnly = "overview.appPagesOnly"
     case overviewCdpEndpoint = "overview.cdpEndpoint"
@@ -66,6 +62,10 @@ enum PresentationTextKey: String, CaseIterable, Sendable {
     case overviewEnable = "overview.enable"
     case overviewEnableDetail = "overview.enableDetail"
     case overviewErrorDetail = "overview.errorDetail"
+    case overviewHideDockIcon = "overview.hideDockIcon"
+    case overviewHideDockIconDetail = "overview.hideDockIconDetail"
+    case overviewHideMenuBarIcon = "overview.hideMenuBarIcon"
+    case overviewHideMenuBarIconDetail = "overview.hideMenuBarIconDetail"
     case overviewInjectionScope = "overview.injectionScope"
     case overviewLoadOrder = "overview.loadOrder"
     case overviewLoadOrderDetail = "overview.loadOrderDetail"
@@ -427,10 +427,6 @@ enum GeneratedPresentationDefaults {
         .navOverview: "Overview",
         .navPackages: "Packages",
         .navUpdates: "About & Updates",
-        .overviewAgentMode: "macOS Agent mode",
-        .overviewAgentModeDetail: "Run as a background accessory and hide the app from the Dock and app switcher. Reopen Codex Tweaks to restore the main window.",
-        .overviewAgentModeHideMenuBar: "Hide menu bar icon",
-        .overviewAgentModeHideMenuBarDetail: "Injection continues while the icon is hidden. Reopen Codex Tweaks from Applications to restore the window.",
         .overviewAiAuthoring: "Create with AI",
         .overviewAppPagesOnly: "app:// pages only",
         .overviewCdpEndpoint: "CDP endpoint",
@@ -447,6 +443,10 @@ enum GeneratedPresentationDefaults {
         .overviewEnable: "Enable interface enhancements",
         .overviewEnableDetail: "Turning this off removes injected styles, components, and event listeners.",
         .overviewErrorDetail: "See the runtime logs for details.",
+        .overviewHideDockIcon: "Hide Dock icon",
+        .overviewHideDockIconDetail: "Also hides the app from the Command-Tab app switcher. Background injection continues after closing the window; reopen Codex Tweaks to restore it.",
+        .overviewHideMenuBarIcon: "Hide menu bar icon",
+        .overviewHideMenuBarIconDetail: "Injection continues while the icon is hidden. Reopen Codex Tweaks from Applications to restore the window.",
         .overviewInjectionScope: "Injection scope",
         .overviewLoadOrder: "Package load order",
         .overviewLoadOrderDetail: "Dependency topology first, then effective user priority from lowest to highest",

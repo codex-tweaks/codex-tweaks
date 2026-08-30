@@ -50,10 +50,6 @@ internal static class PresentationTextKey
     internal const string NavOverview = "nav.overview";
     internal const string NavPackages = "nav.packages";
     internal const string NavUpdates = "nav.updates";
-    internal const string OverviewAgentMode = "overview.agentMode";
-    internal const string OverviewAgentModeDetail = "overview.agentModeDetail";
-    internal const string OverviewAgentModeHideMenuBar = "overview.agentModeHideMenuBar";
-    internal const string OverviewAgentModeHideMenuBarDetail = "overview.agentModeHideMenuBarDetail";
     internal const string OverviewAiAuthoring = "overview.aiAuthoring";
     internal const string OverviewAppPagesOnly = "overview.appPagesOnly";
     internal const string OverviewCdpEndpoint = "overview.cdpEndpoint";
@@ -70,6 +66,10 @@ internal static class PresentationTextKey
     internal const string OverviewEnable = "overview.enable";
     internal const string OverviewEnableDetail = "overview.enableDetail";
     internal const string OverviewErrorDetail = "overview.errorDetail";
+    internal const string OverviewHideDockIcon = "overview.hideDockIcon";
+    internal const string OverviewHideDockIconDetail = "overview.hideDockIconDetail";
+    internal const string OverviewHideMenuBarIcon = "overview.hideMenuBarIcon";
+    internal const string OverviewHideMenuBarIconDetail = "overview.hideMenuBarIconDetail";
     internal const string OverviewInjectionScope = "overview.injectionScope";
     internal const string OverviewLoadOrder = "overview.loadOrder";
     internal const string OverviewLoadOrderDetail = "overview.loadOrderDetail";
@@ -556,10 +556,6 @@ internal static class PresentationDefaults
         [PresentationTextKey.NavOverview] = "Overview",
         [PresentationTextKey.NavPackages] = "Packages",
         [PresentationTextKey.NavUpdates] = "About & Updates",
-        [PresentationTextKey.OverviewAgentMode] = "macOS Agent mode",
-        [PresentationTextKey.OverviewAgentModeDetail] = "Run as a background accessory and hide the app from the Dock and app switcher. Reopen Codex Tweaks to restore the main window.",
-        [PresentationTextKey.OverviewAgentModeHideMenuBar] = "Hide menu bar icon",
-        [PresentationTextKey.OverviewAgentModeHideMenuBarDetail] = "Injection continues while the icon is hidden. Reopen Codex Tweaks from Applications to restore the window.",
         [PresentationTextKey.OverviewAiAuthoring] = "Create with AI",
         [PresentationTextKey.OverviewAppPagesOnly] = "app:// pages only",
         [PresentationTextKey.OverviewCdpEndpoint] = "CDP endpoint",
@@ -576,6 +572,10 @@ internal static class PresentationDefaults
         [PresentationTextKey.OverviewEnable] = "Enable interface enhancements",
         [PresentationTextKey.OverviewEnableDetail] = "Turning this off removes injected styles, components, and event listeners.",
         [PresentationTextKey.OverviewErrorDetail] = "See the runtime logs for details.",
+        [PresentationTextKey.OverviewHideDockIcon] = "Hide Dock icon",
+        [PresentationTextKey.OverviewHideDockIconDetail] = "Also hides the app from the Command-Tab app switcher. Background injection continues after closing the window; reopen Codex Tweaks to restore it.",
+        [PresentationTextKey.OverviewHideMenuBarIcon] = "Hide menu bar icon",
+        [PresentationTextKey.OverviewHideMenuBarIconDetail] = "Injection continues while the icon is hidden. Reopen Codex Tweaks from Applications to restore the window.",
         [PresentationTextKey.OverviewInjectionScope] = "Injection scope",
         [PresentationTextKey.OverviewLoadOrder] = "Package load order",
         [PresentationTextKey.OverviewLoadOrderDetail] = "Dependency topology first, then effective user priority from lowest to highest",

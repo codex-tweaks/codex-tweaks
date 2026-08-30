@@ -35,7 +35,16 @@ type windowsPackageActivator func(appUserModelID, arguments string) (uint32, err
 type windowsPlatform struct {
 	runner            CommandRunner
 	activatePackaged  windowsPackageActivator
-	restoreNotifyIcon func(context.Context) error
+	restoreNotifyIcon func(context.Context, codexNotifyIconTarget) error
+	repairLifetime    context.Context
+	repairLogger      *Logger
+}
+
+// The notification area repair keeps running after LaunchCodex returned, so it must not depend on
+// the context of that call; the controller hands over the application lifetime and the log instead.
+func (p *windowsPlatform) useBackgroundRepairContext(ctx context.Context, logger *Logger) {
+	p.repairLifetime = ctx
+	p.repairLogger = logger
 }
 
 func NewPlatform(runner CommandRunner) Platform {
@@ -64,7 +73,9 @@ func (p *windowsPlatform) LaunchCodex(ctx context.Context) error {
 		if err := p.launchUnpackagedCodex(ctx, executable); err != nil {
 			return err
 		}
-		p.scheduleNotifyIconRestore(ctx)
+		// cmd.exe starts Codex detached, so the executable is the only thing known about the new
+		// instance. The full path keeps the repair away from another ChatGPT.exe on the machine.
+		p.scheduleNotifyIconRestore(codexNotifyIconTarget{executablePath: executable})
 		return nil
 	}
 
@@ -76,23 +87,45 @@ func (p *windowsPlatform) LaunchCodex(ctx context.Context) error {
 	if activate == nil {
 		activate = activatePackagedApplication
 	}
-	if _, err := activate(appUserModelID, strings.Join(CodexDebuggingArguments, " ")); err != nil {
+	processID, err := activate(appUserModelID, strings.Join(CodexDebuggingArguments, " "))
+	if err != nil {
 		return fmt.Errorf("启动 Codex Windows 应用失败：%w", err)
 	}
-	p.scheduleNotifyIconRestore(ctx)
+	// The activation reports the process it started or brought to the front, which is the instance
+	// whose icon has to come back.
+	p.scheduleNotifyIconRestore(codexNotifyIconTarget{processID: processID})
 	return nil
 }
 
-// Codex adds its notification area icon while it starts up, so the repair has to wait for the new
-// instance. It runs in the background because starting Codex must neither block on it nor fail when
-// the icon cannot be repaired.
-func (p *windowsPlatform) scheduleNotifyIconRestore(ctx context.Context) {
+// Every launch path schedules the repair, not only RestartCodex: the shell keeps the stale record
+// after any abrupt end of Codex - our own restart, a crash, or the user ending the process - and the
+// next launch runs into the same refusal. Asking a Codex that already owns its icon to add it again
+// is harmless, the shell keeps a single record for it.
+//
+// Codex adds the icon while it starts up, so the repair has to wait for the new instance. It runs in
+// the background because starting Codex must neither block on it nor fail when the icon cannot be
+// repaired, and a failure is reported through the log instead of being dropped.
+func (p *windowsPlatform) scheduleNotifyIconRestore(target codexNotifyIconTarget) {
 	restore := p.restoreNotifyIcon
 	if restore == nil {
 		restore = restoreCodexNotifyIcon
 	}
+	lifetime := p.repairLifetime
+	if lifetime == nil {
+		lifetime = context.Background()
+	}
+	logger := p.repairLogger
 	go func() {
-		_ = restore(ctx)
+		ctx, cancel := context.WithTimeout(lifetime, codexNotifyIconRepairTimeout)
+		defer cancel()
+		err := restore(ctx, target)
+		switch {
+		case err == nil:
+		case lifetime.Err() != nil:
+			// Codex Tweaks is shutting down; the icon of a Codex we are leaving behind is moot.
+		case logger != nil:
+			logger.Warn("Codex 通知区域图标补发失败（" + target.describe() + "）：" + err.Error())
+		}
 	}()
 }
 

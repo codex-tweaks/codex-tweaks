@@ -4,6 +4,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -46,7 +47,7 @@ func TestWindowsPlatformLaunchIncludesEveryCDPArgument(t *testing.T) {
 	})
 	platform := &windowsPlatform{
 		runner:            runner,
-		restoreNotifyIcon: func(context.Context) error { return nil },
+		restoreNotifyIcon: func(context.Context, codexNotifyIconTarget) error { return nil },
 	}
 	if err := platform.LaunchCodex(context.Background()); err != nil {
 		t.Fatal(err)
@@ -83,6 +84,7 @@ func TestWindowsPlatformDiscoversAndActivatesPackagedCodex(t *testing.T) {
 		}
 		return CommandResult{Output: "\ufeff" + appUserModelID + "\r\n"}, nil
 	})
+	repaired := make(chan codexNotifyIconTarget, 1)
 	platform := &windowsPlatform{
 		runner: runner,
 		activatePackaged: func(id, arguments string) (uint32, error) {
@@ -90,7 +92,10 @@ func TestWindowsPlatformDiscoversAndActivatesPackagedCodex(t *testing.T) {
 			activatedArguments = arguments
 			return 42, nil
 		},
-		restoreNotifyIcon: func(context.Context) error { return nil },
+		restoreNotifyIcon: func(_ context.Context, target codexNotifyIconTarget) error {
+			repaired <- target
+			return nil
+		},
 	}
 	if err := platform.LaunchCodex(context.Background()); err != nil {
 		t.Fatal(err)
@@ -103,9 +108,20 @@ func TestWindowsPlatformDiscoversAndActivatesPackagedCodex(t *testing.T) {
 			t.Fatalf("activation omitted %q: %q", argument, activatedArguments)
 		}
 	}
+	select {
+	case target := <-repaired:
+		if target.processID != 42 {
+			t.Fatalf("the notification area repair targets pid %d, want the activated 42", target.processID)
+		}
+		if target.executablePath != "" {
+			t.Fatalf("the packaged repair should rely on the reported pid, got path %q", target.executablePath)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the packaged activation did not schedule a notification area repair")
+	}
 }
 
-func TestWindowsPlatformRepairsCodexNotifyIconAfterRestart(t *testing.T) {
+func TestWindowsPlatformSchedulesCodexNotifyIconRepairAfterRestart(t *testing.T) {
 	executable := filepath.Join(t.TempDir(), "ChatGPT.exe")
 	if err := os.WriteFile(executable, []byte("test"), 0o600); err != nil {
 		t.Fatal(err)
@@ -120,11 +136,11 @@ func TestWindowsPlatformRepairsCodexNotifyIconAfterRestart(t *testing.T) {
 	) (CommandResult, error) {
 		return CommandResult{}, nil
 	})
-	restored := make(chan struct{}, 1)
+	repaired := make(chan codexNotifyIconTarget, 1)
 	platform := &windowsPlatform{
 		runner: runner,
-		restoreNotifyIcon: func(context.Context) error {
-			restored <- struct{}{}
+		restoreNotifyIcon: func(_ context.Context, target codexNotifyIconTarget) error {
+			repaired <- target
 			return nil
 		},
 	}
@@ -132,10 +148,56 @@ func TestWindowsPlatformRepairsCodexNotifyIconAfterRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 	select {
-	case <-restored:
+	case target := <-repaired:
+		if target.executablePath != executable {
+			t.Fatalf("the repair targets %q, want the launched %q", target.executablePath, executable)
+		}
 	case <-time.After(5 * time.Second):
-		t.Fatal("restarting Codex did not ask Codex to add its notification area icon again")
+		t.Fatal("restarting Codex did not schedule a notification area repair")
 	}
+}
+
+func TestWindowsPlatformLogsAFailedCodexNotifyIconRepair(t *testing.T) {
+	executable := filepath.Join(t.TempDir(), "ChatGPT.exe")
+	if err := os.WriteFile(executable, []byte("test"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CODEX_APP_PATH", executable)
+	logger, err := NewLogger(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner := windowsCommandRunnerFunc(func(
+		_ context.Context,
+		_ string,
+		_ []string,
+		_ string,
+		_ []string,
+	) (CommandResult, error) {
+		return CommandResult{}, nil
+	})
+	platform := &windowsPlatform{
+		runner: runner,
+		restoreNotifyIcon: func(context.Context, codexNotifyIconTarget) error {
+			return errors.New("the icon host window never showed up")
+		},
+	}
+	platform.useBackgroundRepairContext(context.Background(), logger)
+	if err := platform.LaunchCodex(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		contents, err := os.ReadFile(logger.Path)
+		if err == nil && strings.Contains(string(contents), "the icon host window never showed up") {
+			if !strings.Contains(string(contents), "WARN") {
+				t.Fatalf("the failed repair was not logged as a warning:\n%s", contents)
+			}
+			return
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	t.Fatal("a failed notification area repair was swallowed instead of logged")
 }
 
 func TestWindowsPackagedCodexActivationIntegration(t *testing.T) {

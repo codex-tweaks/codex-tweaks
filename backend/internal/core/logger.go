@@ -42,6 +42,7 @@ func NewLogger(applicationSupport string) (*Logger, error) {
 }
 
 func (l *Logger) Info(message string)  { l.append("INFO", message) }
+func (l *Logger) Warn(message string)  { l.append("WARN", message) }
 func (l *Logger) Error(message string) { l.append("ERROR", message) }
 
 func (l *Logger) EnsureExists() error {

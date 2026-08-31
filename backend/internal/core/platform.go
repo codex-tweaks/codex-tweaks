@@ -40,3 +40,10 @@ type Platform interface {
 	RestartCodex(ctx context.Context, options CodexLaunchOptions) error
 	Architecture() string
 }
+
+// backgroundRepairPlatform is implemented by platforms that keep repairing state after the call that
+// triggered them returned. Such work follows the application lifetime instead of a call context and
+// reports its failures to the log.
+type backgroundRepairPlatform interface {
+	useBackgroundRepairContext(ctx context.Context, logger *Logger)
+}

@@ -112,6 +112,9 @@ func NewController(params InitializeParams, event func(AppSnapshot), dependencie
 		cdp = NewCDPService(logger)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
+	if repairable, ok := platform.(backgroundRepairPlatform); ok {
+		repairable.useBackgroundRepairContext(ctx, logger)
+	}
 	controller := &Controller{
 		ctx: ctx, cancel: cancel, event: event, store: store, logger: logger,
 		builder:   NewBuilder(store, dependencies.Runner),

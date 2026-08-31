@@ -34,7 +34,10 @@ const (
 	// The host window shows up slightly before Codex adds the icon, so the repair has to arrive
 	// after that refused add instead of before it.
 	codexNotifyIconSettleDelay = 2 * time.Second
-	codexNotifyIconRetryDelay  = 1 * time.Second
+	// PostMessage only proves that the message entered the queue. A second targeted pulse covers a
+	// slower first NIM_ADD without inspecting or manipulating the shell's private tray state.
+	codexNotifyIconPulseCount = 2
+	codexNotifyIconPulseDelay = 2 * time.Second
 	// The repair outlives the call that started Codex, so it carries its own deadline.
 	codexNotifyIconRepairTimeout = 60 * time.Second
 
@@ -89,12 +92,12 @@ func (target codexNotifyIconTarget) matches(processID uint32, imagePath string) 
 // codexNotifyIconRepair keeps the window lookup and the message behind function fields so the whole
 // sequence can be tested without a running Codex.
 type codexNotifyIconRepair struct {
-	find   func(codexNotifyIconTarget) uintptr
-	post   func(uintptr) error
-	appear time.Duration
-	poll   time.Duration
-	settle time.Duration
-	retry  time.Duration
+	find       func(codexNotifyIconTarget) uintptr
+	post       func(uintptr) error
+	appear     time.Duration
+	poll       time.Duration
+	settle     time.Duration
+	pulseDelay time.Duration
 }
 
 func (repair codexNotifyIconRepair) run(ctx context.Context, target codexNotifyIconTarget) error {
@@ -109,11 +112,17 @@ func (repair codexNotifyIconRepair) run(ctx context.Context, target codexNotifyI
 	}
 
 	// The handle is looked up again instead of reused: Codex can replace the window while the repair
-	// waits, and posting to a handle that is already gone would repair nothing.
+	// waits, and posting to a handle that is already gone would repair nothing. Two pulses are
+	// intentional: PostMessage succeeding only means the message was queued, not that Codex's failed
+	// first NIM_ADD had already happened or that the icon was restored.
+	delivered := false
 	var lastError error
-	for attempt := range 2 {
+	for attempt := range codexNotifyIconPulseCount {
 		if attempt > 0 {
-			if err := waitContext(ctx, repair.retry); err != nil {
+			if err := waitContext(ctx, repair.pulseDelay); err != nil {
+				if delivered {
+					return nil
+				}
 				return err
 			}
 		}
@@ -126,6 +135,9 @@ func (repair codexNotifyIconRepair) run(ctx context.Context, target codexNotifyI
 			lastError = err
 			continue
 		}
+		delivered = true
+	}
+	if delivered {
 		return nil
 	}
 	return lastError
@@ -151,12 +163,12 @@ func (repair codexNotifyIconRepair) waitForHostWindow(
 
 func restoreCodexNotifyIcon(ctx context.Context, target codexNotifyIconTarget) error {
 	return codexNotifyIconRepair{
-		find:   findCodexNotifyIconHost,
-		post:   postTaskbarCreated,
-		appear: codexNotifyIconAppearTimeout,
-		poll:   codexNotifyIconPollInterval,
-		settle: codexNotifyIconSettleDelay,
-		retry:  codexNotifyIconRetryDelay,
+		find:       findCodexNotifyIconHost,
+		post:       postTaskbarCreated,
+		appear:     codexNotifyIconAppearTimeout,
+		poll:       codexNotifyIconPollInterval,
+		settle:     codexNotifyIconSettleDelay,
+		pulseDelay: codexNotifyIconPulseDelay,
 	}.run(ctx, target)
 }
 

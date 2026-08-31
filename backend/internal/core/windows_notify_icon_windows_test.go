@@ -15,12 +15,12 @@ func testCodexNotifyIconRepair(
 	post func(uintptr) error,
 ) codexNotifyIconRepair {
 	return codexNotifyIconRepair{
-		find:   find,
-		post:   post,
-		appear: 500 * time.Millisecond,
-		poll:   time.Millisecond,
-		settle: time.Millisecond,
-		retry:  time.Millisecond,
+		find:       find,
+		post:       post,
+		appear:     500 * time.Millisecond,
+		poll:       time.Millisecond,
+		settle:     time.Millisecond,
+		pulseDelay: time.Millisecond,
 	}
 }
 
@@ -63,34 +63,44 @@ func TestCodexNotifyIconRepairNeedsAnIdentifiedInstance(t *testing.T) {
 	}
 }
 
-func TestCodexNotifyIconRepairLooksUpTheWindowAgainAfterTheSettleDelay(t *testing.T) {
+func TestCodexNotifyIconRepairLooksUpTheWindowBeforeEachPulse(t *testing.T) {
 	lookups := 0
-	posted := uintptr(0)
+	var posted []uintptr
 	repair := testCodexNotifyIconRepair(
 		func(codexNotifyIconTarget) uintptr {
 			lookups++
-			if lookups == 1 {
+			switch lookups {
+			case 1:
 				return 0x11
+			case 2:
+				return 0x22
+			default:
+				return 0x33
 			}
-			return 0x22
 		},
 		func(window uintptr) error {
-			posted = window
+			posted = append(posted, window)
 			return nil
 		},
 	)
 	if err := repair.run(context.Background(), codexNotifyIconTarget{processID: 7}); err != nil {
 		t.Fatal(err)
 	}
-	if lookups < 2 {
+	if lookups < 3 {
 		t.Fatalf("the repair reused the window handle it cached before waiting: %d lookups", lookups)
 	}
-	if posted != 0x22 {
-		t.Fatalf("posted to window %#x, want 0x22 from the lookup after the settle delay", posted)
+	want := []uintptr{0x22, 0x33}
+	if len(posted) != len(want) {
+		t.Fatalf("posted to windows %#v, want %#v", posted, want)
+	}
+	for index, window := range posted {
+		if window != want[index] {
+			t.Fatalf("posted to windows %#v, want %#v from fresh lookups", posted, want)
+		}
 	}
 }
 
-func TestCodexNotifyIconRepairRetriesOnceWhenPostingFails(t *testing.T) {
+func TestCodexNotifyIconRepairUsesTheSecondPulseWhenTheFirstPostFails(t *testing.T) {
 	posts := 0
 	repair := testCodexNotifyIconRepair(
 		func(codexNotifyIconTarget) uintptr { return 0x33 },
@@ -106,7 +116,7 @@ func TestCodexNotifyIconRepairRetriesOnceWhenPostingFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	if posts != 2 {
-		t.Fatalf("posted %d times, want one retry after the first failure", posts)
+		t.Fatalf("posted %d times, want the second pulse after the first failure", posts)
 	}
 }
 
@@ -127,7 +137,27 @@ func TestCodexNotifyIconRepairReportsAPostFailure(t *testing.T) {
 		t.Fatalf("the reported error lost the reason: %v", err)
 	}
 	if posts != 2 {
-		t.Fatalf("posted %d times, want the attempt plus one retry", posts)
+		t.Fatalf("posted %d times, want both pulses", posts)
+	}
+}
+
+func TestCodexNotifyIconRepairKeepsAFirstSuccessfulDelivery(t *testing.T) {
+	posts := 0
+	repair := testCodexNotifyIconRepair(
+		func(codexNotifyIconTarget) uintptr { return 0x45 },
+		func(uintptr) error {
+			posts++
+			if posts == 2 {
+				return errors.New("the second pulse missed a replaced window")
+			}
+			return nil
+		},
+	)
+	if err := repair.run(context.Background(), codexNotifyIconTarget{processID: 7}); err != nil {
+		t.Fatalf("a successful first delivery was discarded: %v", err)
+	}
+	if posts != 2 {
+		t.Fatalf("posted %d times, want the best-effort second pulse", posts)
 	}
 }
 
@@ -167,4 +197,3 @@ func TestCodexNotifyIconRepairFailsWhenTheHostWindowNeverAppears(t *testing.T) {
 		t.Fatalf("the repair waited %s, want it to give up after its own timeout", waited)
 	}
 }
-

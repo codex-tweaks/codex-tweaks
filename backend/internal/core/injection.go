@@ -40,18 +40,17 @@ func injectionRuntimeProbeScript(
   const bridgeSessionID = %s;
   const settingsAdapterConfiguration = %s;
   const settingsAdapterKey = JSON.stringify(settingsAdapterConfiguration ?? null);
-  const settingsAdapterExpected = Boolean(settingsAdapterConfiguration?.sections?.length);
   const unchanged = Boolean(
     runtime?.version === version
     && runtime?.bridgeSessionID === bridgeSessionID
     && runtime?.settingsAdapterKey === settingsAdapterKey
-    && (!settingsAdapterExpected || runtime?.settingsAdapterReady === true)
     && document.getElementById("codex-tweaks-root")
   );
   return {
     status: unchanged ? "unchanged" : "stale",
     version: runtime?.version ?? "",
-    packageErrors: unchanged ? (runtime?.packageErrors ?? []) : []
+    packageErrors: unchanged ? (runtime?.packageErrors ?? []) : [],
+    settingsAdapterError: runtime?.settingsAdapterError ?? null
   };
 })()`, JSONLiteral(effectiveInjectionVersion(payload, forceGeneration)), JSONLiteral(bridgeSessionID), JSONLiteral(settingsAdapterConfiguration))
 }
@@ -82,13 +81,13 @@ func injectionScriptWithRendererBridge(
     existing?.version === version &&
     existing?.bridgeSessionID === bridgeSessionID &&
     existing?.settingsAdapterKey === settingsAdapterKey &&
-    (!settingsAdapterExpected || existing?.settingsAdapterReady === true) &&
     document.getElementById("codex-tweaks-root")
   ) {
     return {
       status: "unchanged",
       version,
-      packageErrors: existing.packageErrors ?? []
+      packageErrors: existing.packageErrors ?? [],
+      settingsAdapterError: existing.settingsAdapterError ?? null
     };
   }
 
@@ -571,9 +570,10 @@ func injectionScriptWithRendererBridge(
     globalThis[globalKey] = adapter;
 
     try {
-      const [appModule, visibilityModule] = await Promise.all([
+      const [appModule, visibilityModule, navigationModule] = await Promise.all([
         import(configuration.appModuleUrl),
-        import(configuration.visibilityModuleUrl)
+        import(configuration.visibilityModuleUrl),
+        import(configuration.navigationModuleUrl || configuration.appModuleUrl)
       ]);
       registry = Object.values(appModule).find((value) =>
         Array.isArray(value)
@@ -581,7 +581,7 @@ func injectionScriptWithRendererBridge(
         && value.some((entry) => entry?.slug === "personalization")
       );
       if (!registry) throw new Error("Codex settings registry unavailable");
-      navigationBus = Object.values(appModule).find((value) =>
+      navigationBus = Object.values(navigationModule).find((value) =>
         value && typeof value === "object"
         && value.handlers instanceof Map
         && typeof value.dispatchHostMessage === "function"
@@ -618,7 +618,7 @@ func injectionScriptWithRendererBridge(
         throw new Error("Codex settings registry is immutable");
       }
 
-      iconMap = Object.values(visibilityModule).find((value) =>
+      iconMap = globalThis[configuration.iconRegistryKey] ?? Object.values(visibilityModule).find((value) =>
         value && typeof value === "object"
         && typeof value.personalization === "function"
         && typeof value["general-settings"] === "function"
@@ -732,6 +732,7 @@ func injectionScriptWithRendererBridge(
     bridgeSessionID,
     settingsAdapterKey,
     settingsAdapterReady: !settingsAdapterExpected || Boolean(settingsAdapter),
+    settingsAdapterError,
     packageErrors,
     settleNodeInvocation(response) {
       if (!response || typeof response.id !== "string") return false;

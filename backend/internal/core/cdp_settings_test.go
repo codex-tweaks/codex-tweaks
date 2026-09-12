@@ -75,10 +75,12 @@ func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.
 		appModuleURL        = "app://-/assets/app-initial-TEST.js"
 		settingsModuleURL   = "app://-/assets/settings-page-TEST.js"
 		visibilityModuleURL = "app://-/assets/use-visible-settings-sections-TEST.js"
+		navigationModuleURL = "app://-/assets/message-bus-TEST.js"
 	)
 	upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
 	var countsMu sync.Mutex
 	getScriptSourceCount := 0
+	failSource := false
 	importModuleCount := 0
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		connection, err := upgrader.Upgrade(writer, request, nil)
@@ -112,13 +114,46 @@ func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.
 				scriptID, _ := params["scriptId"].(string)
 				countsMu.Lock()
 				getScriptSourceCount++
+				shouldFail := failSource
 				countsMu.Unlock()
+				if shouldFail {
+					writeResponse(command, map[string]any{"scriptSource": "const missing = true;"})
+					continue
+				}
 				source := `import "./use-visible-settings-sections-TEST.js";`
 				if strings.HasPrefix(scriptID, "app-") {
-					source = "const page=()=>import(`./settings-page-TEST.js`);"
+					source = `const deps=["./settings-page-TEST.js"];import{bus}from"./message-bus-TEST.js";`
 				}
 				writeResponse(command, map[string]any{"scriptSource": source})
+			case "Runtime.getProperties":
+				params, _ := command["params"].(map[string]any)
+				switch params["objectId"] {
+				case "exports":
+					writeResponse(command, map[string]any{"result": []any{map[string]any{"name": "0", "value": map[string]any{"type": "function", "objectId": "accessor"}}}})
+				case "accessor":
+					writeResponse(command, map[string]any{"internalProperties": []any{map[string]any{"name": "[[Scopes]]", "value": map[string]any{"objectId": "scopes"}}}})
+				case "scopes":
+					writeResponse(command, map[string]any{"result": []any{
+						map[string]any{"name": "0", "value": map[string]any{"description": "Module", "objectId": "module"}},
+						map[string]any{"name": "1", "value": map[string]any{"description": "Global", "objectId": "forbidden"}},
+					}})
+				case "module":
+					writeResponse(command, map[string]any{"result": []any{map[string]any{"name": "privateIcons", "value": map[string]any{"type": "object", "objectId": "icons"}}}})
+				default:
+					t.Errorf("unexpected scope read: %v", params["objectId"])
+					writeResponse(command, map[string]any{})
+				}
+			case "Runtime.callFunctionOn":
+				writeResponse(command, map[string]any{"result": map[string]any{"value": true}})
+			case "Runtime.releaseObjectGroup":
+				writeResponse(command, map[string]any{})
 			case "Runtime.evaluate":
+				params, _ := command["params"].(map[string]any)
+				expression, _ := params["expression"].(string)
+				if strings.Contains(expression, "Object.values(module)") {
+					writeResponse(command, map[string]any{"result": map[string]any{"objectId": "exports"}})
+					continue
+				}
 				countsMu.Lock()
 				importModuleCount++
 				settingsScriptID := fmt.Sprintf("settings-%d", importModuleCount)
@@ -170,6 +205,7 @@ func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.
 		t.Fatal(err)
 	}
 	if first.AppModuleURL != appModuleURL || first.VisibilityModuleURL != visibilityModuleURL ||
+		first.NavigationModuleURL != navigationModuleURL || first.IconRegistryKey != settingsIconRegistryKey ||
 		second.AppModuleURL != appModuleURL || second.VisibilityModuleURL != visibilityModuleURL ||
 		len(second.Sections) != 1 || second.Sections[0].Title != "Second" {
 		t.Fatalf("unexpected cached settings adapters: first=%#v second=%#v", first, second)
@@ -191,9 +227,30 @@ func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.
 		t.Fatalf("settings sections were not refreshed after navigation: %#v", third)
 	}
 	countsMu.Lock()
-	defer countsMu.Unlock()
 	if getScriptSourceCount != 4 || importModuleCount != 2 {
 		t.Fatalf("execution-context reset did not invalidate discovery: getScriptSource=%d import=%d", getScriptSourceCount, importModuleCount)
+	}
+	failSource = true
+	countsMu.Unlock()
+	if _, err := session.call(context.Background(), "Test.resetExecutionContext", map[string]any{}); err != nil {
+		t.Fatal(err)
+	}
+	for range 3 {
+		if _, err := session.ensureSettingsAdapter(context.Background(), makePayload("Failure")); err == nil {
+			t.Fatal("missing module accepted")
+		}
+	}
+	countsMu.Lock()
+	if getScriptSourceCount != 5 {
+		t.Fatalf("failed discovery was repeated: %d", getScriptSourceCount)
+	}
+	failSource = false
+	countsMu.Unlock()
+	if _, err := session.call(context.Background(), "Test.resetExecutionContext", map[string]any{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := session.ensureSettingsAdapter(context.Background(), makePayload("Recovered")); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -270,6 +327,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
 	}
 	originalSettingsSlug, _ := original["settingsSlug"].(string)
 	appModuleURL := ""
+	navigationModuleURL := ""
 	openedCustom := false
 	restoreNavigation := func(restoreContext context.Context) {
 		if !openedCustom || appModuleURL == "" {
@@ -285,7 +343,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
           if (!bus) return { restored: false };
           %s
           return { restored: true };
-        })()`, JSONLiteral(appModuleURL), func() string {
+        })()`, JSONLiteral(navigationModuleURL), func() string {
 			if originalSettingsSlug != "" {
 				return fmt.Sprintf(`bus.dispatchHostMessage({
               type: "navigate-to-route",
@@ -338,6 +396,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
 		t.Fatalf("settings bridge unavailable: %v %#v", err, configuration)
 	}
 	appModuleURL = configuration.AppModuleURL
+	navigationModuleURL = configuration.NavigationModuleURL
 	if _, err := service.evaluate(ctx, `(() => {
       const records = [];
       const originalConsoleError = console.error;
@@ -373,7 +432,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
         && value.some((entry) => entry?.slug === "general-settings")
         && value.some((entry) => entry?.slug === "personalization")
       );
-      const iconMap = Object.values(visibilityModule).find((value) =>
+      const iconMap = globalThis.__CODEX_TWEAKS_SETTINGS_ICON_REGISTRY__ ?? Object.values(visibilityModule).find((value) =>
         value && typeof value === "object"
         && typeof value.personalization === "function"
         && typeof value["general-settings"] === "function"
@@ -415,7 +474,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
       }
       return {
         slug,
-        customIconType: typeof iconMap?.[slug],
+        customIconValid: typeof iconMap?.[slug] === "function" || Boolean(iconMap?.[slug]?.component),
         registryHasSlug: registry?.some((entry) => entry?.slug === slug),
         registryOwnFilter: Object.prototype.hasOwnProperty.call(registry ?? {}, "filter"),
         routeRegistered,
@@ -428,7 +487,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
 	}
 	if diagnostics["registryHasSlug"] != true || diagnostics["registryOwnFilter"] != true ||
 		diagnostics["routeRegistered"] != true || diagnostics["visibleWhenRejected"] != true ||
-		diagnostics["customIconType"] != "function" {
+		diagnostics["customIconValid"] != true {
 		t.Fatalf("settings adapter did not mutate the native registries: %#v", diagnostics)
 	}
 	if _, err := service.evaluate(ctx, `(() => {
@@ -510,6 +569,34 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
 		t.Fatalf("settings adapter did not restore the native registries: %#v", cleaned)
 	}
 	restoreNavigation(ctx)
+
+	// An unavailable optional adapter must not unload a working package on each monitor tick.
+	failedConfiguration := *configuration
+	failedConfiguration.VisibilityModuleURL = "data:text/javascript,export{}"
+	failedConfiguration.IconRegistryKey = ""
+	fallbackPayload := Payload{Version: "live-settings-failure", Packages: []CompiledPackage{{
+		ID: "fallback", Name: "fallback", UI: ui,
+		JavaScript: `module.exports.activate = ({ root }) => { root.textContent = "background survived"; };`,
+	}}}
+	injected, err := service.evaluate(ctx, injectionScriptWithRendererBridge(fallbackPayload, 0, bridgeID, tokens, &failedConfiguration), *target.WebSocketDebuggerURL)
+	if err != nil || injected["settingsAdapterError"] == nil {
+		t.Fatalf("adapter failure was not observed: %v %#v", err, injected)
+	}
+	for range 3 {
+		for _, script := range []string{
+			injectionRuntimeProbeScript(fallbackPayload, 0, bridgeID, &failedConfiguration),
+			injectionScriptWithRendererBridge(fallbackPayload, 0, bridgeID, tokens, &failedConfiguration),
+		} {
+			stable, err := service.evaluate(ctx, script, *target.WebSocketDebuggerURL)
+			if err != nil || stable["status"] != "unchanged" || stable["settingsAdapterError"] == nil {
+				t.Fatalf("failed adapter retriggered injection: %v %#v", err, stable)
+			}
+		}
+	}
+	survivor, err := service.evaluate(ctx, `({content: document.querySelector('[data-codex-tweaks-package-root="fallback"]')?.textContent})`, *target.WebSocketDebuggerURL)
+	if err != nil || survivor["content"] != "background survived" {
+		t.Fatalf("optional adapter failure removed package: %v %#v", err, survivor)
+	}
 }
 
 func TestCustomBackgroundPackageLiveRuntime(t *testing.T) {
@@ -612,13 +699,13 @@ func TestCustomBackgroundSettingsRouteLive(t *testing.T) {
 	if target == nil {
 		t.Fatal("no main Codex target")
 	}
-	ui, section := testCompiledSettingsUI(t, "codex-custom-background", UISettingsSectionDeclaration{
+	ui, section := testCompiledSettingsUI(t, "ct-custom-background", UISettingsSectionDeclaration{
 		ID: "custom-background", Title: "自定义背景", Group: "personal",
 		Icon: "personalization", After: "personalization",
 	})
 	slug := section.Slug
 	payload := Payload{Packages: []CompiledPackage{{
-		ID: "codex-custom-background",
+		ID: "ct-custom-background",
 		UI: ui,
 	}}}
 	session, err := openRendererBridgeSession(
@@ -684,7 +771,7 @@ func TestCustomBackgroundSettingsRouteLive(t *testing.T) {
             replace: %s
           });
           return { navigated: true };
-        })()`, JSONLiteral(configuration.AppModuleURL), JSONLiteral(sectionSlug), JSONLiteral(replace))
+        })()`, JSONLiteral(configuration.NavigationModuleURL), JSONLiteral(sectionSlug), JSONLiteral(replace))
 		if _, evaluateError := service.evaluate(ctx, expression, *target.WebSocketDebuggerURL); evaluateError != nil {
 			t.Fatal(evaluateError)
 		}
@@ -703,7 +790,7 @@ func TestCustomBackgroundSettingsRouteLive(t *testing.T) {
           );
           bus?.dispatchHostMessage({ type: "navigate-back" });
           return { restored: Boolean(bus) };
-        })()`, JSONLiteral(configuration.AppModuleURL))
+        })()`, JSONLiteral(configuration.NavigationModuleURL))
 		_, _ = service.evaluate(context.Background(), expression, *target.WebSocketDebuggerURL)
 	}
 	defer restore()

@@ -11,33 +11,56 @@ import (
 )
 
 var appInitialScriptPattern = regexp.MustCompile(`/app-initial-[A-Za-z0-9_-]+\.js(?:\?.*)?$`)
-var settingsPageImportPattern = regexp.MustCompile("import\\(`(\\./settings-page-[A-Za-z0-9_-]+\\.js)`\\)")
+
+// Bundlers may move lazy imports into a dependency table or use any JS quote.
+var settingsPageImportPattern = regexp.MustCompile(`\./settings-page-[A-Za-z0-9_-]+\.js`)
 var visibilityAssetPattern = regexp.MustCompile(`\./use-visible-settings-sections-[A-Za-z0-9_-]+\.js`)
+var messageBusAssetPattern = regexp.MustCompile(`\./message-bus-[A-Za-z0-9_-]+\.js`)
 
 func (s *rendererBridgeSession) ensureSettingsAdapter(
 	ctx context.Context,
 	payload Payload,
-) (*SettingsAdapterConfiguration, error) {
+) (configuration *SettingsAdapterConfiguration, adapterError error) {
 	sections := payloadSettingsSections(payload)
 	if len(sections) == 0 {
 		return nil, nil
 	}
+	// Settings belong to the main app; pet and detached renderers still receive
+	// their packages and Node bridge without repeatedly probing absent modules.
+	target, err := url.Parse(s.targetURL)
+	if err != nil || target.Path != "/index.html" || target.Query().Get("initialRoute") == "/avatar-overlay" {
+		return nil, nil
+	}
 	s.adapterMu.Lock()
 	defer s.adapterMu.Unlock()
+	generation := s.executionGeneration.Load()
+	if s.settingsAdapterGen == generation && s.settingsAdapterError != nil && time.Now().Before(s.settingsAdapterRetryAt) {
+		return nil, s.settingsAdapterError
+	}
+	defer func() {
+		if s.executionGeneration.Load() == generation {
+			s.settingsAdapterGen = generation
+			s.settingsAdapterError = adapterError
+			if adapterError != nil {
+				s.settingsAdapterRetryAt = time.Now().Add(30 * time.Second)
+			}
+		}
+	}()
 	if !s.debuggerEnabled {
 		if _, err := s.call(ctx, "Debugger.enable", map[string]any{}); err != nil {
 			return nil, fmt.Errorf("无法启用 Codex 模块适配：%w", err)
 		}
 		s.debuggerEnabled = true
 	}
-	generation := s.executionGeneration.Load()
 	if s.settingsAdapterCached && s.settingsAdapterGen == generation &&
 		s.settingsAppModuleURL != "" && s.settingsVisibilityURL != "" {
 		return &SettingsAdapterConfiguration{
 			AppModuleURL: s.settingsAppModuleURL, VisibilityModuleURL: s.settingsVisibilityURL,
+			NavigationModuleURL: s.settingsNavigationURL, IconRegistryKey: settingsIconRegistryKey,
 			Sections: sections,
 		}, nil
 	}
+	s.settingsAdapterCached = false
 	appModuleURL, appScriptID := s.waitForMatchingScript(ctx, appInitialScriptPattern)
 	if appScriptID == "" {
 		return nil, errors.New("当前 Codex 构建中未找到 app-initial 模块")
@@ -73,15 +96,27 @@ func (s *rendererBridgeSession) ensureSettingsAdapter(
 	if err != nil {
 		return nil, err
 	}
+	navigationURL := appModuleURL
+	if asset := messageBusAssetPattern.FindString(appSource); asset != "" {
+		navigationURL, err = resolveModuleURL(appModuleURL, asset)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if err := s.exposeSettingsIconRegistry(ctx, visibilityURL); err != nil {
+		return nil, err
+	}
 	if s.executionGeneration.Load() != generation {
 		return nil, errors.New("Codex 页面在设置模块适配期间发生刷新")
 	}
 	s.settingsAppModuleURL = appModuleURL
 	s.settingsVisibilityURL = visibilityURL
+	s.settingsNavigationURL = navigationURL
 	s.settingsAdapterGen = generation
 	s.settingsAdapterCached = true
 	return &SettingsAdapterConfiguration{
 		AppModuleURL: s.settingsAppModuleURL, VisibilityModuleURL: s.settingsVisibilityURL,
+		NavigationModuleURL: s.settingsNavigationURL, IconRegistryKey: settingsIconRegistryKey,
 		Sections: sections,
 	}, nil
 }

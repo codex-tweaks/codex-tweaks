@@ -78,6 +78,7 @@ type rendererAuthorization struct {
 type rendererBridgeSession struct {
 	id          string
 	debuggerURL string
+	targetURL   string
 	connection  *websocket.Conn
 	logger      *Logger
 	secret      string
@@ -97,15 +98,19 @@ type rendererBridgeSession struct {
 	responseSlots   chan struct{}
 	closeOnce       sync.Once
 
-	scriptMu              sync.RWMutex
-	scripts               map[string]string
-	executionGeneration   atomic.Uint64
-	debuggerEnabled       bool
-	settingsAppModuleURL  string
-	settingsVisibilityURL string
-	adapterMu             sync.Mutex
-	settingsAdapterCached bool
-	settingsAdapterGen    uint64
+	scriptMu                   sync.RWMutex
+	scripts                    map[string]string
+	executionGeneration        atomic.Uint64
+	debuggerEnabled            bool
+	settingsAppModuleURL       string
+	settingsVisibilityURL      string
+	settingsNavigationURL      string
+	settingsAdapterError       error
+	settingsAdapterRetryAt     time.Time
+	settingsAdapterLoggedError string
+	adapterMu                  sync.Mutex
+	settingsAdapterCached      bool
+	settingsAdapterGen         uint64
 }
 
 func openRendererBridgeSession(
@@ -133,7 +138,7 @@ func openRendererBridgeSession(
 		return nil, err
 	}
 	session := &rendererBridgeSession{
-		id: id, debuggerURL: *target.WebSocketDebuggerURL, connection: connection,
+		id: id, debuggerURL: *target.WebSocketDebuggerURL, targetURL: target.URL, connection: connection,
 		invoker: invoker, logger: logger, secret: secret, nextID: 1,
 		pending: map[int]chan cdpCallResult{}, done: make(chan struct{}),
 		authorizations: map[string]rendererAuthorization{},
@@ -424,10 +429,13 @@ func (s *CDPService) rendererBridgeForTargetLocked(
 	defer cancel()
 	settingsAdapter, err := existing.ensureSettingsAdapter(adapterContext, payload)
 	if err != nil {
-		if s.logger != nil {
+		if s.logger != nil && existing.settingsAdapterLoggedError != err.Error() {
 			s.logger.Error("ui.settingsSections@1 无法适配当前 Codex：" + err.Error())
 		}
+		existing.settingsAdapterLoggedError = err.Error()
 		settingsAdapter = nil
+	} else {
+		existing.settingsAdapterLoggedError = ""
 	}
 	return existing.id, existing.authorize(payload), settingsAdapter, nil
 }

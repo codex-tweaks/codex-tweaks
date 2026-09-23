@@ -123,6 +123,7 @@ func (s *CDPService) Inject(ctx context.Context, payload Payload, forceGeneratio
 		if probeErr == nil && value["status"] == "unchanged" {
 			result.SuccessCount++
 			mergeInjectionPackageErrors(result.PackageErrors, value)
+			s.logSettingsAdapterRuntimeError(target.ID, value)
 			continue
 		}
 		script := injectionScriptWithRendererBridge(payload, forceGeneration, bridgeSessionID, nodeTokens, settingsAdapter)
@@ -133,8 +134,24 @@ func (s *CDPService) Inject(ctx context.Context, payload Payload, forceGeneratio
 		}
 		result.SuccessCount++
 		mergeInjectionPackageErrors(result.PackageErrors, value)
+		s.logSettingsAdapterRuntimeError(target.ID, value)
 	}
 	return result, nil
+}
+
+func (s *CDPService) logSettingsAdapterRuntimeError(targetID string, value map[string]any) {
+	session := s.sessions[targetID]
+	if session == nil {
+		return
+	}
+	message, _ := value["settingsAdapterError"].(string)
+	if message == session.settingsAdapterRuntimeError {
+		return
+	}
+	session.settingsAdapterRuntimeError = message
+	if message != "" {
+		s.logError("目标 " + targetID + " 的 Codex 设置适配失败：" + message)
+	}
 }
 
 func (s *CDPService) targetDOMReady(ctx context.Context, debuggerURL string) (bool, error) {

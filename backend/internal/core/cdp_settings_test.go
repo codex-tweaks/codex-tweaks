@@ -150,6 +150,10 @@ func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.
 			case "Runtime.evaluate":
 				params, _ := command["params"].(map[string]any)
 				expression, _ := params["expression"].(string)
+				if strings.Contains(expression, "dispatchHostMessage") {
+					writeResponse(command, map[string]any{"result": map[string]any{"value": navigationModuleURL}})
+					continue
+				}
 				if strings.Contains(expression, "Object.values(module)") {
 					writeResponse(command, map[string]any{"result": map[string]any{"objectId": "exports"}})
 					continue
@@ -287,6 +291,7 @@ func TestSettingsAdapterLiveCDP(t *testing.T) {
 		configuration, adapterError := session.ensureSettingsAdapter(ctx, payload)
 		session.Close()
 		if adapterError == nil && configuration != nil {
+			t.Logf("Codex settings navigation module: %s", configuration.NavigationModuleURL)
 			return
 		}
 		if adapterError != nil {
@@ -337,7 +342,6 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
           const appModule = await import(%s);
           const bus = Object.values(appModule).find((value) =>
             value && typeof value === "object"
-            && value.handlers instanceof Map
             && typeof value.dispatchHostMessage === "function"
           );
           if (!bus) return { restored: false };

@@ -3,6 +3,15 @@
     <channel>
         <title>Codex Tweaks</title>
         <item>
+            <title>3.5.7</title>
+            <pubDate>Wed, 23 Sep 2026 03:28:54 +0000</pubDate>
+            <link>https://github.com/codex-tweaks/codex-tweaks/releases/tag/v3.5.7</link>
+            <sparkle:version>45</sparkle:version>
+            <sparkle:shortVersionString>3.5.7</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/codex-tweaks/codex-tweaks/releases/download/v3.5.7/Codex-Tweaks-v3.5.7-sparkle.zip" length="11691001" type="application/octet-stream" sparkle:edSignature="ZduuMTj2648SRuHZwNmR6durKKVoZMDYPvk9w37FoMDeHmL9mI0dLGG28puqP72PS2rzMTRQHS32B91CzEQbAw=="/>
+        </item>
+        <item>
             <title>3.5.6</title>
             <pubDate>Sat, 12 Sep 2026 09:16:25 +0000</pubDate>
             <link>https://github.com/codex-tweaks/codex-tweaks/releases/tag/v3.5.6</link>
@@ -93,18 +102,9 @@
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/codex-tweaks/codex-tweaks/releases/download/v3.2.2/Codex-Tweaks-v3.2.2-sparkle.zip" length="10737896" type="application/octet-stream" sparkle:edSignature="jKnqUcQURJS/z33wgUzX8lsU7YcitEJSrYZITHLbvvjkMonq1M7kTiIFzJY5x30I4k+9ZpaUC+vt/mOXRIyIAg=="/>
         </item>
-        <item>
-            <title>3.2.1</title>
-            <pubDate>Wed, 26 Aug 2026 00:29:40 +0000</pubDate>
-            <link>https://github.com/cr-zhichen/codex-tweaks/releases/tag/v3.2.1</link>
-            <sparkle:version>26</sparkle:version>
-            <sparkle:shortVersionString>3.2.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/cr-zhichen/codex-tweaks/releases/download/v3.2.1/Codex-Tweaks-v3.2.1-sparkle.zip" length="10737900" type="application/octet-stream" sparkle:edSignature="PwyqoNX7pjjtHaltq3L3Yn/o4biBT+Crjpc7JXRrYboFZ2s96Fi4cIf/hmu7AOmPkbk2o7/aKoBMl/ZzTegpCg=="/>
-        </item>
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: elTFmwYT5W3ewAn2hiJiiJX3rDB6GCghsIfIbkIy8L/8NeOQwhmvpiEMha7nQuGlFZs1ouDsGwc13MmvoPHvBw==
-length: 8122
+edSignature: IghyIJ2BwjzOb0rZ0/P6bQMMnIaEoMi9FfjLzbeJfXj2ecJlMrxZjmR4ROoMv1gKPX6MBMDYUC3V3od9On+TBQ==
+length: 8126
 -->

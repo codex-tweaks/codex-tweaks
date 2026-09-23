@@ -16,6 +16,8 @@ var appInitialScriptPattern = regexp.MustCompile(`/app-initial-[A-Za-z0-9_-]+\.j
 var settingsPageImportPattern = regexp.MustCompile(`\./settings-page-[A-Za-z0-9_-]+\.js`)
 var visibilityAssetPattern = regexp.MustCompile(`\./use-visible-settings-sections-[A-Za-z0-9_-]+\.js`)
 var messageBusAssetPattern = regexp.MustCompile(`\./message-bus-[A-Za-z0-9_-]+\.js`)
+var appSharedAssetPattern = regexp.MustCompile(`\./app-shared-[A-Za-z0-9_-]+\.js`)
+var staticModuleImportPattern = regexp.MustCompile(`\bfrom\s*["'](\./[A-Za-z0-9_./-]+\.js)["']`)
 
 func (s *rendererBridgeSession) ensureSettingsAdapter(
 	ctx context.Context,
@@ -96,12 +98,9 @@ func (s *rendererBridgeSession) ensureSettingsAdapter(
 	if err != nil {
 		return nil, err
 	}
-	navigationURL := appModuleURL
-	if asset := messageBusAssetPattern.FindString(appSource); asset != "" {
-		navigationURL, err = resolveModuleURL(appModuleURL, asset)
-		if err != nil {
-			return nil, err
-		}
+	navigationURL, err := s.findSettingsNavigationModuleURL(ctx, appModuleURL, appSource)
+	if err != nil {
+		return nil, err
 	}
 	if err := s.exposeSettingsIconRegistry(ctx, visibilityURL); err != nil {
 		return nil, err
@@ -119,6 +118,69 @@ func (s *rendererBridgeSession) ensureSettingsAdapter(
 		NavigationModuleURL: s.settingsNavigationURL, IconRegistryKey: settingsIconRegistryKey,
 		Sections: sections,
 	}, nil
+}
+
+func (s *rendererBridgeSession) findSettingsNavigationModuleURL(
+	ctx context.Context,
+	appModuleURL, appSource string,
+) (string, error) {
+	candidates := []string{appModuleURL}
+	seen := map[string]bool{appModuleURL: true}
+	addAsset := func(asset string) error {
+		if asset == "" {
+			return nil
+		}
+		moduleURL, err := resolveModuleURL(appModuleURL, asset)
+		if err != nil {
+			return err
+		}
+		if !seen[moduleURL] {
+			candidates = append(candidates, moduleURL)
+			seen[moduleURL] = true
+		}
+		return nil
+	}
+	for _, match := range staticModuleImportPattern.FindAllStringSubmatch(appSource, -1) {
+		if err := addAsset(match[1]); err != nil {
+			return "", err
+		}
+	}
+	for _, pattern := range []*regexp.Regexp{messageBusAssetPattern, appSharedAssetPattern} {
+		if err := addAsset(pattern.FindString(appSource)); err != nil {
+			return "", err
+		}
+	}
+	expression := fmt.Sprintf(`(async () => {
+  for (const url of %s) {
+    try {
+      const module = await import(url);
+      if (Object.values(module).some(value =>
+        value && typeof value === "object"
+        && typeof value.dispatchHostMessage === "function"
+      )) return url;
+    } catch (_) {}
+  }
+  return "";
+})()`, JSONLiteral(candidates))
+	raw, err := s.call(ctx, "Runtime.evaluate", map[string]any{
+		"expression": expression, "returnByValue": true, "awaitPromise": true,
+	})
+	if err != nil {
+		return "", err
+	}
+	var result struct {
+		Result struct {
+			Value string `json:"value"`
+		} `json:"result"`
+		ExceptionDetails json.RawMessage `json:"exceptionDetails"`
+	}
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return "", err
+	}
+	if len(result.ExceptionDetails) != 0 || result.Result.Value == "" {
+		return "", errors.New("当前 Codex 构建中未找到设置导航模块")
+	}
+	return result.Result.Value, nil
 }
 
 func matchAsset(pattern *regexp.Regexp, source string) string {

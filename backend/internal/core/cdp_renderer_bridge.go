@@ -111,6 +111,8 @@ type rendererBridgeSession struct {
 	adapterMu                  sync.Mutex
 	settingsAdapterCached      bool
 	settingsAdapterGen         uint64
+
+	settingsAdapterRuntimeError string
 }
 
 func openRendererBridgeSession(

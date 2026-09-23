@@ -93,6 +93,10 @@ run = "rm -rf build dist"
 description = "验证设置模块发现与注入后端"
 run = "cd backend && go test -race ./internal/core -run 'TestSettings|TestInjection'"
 
+[tasks."settings:probe"]
+description = "检查当前 Codex 的设置模块适配，不注入测试页面"
+run = "cd backend && CODEX_TWEAKS_LIVE_CDP=1 go test ./internal/core -run '^TestSettingsAdapterLiveCDP$' -v -count=1"
+
 [tasks."settings:live"]
 description = "在当前 Codex 中验证设置模块和路由挂载"
 run = "cd backend && CODEX_TWEAKS_LIVE_CDP=1 CODEX_TWEAKS_LIVE_SETTINGS_INJECTION=1 go test ./internal/core -run 'TestSettingsAdapterLive' -v -count=1"

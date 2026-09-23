@@ -583,9 +583,7 @@ func injectionScriptWithRendererBridge(
       if (!registry) throw new Error("Codex settings registry unavailable");
       navigationBus = Object.values(navigationModule).find((value) =>
         value && typeof value === "object"
-        && value.handlers instanceof Map
         && typeof value.dispatchHostMessage === "function"
-        && typeof value.deliverMessage === "function"
       );
       if (!navigationBus) throw new Error("Codex navigation bus unavailable");
       const settingsRoute = findSettingsRouteElement();

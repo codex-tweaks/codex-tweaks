@@ -179,12 +179,18 @@ func injectionScriptWithRendererBridge(
     let registry = null;
     let registryFilter = null;
     let originalRegistryFilterDescriptor = null;
+    let registryMap = null;
+    let originalRegistryMapDescriptor = null;
     let iconMap = null;
     let labelRegistry = null;
     let groupRegistry = null;
     let navigationBus = null;
     let settingsRouteChildren = null;
     let routeTemplate = null;
+    let routeRetryTimer = null;
+    let pendingOpenSlug = null;
+    let adapterDisposed = false;
+    let routeDiscoveryFailed = false;
 
     const originalArrayMapDescriptor = Object.getOwnPropertyDescriptor(Array.prototype, "map");
     const originalArrayMap = originalArrayMapDescriptor?.value;
@@ -210,7 +216,7 @@ func injectionScriptWithRendererBridge(
         }
       }
       for (const descriptor of descriptors.values()) {
-        if (!renderers.has(descriptor.slug)) continue;
+        if (!routeElements.has(descriptor.slug)) continue;
         const group = groupRegistry.find((candidate) => candidate?.key === descriptor.group)
           ?? groupRegistry.find((candidate) => candidate?.key === "personal")
           ?? groupRegistry[0];
@@ -276,6 +282,18 @@ func injectionScriptWithRendererBridge(
         }
       }
       return null;
+    };
+    const initializeRoutes = () => {
+      if (settingsRouteChildren) return true;
+      const route = findSettingsRouteElement();
+      if (!route) return false;
+      const children = route.props.children;
+      if (Object.isFrozen(children)) throw new Error("Codex settings route registry is immutable");
+      const template = flattenReactElements(children).find(candidate => candidate?.props?.path === "*");
+      if (!template?.type) throw new Error("Codex settings route component unavailable");
+      settingsRouteChildren = children;
+      routeTemplate = template;
+      return true;
     };
     const installRoute = (descriptor) => {
       if (routeElements.has(descriptor.slug)) return;
@@ -405,6 +423,10 @@ func injectionScriptWithRendererBridge(
       mounted.delete(element);
     };
     const scanMounts = () => {
+      if (!settingsRouteChildren) {
+        schedulePendingRoutes();
+        return;
+      }
       for (const [element, record] of mounted) {
         if (!element.isConnected || renderers.get(record.slug) !== record.renderer) {
           cleanupMount(element, record);
@@ -449,8 +471,56 @@ func injectionScriptWithRendererBridge(
       const activeSlug = activeSettingsSlug();
       if (activeSlug) navigateToSettings("/settings/" + activeSlug, true);
     };
+    const syncPendingRoutes = () => {
+      if (!initializeRoutes()) return;
+      let changed = false;
+      for (const descriptor of descriptors.values()) {
+        if (!renderers.has(descriptor.slug) || routeElements.has(descriptor.slug)) continue;
+        installRoute(descriptor);
+        installLabel(descriptor);
+        if (!registry.some((entry) => entry?.slug === descriptor.slug)) {
+          registry.push({ slug: descriptor.slug });
+        }
+        previousIcons.set(descriptor.slug, {
+          descriptor: Object.getOwnPropertyDescriptor(iconMap, descriptor.slug) ?? null
+        });
+        Object.defineProperty(iconMap, descriptor.slug, {
+          configurable: true,
+          enumerable: true,
+          writable: true,
+          value: iconMap[descriptor.icon] ?? iconMap.personalization
+        });
+        changed = true;
+      }
+      if (changed) applyGroupPlacements();
+      if (pendingOpenSlug && routeElements.has(pendingOpenSlug)) {
+        const slug = pendingOpenSlug;
+        pendingOpenSlug = null;
+        navigateToSettings("/settings/" + slug);
+      } else if (changed) {
+        refreshSettingsRoute();
+      }
+    };
+    const schedulePendingRoutes = () => {
+      if (adapterDisposed || routeDiscoveryFailed || routeRetryTimer !== null || !renderers.size) return;
+      routeRetryTimer = bridgeSetTimeout(() => {
+        routeRetryTimer = null;
+        if (adapterDisposed || !renderers.size) return;
+        try {
+          syncPendingRoutes();
+          scanMounts();
+        } catch (error) {
+          routeDiscoveryFailed = true;
+          settingsAdapterError = error instanceof Error ? error.message : String(error);
+          console.error("Codex Tweaks settings routes unavailable", error);
+        }
+      }, 500);
+    };
 
     const adapter = {
+      get ready() {
+        return Boolean(settingsRouteChildren) && !routeDiscoveryFailed;
+      },
       has(slug) {
         return renderers.has(slug);
       },
@@ -464,7 +534,7 @@ func injectionScriptWithRendererBridge(
         if (typeof mount !== "function") {
           throw new TypeError("Settings section mount must be a function");
         }
-        if (!registry || !iconMap || !navigationBus || !settingsRouteChildren || !routeTemplate) {
+        if (!registry || !iconMap || !navigationBus) {
           throw new Error("Codex settings module is not ready");
         }
         if (renderers.has(descriptor.slug)) {
@@ -472,26 +542,8 @@ func injectionScriptWithRendererBridge(
         }
         const renderer = { mount };
         renderers.set(descriptor.slug, renderer);
-        installLabel(descriptor);
-        if (!registry.some((entry) => entry?.slug === descriptor.slug)) {
-          registry.push({ slug: descriptor.slug });
-        }
-        installRoute(descriptor);
-        if (!previousIcons.has(descriptor.slug)) {
-          const previousDescriptor = Object.getOwnPropertyDescriptor(iconMap, descriptor.slug) ?? null;
-          previousIcons.set(descriptor.slug, {
-            descriptor: previousDescriptor
-          });
-        }
-        Object.defineProperty(iconMap, descriptor.slug, {
-          configurable: true,
-          enumerable: true,
-          writable: true,
-          value: iconMap[descriptor.icon] ?? iconMap.personalization
-        });
-        applyGroupPlacements();
+        syncPendingRoutes();
         scanMounts();
-        refreshSettingsRoute();
         let registered = true;
         const unregister = () => {
           if (!registered) return;
@@ -499,6 +551,7 @@ func injectionScriptWithRendererBridge(
           if (renderers.get(descriptor.slug) === renderer) {
             const activeSlug = activeSettingsSlug();
             renderers.delete(descriptor.slug);
+            if (pendingOpenSlug === descriptor.slug) pendingOpenSlug = null;
             for (const [element, record] of mounted) {
               if (record.slug === descriptor.slug) cleanupMount(element, record);
             }
@@ -525,12 +578,19 @@ func injectionScriptWithRendererBridge(
           id: descriptor.id,
           slug: descriptor.slug,
           open() {
-            navigateToSettings("/settings/" + descriptor.slug);
+            if (!registered) return;
+            pendingOpenSlug = descriptor.slug;
+            syncPendingRoutes();
+            if (pendingOpenSlug) schedulePendingRoutes();
           },
           unregister
         });
       },
       cleanup() {
+        adapterDisposed = true;
+        if (routeRetryTimer !== null) bridgeClearTimeout(routeRetryTimer);
+        routeRetryTimer = null;
+        pendingOpenSlug = null;
         const activeSlug = activeSettingsSlug();
         const wasCustomRoute = Boolean(activeSlug && descriptors.has(activeSlug));
         if (wasCustomRoute) {
@@ -546,6 +606,13 @@ func injectionScriptWithRendererBridge(
         }
         applyGroupPlacements();
         if (registry) {
+          if (registry.map === registryMap) {
+            if (originalRegistryMapDescriptor) {
+              Object.defineProperty(registry, "map", originalRegistryMapDescriptor);
+            } else {
+              delete registry.map;
+            }
+          }
           if (registry.filter === registryFilter) {
             if (originalRegistryFilterDescriptor) {
               Object.defineProperty(registry, "filter", originalRegistryFilterDescriptor);
@@ -586,25 +653,37 @@ func injectionScriptWithRendererBridge(
         && typeof value.dispatchHostMessage === "function"
       );
       if (!navigationBus) throw new Error("Codex navigation bus unavailable");
-      const settingsRoute = findSettingsRouteElement();
-      settingsRouteChildren = settingsRoute?.props?.children;
-      if (!Array.isArray(settingsRouteChildren)) {
-        throw new Error("Codex settings route registry unavailable");
-      }
-      if (Object.isFrozen(settingsRouteChildren)) {
-        throw new Error("Codex settings route registry is immutable");
-      }
-      routeTemplate = flattenReactElements(settingsRouteChildren).find(
-        (candidate) => candidate?.props?.path === "*"
-      );
-      if (!routeTemplate?.type) {
-        throw new Error("Codex settings route component unavailable");
-      }
+      // React may mount its route tree after the renderer is otherwise ready.
+      // Keep package activation independent from this delayed discovery.
+      initializeRoutes();
+      originalRegistryMapDescriptor = Object.getOwnPropertyDescriptor(registry, "map") ?? null;
+      registryMap = function (callback, thisArg) {
+        if (typeof callback !== "function") throw new TypeError("Settings map callback must be a function");
+        let projectsVisibility = false;
+        return originalArrayMap.call(this, (entry, index, source) => {
+          // Native sections precede appended extensions. Detect the visibility
+          // projection from native results before it reaches an unknown slug.
+          if (projectsVisibility && routeElements.has(entry?.slug)) {
+            return { section: entry, visible: true, pending: false, error: false };
+          }
+          const result = callback.call(thisArg, entry, index, source);
+          if (result?.section === entry && typeof result.visible === "boolean"
+              && typeof result.pending === "boolean" && typeof result.error === "boolean") {
+            projectsVisibility = true;
+          }
+          return result;
+        });
+      };
+      Object.defineProperty(registry, "map", {
+        configurable: true,
+        writable: true,
+        value: registryMap
+      });
       originalRegistryFilterDescriptor = Object.getOwnPropertyDescriptor(registry, "filter") ?? null;
       registryFilter = function (callback, thisArg) {
         const visible = Array.prototype.filter.call(this, callback, thisArg);
         for (const descriptor of descriptors.values()) {
-          if (!renderers.has(descriptor.slug)) continue;
+          if (!routeElements.has(descriptor.slug)) continue;
           if (!visible.some((entry) => entry?.slug === descriptor.slug)) {
             visible.push(registry.find((entry) => entry?.slug === descriptor.slug) ?? { slug: descriptor.slug });
           }
@@ -729,8 +808,12 @@ func injectionScriptWithRendererBridge(
     version,
     bridgeSessionID,
     settingsAdapterKey,
-    settingsAdapterReady: !settingsAdapterExpected || Boolean(settingsAdapter),
-    settingsAdapterError,
+    get settingsAdapterReady() {
+      return !settingsAdapterExpected || Boolean(settingsAdapter?.ready);
+    },
+    get settingsAdapterError() {
+      return settingsAdapterError;
+    },
     packageErrors,
     settleNodeInvocation(response) {
       if (!response || typeof response.id !== "string") return false;

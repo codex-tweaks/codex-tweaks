@@ -33,6 +33,7 @@ type SettingsAdapterConfiguration struct {
 	VisibilityModuleURL string                   `json:"visibilityModuleUrl"`
 	NavigationModuleURL string                   `json:"navigationModuleUrl"`
 	IconRegistryKey     string                   `json:"iconRegistryKey"`
+	RouteRegistryKey    string                   `json:"routeRegistryKey"`
 	Sections            []RuntimeSettingsSection `json:"sections"`
 }
 

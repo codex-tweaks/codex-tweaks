@@ -441,41 +441,10 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
         && typeof value.personalization === "function"
         && typeof value["general-settings"] === "function"
       );
-      const fibers = [];
-      for (const element of document.querySelectorAll("*")) {
-        for (const key of Object.getOwnPropertyNames(element)) {
-          if (key.startsWith("__reactContainer$") || key.startsWith("__reactFiber$")) {
-            fibers.push(element[key]?.current ?? element[key]);
-          }
-        }
-      }
-      const seenFibers = new Set();
-      let routeRegistered = false;
-      const flatten = (node, result = [], seen = new Set()) => {
-        if (Array.isArray(node)) {
-          for (const child of node) flatten(child, result, seen);
-        } else if (node && typeof node === "object" && !seen.has(node)) {
-          seen.add(node);
-          if (node.props) {
-            result.push(node);
-            flatten(node.props.children, result, seen);
-          }
-        }
-        return result;
-      };
-      while (fibers.length && seenFibers.size < 200000) {
-        const fiber = fibers.shift();
-        if (!fiber || typeof fiber !== "object" || seenFibers.has(fiber)) continue;
-        seenFibers.add(fiber);
-        fibers.push(fiber.child, fiber.sibling, fiber.return, fiber.alternate);
-        for (const props of [fiber.memoizedProps, fiber.pendingProps]) {
-          const elements = flatten(props?.children);
-          if (
-            elements.some((element) => element?.props?.path === "/settings")
-            && elements.some((element) => element?.props?.path === slug)
-          ) routeRegistered = true;
-        }
-      }
+      const routes = globalThis[%s];
+      const routeRegistered = routes?.children?.some((route) =>
+        route.path === slug && route.element?.props?.["data-codex-tweaks-settings-section-host"] === slug
+      ) ?? false;
       return {
         slug,
         customIconValid: typeof iconMap?.[slug] === "function" || Boolean(iconMap?.[slug]?.component),
@@ -484,7 +453,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
         routeRegistered,
         visibleWhenRejected: registry?.filter(() => false).some((entry) => entry?.slug === slug)
       };
-    })()`, JSONLiteral(configuration.AppModuleURL), JSONLiteral(configuration.VisibilityModuleURL))
+    })()`, JSONLiteral(configuration.AppModuleURL), JSONLiteral(configuration.VisibilityModuleURL), JSONLiteral(configuration.RouteRegistryKey))
 	diagnostics, diagnosticError := service.evaluate(ctx, diagnosticsExpression, *target.WebSocketDebuggerURL)
 	if diagnosticError != nil {
 		t.Fatal(diagnosticError)

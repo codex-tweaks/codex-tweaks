@@ -93,7 +93,7 @@ func TestInjectionExposesTypedNodeAndSettingsExtensions(t *testing.T) {
 		"settleNodeInvocation", "emitNodeEvent",
 		"registry.push({ slug: descriptor.slug })", "iconMap[descriptor.slug]",
 		"settingsRouteChildren.splice(", "dispatchHostMessage", "labelRegistry", "groupRegistry",
-		`key.startsWith("__reactFiber$")`, "settingsAdapter?.cleanup?.()",
+		"settingsAdapter?.cleanup?.()",
 		"nodePendingLimit = 64",
 		"settingsAdapterReady",
 		"try {\n      const context = {",

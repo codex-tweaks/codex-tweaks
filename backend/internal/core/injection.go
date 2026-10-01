@@ -187,10 +187,7 @@ func injectionScriptWithRendererBridge(
     let navigationBus = null;
     let settingsRouteChildren = null;
     let routeTemplate = null;
-    let routeRetryTimer = null;
-    let pendingOpenSlug = null;
     let adapterDisposed = false;
-    let routeDiscoveryFailed = false;
 
     const originalArrayMapDescriptor = Object.getOwnPropertyDescriptor(Array.prototype, "map");
     const originalArrayMap = originalArrayMapDescriptor?.value;
@@ -240,65 +237,20 @@ func injectionScriptWithRendererBridge(
       });
     }
 
-    const flattenReactElements = (node, result = [], seen = new Set(), depth = 0) => {
-      if (node == null || depth > 24) return result;
-      if (Array.isArray(node)) {
-        for (const child of node) flattenReactElements(child, result, seen, depth + 1);
-        return result;
-      }
-      if (typeof node !== "object" || seen.has(node)) return result;
-      seen.add(node);
-      if (node.props) {
-        result.push(node);
-        flattenReactElements(node.props.children, result, seen, depth + 1);
-      }
-      return result;
-    };
-    const findSettingsRouteElement = () => {
-      const fibers = [];
-      for (const element of document.querySelectorAll("*")) {
-        for (const key of Object.getOwnPropertyNames(element)) {
-          if (key.startsWith("__reactContainer$") || key.startsWith("__reactFiber$")) {
-            fibers.push(element[key]?.current ?? element[key]);
-          }
-        }
-      }
-      const seen = new Set();
-      while (fibers.length && seen.size < 200000) {
-        const fiber = fibers.shift();
-        if (!fiber || typeof fiber !== "object" || seen.has(fiber)) continue;
-        seen.add(fiber);
-        fibers.push(fiber.child, fiber.sibling, fiber.return, fiber.alternate);
-        for (const props of [fiber.memoizedProps, fiber.pendingProps]) {
-          const route = flattenReactElements(props?.children).find(
-            (candidate) =>
-              candidate?.props?.path === "/settings"
-              && Array.isArray(candidate.props.children)
-              && flattenReactElements(candidate.props.children).some(
-                (child) => child?.props?.path === "*"
-              )
-          );
-          if (route) return route;
-        }
-      }
-      return null;
-    };
     const initializeRoutes = () => {
-      if (settingsRouteChildren) return true;
-      const route = findSettingsRouteElement();
-      if (!route) return false;
-      const children = route.props.children;
+      const routes = globalThis[configuration.routeRegistryKey];
+      const children = routes?.children;
+      if (!Array.isArray(children) || !routes.template?.element) {
+        throw new Error("Codex settings route registry unavailable");
+      }
       if (Object.isFrozen(children)) throw new Error("Codex settings route registry is immutable");
-      const template = flattenReactElements(children).find(candidate => candidate?.props?.path === "*");
-      if (!template?.type) throw new Error("Codex settings route component unavailable");
       settingsRouteChildren = children;
-      routeTemplate = template;
-      return true;
+      routeTemplate = routes.template;
     };
     const installRoute = (descriptor) => {
       if (routeElements.has(descriptor.slug)) return;
       const hostElement = {
-        ...routeTemplate,
+        ...routeTemplate.element,
         key: null,
         type: "div",
         props: {
@@ -311,18 +263,14 @@ func injectionScriptWithRendererBridge(
       };
       const routeElement = {
         ...routeTemplate,
-        key: "codex-tweaks-settings-" + descriptor.slug,
-        props: {
-          ...routeTemplate.props,
-          children: undefined,
-          element: hostElement,
-          index: undefined,
-          path: descriptor.slug
-        },
-        _owner: null
+        id: "codex-tweaks-settings-" + descriptor.slug,
+        children: undefined,
+        element: hostElement,
+        index: undefined,
+        path: descriptor.slug
       };
       const wildcardIndex = settingsRouteChildren.findIndex(
-        (candidate) => candidate?.props?.path === "*"
+        (candidate) => candidate?.path === "*"
       );
       settingsRouteChildren.splice(
         wildcardIndex >= 0 ? wildcardIndex : settingsRouteChildren.length,
@@ -423,10 +371,7 @@ func injectionScriptWithRendererBridge(
       mounted.delete(element);
     };
     const scanMounts = () => {
-      if (!settingsRouteChildren) {
-        schedulePendingRoutes();
-        return;
-      }
+      if (adapterDisposed || !settingsRouteChildren || !renderers.size) return;
       for (const [element, record] of mounted) {
         if (!element.isConnected || renderers.get(record.slug) !== record.renderer) {
           cleanupMount(element, record);
@@ -471,8 +416,7 @@ func injectionScriptWithRendererBridge(
       const activeSlug = activeSettingsSlug();
       if (activeSlug) navigateToSettings("/settings/" + activeSlug, true);
     };
-    const syncPendingRoutes = () => {
-      if (!initializeRoutes()) return;
+    const syncRoutes = () => {
       let changed = false;
       for (const descriptor of descriptors.values()) {
         if (!renderers.has(descriptor.slug) || routeElements.has(descriptor.slug)) continue;
@@ -492,34 +436,15 @@ func injectionScriptWithRendererBridge(
         });
         changed = true;
       }
-      if (changed) applyGroupPlacements();
-      if (pendingOpenSlug && routeElements.has(pendingOpenSlug)) {
-        const slug = pendingOpenSlug;
-        pendingOpenSlug = null;
-        navigateToSettings("/settings/" + slug);
-      } else if (changed) {
+      if (changed) {
+        applyGroupPlacements();
         refreshSettingsRoute();
       }
-    };
-    const schedulePendingRoutes = () => {
-      if (adapterDisposed || routeDiscoveryFailed || routeRetryTimer !== null || !renderers.size) return;
-      routeRetryTimer = bridgeSetTimeout(() => {
-        routeRetryTimer = null;
-        if (adapterDisposed || !renderers.size) return;
-        try {
-          syncPendingRoutes();
-          scanMounts();
-        } catch (error) {
-          routeDiscoveryFailed = true;
-          settingsAdapterError = error instanceof Error ? error.message : String(error);
-          console.error("Codex Tweaks settings routes unavailable", error);
-        }
-      }, 500);
     };
 
     const adapter = {
       get ready() {
-        return Boolean(settingsRouteChildren) && !routeDiscoveryFailed;
+        return Boolean(settingsRouteChildren) && !adapterDisposed;
       },
       has(slug) {
         return renderers.has(slug);
@@ -534,7 +459,7 @@ func injectionScriptWithRendererBridge(
         if (typeof mount !== "function") {
           throw new TypeError("Settings section mount must be a function");
         }
-        if (!registry || !iconMap || !navigationBus) {
+        if (adapterDisposed || !settingsRouteChildren || !registry || !iconMap || !navigationBus) {
           throw new Error("Codex settings module is not ready");
         }
         if (renderers.has(descriptor.slug)) {
@@ -542,7 +467,7 @@ func injectionScriptWithRendererBridge(
         }
         const renderer = { mount };
         renderers.set(descriptor.slug, renderer);
-        syncPendingRoutes();
+        syncRoutes();
         scanMounts();
         let registered = true;
         const unregister = () => {
@@ -551,7 +476,6 @@ func injectionScriptWithRendererBridge(
           if (renderers.get(descriptor.slug) === renderer) {
             const activeSlug = activeSettingsSlug();
             renderers.delete(descriptor.slug);
-            if (pendingOpenSlug === descriptor.slug) pendingOpenSlug = null;
             for (const [element, record] of mounted) {
               if (record.slug === descriptor.slug) cleanupMount(element, record);
             }
@@ -579,18 +503,13 @@ func injectionScriptWithRendererBridge(
           slug: descriptor.slug,
           open() {
             if (!registered) return;
-            pendingOpenSlug = descriptor.slug;
-            syncPendingRoutes();
-            if (pendingOpenSlug) schedulePendingRoutes();
+            navigateToSettings("/settings/" + descriptor.slug);
           },
           unregister
         });
       },
       cleanup() {
         adapterDisposed = true;
-        if (routeRetryTimer !== null) bridgeClearTimeout(routeRetryTimer);
-        routeRetryTimer = null;
-        pendingOpenSlug = null;
         const activeSlug = activeSettingsSlug();
         const wasCustomRoute = Boolean(activeSlug && descriptors.has(activeSlug));
         if (wasCustomRoute) {
@@ -653,8 +572,8 @@ func injectionScriptWithRendererBridge(
         && typeof value.dispatchHostMessage === "function"
       );
       if (!navigationBus) throw new Error("Codex navigation bus unavailable");
-      // React may mount its route tree after the renderer is otherwise ready.
-      // Keep package activation independent from this delayed discovery.
+      // The backend has already located the module's live route object table.
+      // Unsupported builds fail once; renderer updates never restart discovery.
       initializeRoutes();
       originalRegistryMapDescriptor = Object.getOwnPropertyDescriptor(registry, "map") ?? null;
       registryMap = function (callback, thisArg) {

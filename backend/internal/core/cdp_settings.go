@@ -59,7 +59,8 @@ func (s *rendererBridgeSession) ensureSettingsAdapter(
 		return &SettingsAdapterConfiguration{
 			AppModuleURL: s.settingsAppModuleURL, VisibilityModuleURL: s.settingsVisibilityURL,
 			NavigationModuleURL: s.settingsNavigationURL, IconRegistryKey: settingsIconRegistryKey,
-			Sections: sections,
+			RouteRegistryKey: settingsRouteRegistryKey,
+			Sections:         sections,
 		}, nil
 	}
 	s.settingsAdapterCached = false
@@ -105,6 +106,9 @@ func (s *rendererBridgeSession) ensureSettingsAdapter(
 	if err := s.exposeSettingsIconRegistry(ctx, visibilityURL); err != nil {
 		return nil, err
 	}
+	if err := s.exposeSettingsRouteRegistry(ctx, appModuleURL); err != nil {
+		return nil, err
+	}
 	if s.executionGeneration.Load() != generation {
 		return nil, errors.New("Codex 页面在设置模块适配期间发生刷新")
 	}
@@ -116,7 +120,8 @@ func (s *rendererBridgeSession) ensureSettingsAdapter(
 	return &SettingsAdapterConfiguration{
 		AppModuleURL: s.settingsAppModuleURL, VisibilityModuleURL: s.settingsVisibilityURL,
 		NavigationModuleURL: s.settingsNavigationURL, IconRegistryKey: settingsIconRegistryKey,
-		Sections: sections,
+		RouteRegistryKey: settingsRouteRegistryKey,
+		Sections:         sections,
 	}, nil
 }
 

@@ -81,6 +81,10 @@ description = "启动 dist/ 中的 Codex Tweaks.app"
 depends = ["build"]
 run = "open 'dist/Codex Tweaks.app'"
 
+[tasks."launch:built"]
+description = "启动已经完成构建的 Codex Tweaks.app"
+run = "open 'dist/Codex Tweaks.app'"
+
 [tasks.kill]
 description = "停止正在运行的 Codex Tweaks"
 run = "pkill -x 'Codex Tweaks' 2>/dev/null || true"
@@ -92,6 +96,10 @@ run = "rm -rf build dist"
 [tasks."settings:check"]
 description = "验证设置模块发现与注入后端"
 run = "cd backend && go test -race ./internal/core -run 'TestSettings|TestInjection'"
+
+[tasks."format:go"]
+description = "格式化 Go 后端源码"
+run = "cd backend && go fmt ./..."
 
 [tasks."settings:probe"]
 description = "检查当前 Codex 的设置模块适配，不注入测试页面"

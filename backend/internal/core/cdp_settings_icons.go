@@ -109,7 +109,7 @@ func (s *rendererBridgeSession) publishSettingsIconRegistry(ctx context.Context,
 	raw, err := s.call(ctx, "Runtime.callFunctionOn", map[string]any{
 		"objectId": arguments[1]["objectId"], "arguments": arguments, "returnByValue": true,
 		"functionDeclaration": `function(key, ...values) {
-  const icon = value => typeof value === "function" || Boolean(value && typeof value === "object" && value.component);
+  const icon = value => Boolean(value && typeof value === "object" && value.component);
   const registry = values.find(value => {
     const general = Object.getOwnPropertyDescriptor(value, "general-settings")?.value;
     const personalization = Object.getOwnPropertyDescriptor(value, "personalization")?.value;

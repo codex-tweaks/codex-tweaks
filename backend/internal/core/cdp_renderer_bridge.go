@@ -102,7 +102,8 @@ type rendererBridgeSession struct {
 	scripts                    map[string]string
 	executionGeneration        atomic.Uint64
 	debuggerEnabled            bool
-	settingsAppModuleURL       string
+	settingsAssetURLs          func(context.Context) ([]string, error)
+	settingsRegistryURL        string
 	settingsVisibilityURL      string
 	settingsNavigationURL      string
 	settingsAdapterError       error
@@ -143,10 +144,11 @@ func openRendererBridgeSession(
 		id: id, debuggerURL: *target.WebSocketDebuggerURL, targetURL: target.URL, connection: connection,
 		invoker: invoker, logger: logger, secret: secret, nextID: 1,
 		pending: map[int]chan cdpCallResult{}, done: make(chan struct{}),
-		authorizations: map[string]rendererAuthorization{},
-		requestSlots:   make(chan struct{}, rendererBridgeMaximumConcurrent),
-		responseSlots:  make(chan struct{}, rendererBridgeMaximumResponses),
-		scripts:        map[string]string{},
+		authorizations:    map[string]rendererAuthorization{},
+		requestSlots:      make(chan struct{}, rendererBridgeMaximumConcurrent),
+		responseSlots:     make(chan struct{}, rendererBridgeMaximumResponses),
+		scripts:           map[string]string{},
+		settingsAssetURLs: installedCodexAssetURLs,
 	}
 	go session.readLoop()
 	setupContext, cancel := context.WithTimeout(ctx, 5*time.Second)

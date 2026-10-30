@@ -37,42 +37,29 @@ func testCompiledSettingsUI(
 }
 
 func TestSettingsModuleAssetDiscovery(t *testing.T) {
-	appSource := `const page=()=>import(` + "`" + `./settings-page-ABC_123.js` + "`" + `);`
-	settingsSource := `import{n as e}from"./use-visible-settings-sections-DEF-456.js";`
-	if got := matchAsset(settingsPageImportPattern, appSource); got != "./settings-page-ABC_123.js" {
-		t.Fatalf("settings page asset = %q", got)
+	assets := []string{
+		"app://-/assets/settings-page-lazy-ABC123.js",
+		"app://-/assets/settings-page-frame-DEF456.js",
+		"app://-/assets/settings-page-ABC_123.js",
+		"app://-/assets/app-runtime-ABC123.js",
 	}
-	if got := visibilityAssetPattern.FindString(settingsSource); got != "./use-visible-settings-sections-DEF-456.js" {
-		t.Fatalf("visibility asset = %q", got)
+	got, err := settingsAssetURL(assets, settingsPageScriptPattern)
+	if err != nil || got != "app://-/assets/settings-page-ABC_123.js" {
+		t.Fatalf("settings page asset = %q, error = %v", got, err)
 	}
-	if got := matchAsset(settingsPageImportPattern, "const settings = [];"); got != "" {
-		t.Fatalf("unexpected asset = %q", got)
+	if _, err := settingsAssetURL(assets[:2], settingsPageScriptPattern); err == nil {
+		t.Fatal("lazy or frame module accepted as the settings page")
 	}
-}
-
-func TestSettingsModuleAssetFixtures(t *testing.T) {
-	appPath := os.Getenv("CODEX_TWEAKS_APP_INITIAL_FIXTURE")
-	settingsPath := os.Getenv("CODEX_TWEAKS_SETTINGS_PAGE_FIXTURE")
-	if appPath == "" || settingsPath == "" {
-		t.Skip("set app-initial and settings-page fixture paths for a Codex compatibility check")
-	}
-	appSource, err := os.ReadFile(appPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	settingsSource, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if matchAsset(settingsPageImportPattern, string(appSource)) == "" ||
-		visibilityAssetPattern.FindString(string(settingsSource)) == "" {
-		t.Fatal("current Codex module assets were not discovered")
+	assets = append(assets, "app://-/assets/settings-page-DEF456.js")
+	if _, err := settingsAssetURL(assets, settingsPageScriptPattern); err == nil {
+		t.Fatal("ambiguous settings page accepted")
 	}
 }
 
 func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.T) {
 	const (
-		appModuleURL        = "app://-/assets/app-initial-TEST.js"
+		appModuleURL        = "app://-/assets/app-primary-TEST.js"
+		routeModuleURL      = "app://-/assets/app-runtime-TEST.js"
 		settingsModuleURL   = "app://-/assets/settings-page-TEST.js"
 		visibilityModuleURL = "app://-/assets/use-visible-settings-sections-TEST.js"
 		navigationModuleURL = "app://-/assets/message-bus-TEST.js"
@@ -110,8 +97,6 @@ func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.
 				writeScriptParsed("app-1", appModuleURL)
 				writeResponse(command, map[string]any{})
 			case "Debugger.getScriptSource":
-				params, _ := command["params"].(map[string]any)
-				scriptID, _ := params["scriptId"].(string)
 				countsMu.Lock()
 				getScriptSourceCount++
 				shouldFail := failSource
@@ -120,10 +105,7 @@ func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.
 					writeResponse(command, map[string]any{"scriptSource": "const missing = true;"})
 					continue
 				}
-				source := `import "./use-visible-settings-sections-TEST.js";`
-				if strings.HasPrefix(scriptID, "app-") {
-					source = `const deps=["./settings-page-TEST.js"];import{bus}from"./message-bus-TEST.js";`
-				}
+				source := `import {icons} from "./use-visible-settings-sections-TEST.js";import {sections} from "./app-primary-TEST.js";import {bus} from "./message-bus-TEST.js";`
 				writeResponse(command, map[string]any{"scriptSource": source})
 			case "Runtime.getProperties":
 				params, _ := command["params"].(map[string]any)
@@ -151,7 +133,7 @@ func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.
 				params, _ := command["params"].(map[string]any)
 				expression, _ := params["expression"].(string)
 				if strings.Contains(expression, "dispatchHostMessage") {
-					writeResponse(command, map[string]any{"result": map[string]any{"value": navigationModuleURL}})
+					writeResponse(command, map[string]any{"result": map[string]any{"value": map[string]any{"registryURL": appModuleURL, "navigationURL": navigationModuleURL}}})
 					continue
 				}
 				if strings.Contains(expression, "Object.values(module)") {
@@ -191,6 +173,9 @@ func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.
 		t.Fatal(err)
 	}
 	defer session.Close()
+	session.settingsAssetURLs = func(context.Context) ([]string, error) {
+		return []string{settingsModuleURL, routeModuleURL}, nil
+	}
 
 	makePayload := func(title string) Payload {
 		return Payload{Packages: []CompiledPackage{{
@@ -208,14 +193,14 @@ func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if first.AppModuleURL != appModuleURL || first.VisibilityModuleURL != visibilityModuleURL ||
+	if first.RegistryModuleURL != appModuleURL || first.VisibilityModuleURL != visibilityModuleURL ||
 		first.NavigationModuleURL != navigationModuleURL || first.IconRegistryKey != settingsIconRegistryKey ||
-		second.AppModuleURL != appModuleURL || second.VisibilityModuleURL != visibilityModuleURL ||
+		second.RegistryModuleURL != appModuleURL || second.VisibilityModuleURL != visibilityModuleURL ||
 		len(second.Sections) != 1 || second.Sections[0].Title != "Second" {
 		t.Fatalf("unexpected cached settings adapters: first=%#v second=%#v", first, second)
 	}
 	countsMu.Lock()
-	if getScriptSourceCount != 2 || importModuleCount != 1 {
+	if getScriptSourceCount != 1 || importModuleCount != 1 {
 		t.Fatalf("cached discovery repeated CDP work: getScriptSource=%d import=%d", getScriptSourceCount, importModuleCount)
 	}
 	countsMu.Unlock()
@@ -231,7 +216,7 @@ func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.
 		t.Fatalf("settings sections were not refreshed after navigation: %#v", third)
 	}
 	countsMu.Lock()
-	if getScriptSourceCount != 4 || importModuleCount != 2 {
+	if getScriptSourceCount != 2 || importModuleCount != 2 {
 		t.Fatalf("execution-context reset did not invalidate discovery: getScriptSource=%d import=%d", getScriptSourceCount, importModuleCount)
 	}
 	failSource = true
@@ -245,7 +230,7 @@ func TestSettingsAdapterDiscoveryIsCachedUntilExecutionContextClears(t *testing.
 		}
 	}
 	countsMu.Lock()
-	if getScriptSourceCount != 5 {
+	if getScriptSourceCount != 3 {
 		t.Fatalf("failed discovery was repeated: %d", getScriptSourceCount)
 	}
 	failSource = false
@@ -399,7 +384,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
 	if err != nil || configuration == nil {
 		t.Fatalf("settings bridge unavailable: %v %#v", err, configuration)
 	}
-	appModuleURL = configuration.AppModuleURL
+	appModuleURL = configuration.RegistryModuleURL
 	navigationModuleURL = configuration.NavigationModuleURL
 	if _, err := service.evaluate(ctx, `(() => {
       const records = [];
@@ -453,7 +438,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
         routeRegistered,
         visibleWhenRejected: registry?.filter(() => false).some((entry) => entry?.slug === slug)
       };
-    })()`, JSONLiteral(configuration.AppModuleURL), JSONLiteral(configuration.VisibilityModuleURL), JSONLiteral(configuration.RouteRegistryKey))
+    })()`, JSONLiteral(configuration.RegistryModuleURL), JSONLiteral(configuration.VisibilityModuleURL), JSONLiteral(configuration.RouteRegistryKey))
 	diagnostics, diagnosticError := service.evaluate(ctx, diagnosticsExpression, *target.WebSocketDebuggerURL)
 	if diagnosticError != nil {
 		t.Fatal(diagnosticError)

@@ -40,7 +40,7 @@ func TestInjectionRuntimeProbeExcludesPackageBundles(t *testing.T) {
 		ID: "sample", CSS: "large-package-css-marker", JavaScript: "large-package-js-marker",
 	}}}
 	configuration := &SettingsAdapterConfiguration{
-		AppModuleURL:        "app://-/assets/app-initial-test.js",
+		RegistryModuleURL:   "app://-/assets/app-primary-test.js",
 		VisibilityModuleURL: "app://-/assets/use-visible-settings-sections-test.js",
 		Sections: []RuntimeSettingsSection{{
 			PackageID: "sample", ID: "wallpaper", Title: "自定义背景", Slug: "sample-wallpaper",
@@ -48,7 +48,7 @@ func TestInjectionRuntimeProbeExcludesPackageBundles(t *testing.T) {
 	}
 	probe := injectionRuntimeProbeScript(payload, 7, "bridge-session", configuration)
 	for _, expected := range []string{
-		`"base-force-7"`, `"bridge-session"`, `"appModuleUrl"`, `"unchanged"`,
+		`"base-force-7"`, `"bridge-session"`, `"registryModuleUrl"`, `"unchanged"`,
 	} {
 		if !strings.Contains(probe, expected) {
 			t.Fatalf("runtime probe missing %q", expected)
@@ -77,7 +77,7 @@ func TestInjectionExposesTypedNodeAndSettingsExtensions(t *testing.T) {
 		JavaScript: `module.exports.activate = ({ node, ui }) => node.invoke("ping", ui.settingsSections.list());`,
 	}}}
 	configuration := &SettingsAdapterConfiguration{
-		AppModuleURL:        "app://-/assets/app-initial-test.js",
+		RegistryModuleURL:   "app://-/assets/app-primary-test.js",
 		VisibilityModuleURL: "app://-/assets/use-visible-settings-sections-test.js",
 		Sections: []RuntimeSettingsSection{{
 			PackageID: "sample", ID: "wallpaper", Title: "自定义背景",
@@ -88,7 +88,7 @@ func TestInjectionExposesTypedNodeAndSettingsExtensions(t *testing.T) {
 		payload, 0, "bridge-session", map[string]string{"sample": "secret-token"}, configuration,
 	)
 	for _, expected := range []string{
-		`"bridge-session"`, `"secret-token"`, `"appModuleUrl"`,
+		`"bridge-session"`, `"secret-token"`, `"registryModuleUrl"`,
 		"createPackageNode(", "createPackageUI(", "ui.settingsSections",
 		"settleNodeInvocation", "emitNodeEvent",
 		"registry.push({ slug: descriptor.slug })", "iconMap[descriptor.slug]",

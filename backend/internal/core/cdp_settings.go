@@ -10,13 +10,10 @@ import (
 	"time"
 )
 
-var appInitialScriptPattern = regexp.MustCompile(`/app-initial-[A-Za-z0-9_-]+\.js(?:\?.*)?$`)
-
-// Bundlers may move lazy imports into a dependency table or use any JS quote.
-var settingsPageImportPattern = regexp.MustCompile(`\./settings-page-[A-Za-z0-9_-]+\.js`)
+// Match the page itself, not settings-page-lazy or settings-page-frame.
+var settingsPageScriptPattern = regexp.MustCompile(`/settings-page-[A-Za-z0-9_]+\.js$`)
+var settingsRouteScriptPattern = regexp.MustCompile(`/app-runtime-[A-Za-z0-9_]+\.js$`)
 var visibilityAssetPattern = regexp.MustCompile(`\./use-visible-settings-sections-[A-Za-z0-9_-]+\.js`)
-var messageBusAssetPattern = regexp.MustCompile(`\./message-bus-[A-Za-z0-9_-]+\.js`)
-var appSharedAssetPattern = regexp.MustCompile(`\./app-shared-[A-Za-z0-9_-]+\.js`)
 var staticModuleImportPattern = regexp.MustCompile(`\bfrom\s*["'](\./[A-Za-z0-9_./-]+\.js)["']`)
 
 func (s *rendererBridgeSession) ensureSettingsAdapter(
@@ -55,28 +52,24 @@ func (s *rendererBridgeSession) ensureSettingsAdapter(
 		s.debuggerEnabled = true
 	}
 	if s.settingsAdapterCached && s.settingsAdapterGen == generation &&
-		s.settingsAppModuleURL != "" && s.settingsVisibilityURL != "" {
+		s.settingsRegistryURL != "" && s.settingsVisibilityURL != "" {
 		return &SettingsAdapterConfiguration{
-			AppModuleURL: s.settingsAppModuleURL, VisibilityModuleURL: s.settingsVisibilityURL,
+			RegistryModuleURL: s.settingsRegistryURL, VisibilityModuleURL: s.settingsVisibilityURL,
 			NavigationModuleURL: s.settingsNavigationURL, IconRegistryKey: settingsIconRegistryKey,
 			RouteRegistryKey: settingsRouteRegistryKey,
 			Sections:         sections,
 		}, nil
 	}
 	s.settingsAdapterCached = false
-	appModuleURL, appScriptID := s.waitForMatchingScript(ctx, appInitialScriptPattern)
-	if appScriptID == "" {
-		return nil, errors.New("当前 Codex 构建中未找到 app-initial 模块")
-	}
-	appSource, err := s.getScriptSource(ctx, appScriptID)
+	assets, err := s.settingsAssetURLs(ctx)
 	if err != nil {
 		return nil, err
 	}
-	settingsAsset := matchAsset(settingsPageImportPattern, appSource)
-	if settingsAsset == "" {
-		return nil, errors.New("当前 Codex 构建中未找到设置模块入口")
+	settingsModuleURL, err := settingsAssetURL(assets, settingsPageScriptPattern)
+	if err != nil {
+		return nil, err
 	}
-	settingsModuleURL, err := resolveModuleURL(appModuleURL, settingsAsset)
+	routeModuleURL, err := settingsAssetURL(assets, settingsRouteScriptPattern)
 	if err != nil {
 		return nil, err
 	}
@@ -99,137 +92,107 @@ func (s *rendererBridgeSession) ensureSettingsAdapter(
 	if err != nil {
 		return nil, err
 	}
-	navigationURL, err := s.findSettingsNavigationModuleURL(ctx, appModuleURL, appSource)
+	dependencies, err := s.findSettingsDependencies(ctx, settingsModuleURL, settingsSource)
 	if err != nil {
 		return nil, err
 	}
 	if err := s.exposeSettingsIconRegistry(ctx, visibilityURL); err != nil {
 		return nil, err
 	}
-	if err := s.exposeSettingsRouteRegistry(ctx, appModuleURL); err != nil {
+	if err := s.exposeSettingsRouteRegistry(ctx, routeModuleURL); err != nil {
 		return nil, err
 	}
 	if s.executionGeneration.Load() != generation {
 		return nil, errors.New("Codex 页面在设置模块适配期间发生刷新")
 	}
-	s.settingsAppModuleURL = appModuleURL
+	s.settingsRegistryURL = dependencies.RegistryURL
 	s.settingsVisibilityURL = visibilityURL
-	s.settingsNavigationURL = navigationURL
+	s.settingsNavigationURL = dependencies.NavigationURL
 	s.settingsAdapterGen = generation
 	s.settingsAdapterCached = true
 	return &SettingsAdapterConfiguration{
-		AppModuleURL: s.settingsAppModuleURL, VisibilityModuleURL: s.settingsVisibilityURL,
+		RegistryModuleURL: s.settingsRegistryURL, VisibilityModuleURL: s.settingsVisibilityURL,
 		NavigationModuleURL: s.settingsNavigationURL, IconRegistryKey: settingsIconRegistryKey,
 		RouteRegistryKey: settingsRouteRegistryKey,
 		Sections:         sections,
 	}, nil
 }
 
-func (s *rendererBridgeSession) findSettingsNavigationModuleURL(
+type settingsDependencies struct {
+	RegistryURL   string `json:"registryURL"`
+	NavigationURL string `json:"navigationURL"`
+}
+
+func (s *rendererBridgeSession) findSettingsDependencies(
 	ctx context.Context,
-	appModuleURL, appSource string,
-) (string, error) {
-	candidates := []string{appModuleURL}
-	seen := map[string]bool{appModuleURL: true}
-	addAsset := func(asset string) error {
-		if asset == "" {
-			return nil
-		}
-		moduleURL, err := resolveModuleURL(appModuleURL, asset)
+	settingsModuleURL, settingsSource string,
+) (settingsDependencies, error) {
+	candidates := []string{settingsModuleURL}
+	for _, match := range staticModuleImportPattern.FindAllStringSubmatch(settingsSource, -1) {
+		moduleURL, err := resolveModuleURL(settingsModuleURL, match[1])
 		if err != nil {
-			return err
+			return settingsDependencies{}, err
 		}
-		if !seen[moduleURL] {
-			candidates = append(candidates, moduleURL)
-			seen[moduleURL] = true
-		}
-		return nil
+		candidates = append(candidates, moduleURL)
 	}
-	for _, match := range staticModuleImportPattern.FindAllStringSubmatch(appSource, -1) {
-		if err := addAsset(match[1]); err != nil {
-			return "", err
-		}
-	}
-	for _, pattern := range []*regexp.Regexp{messageBusAssetPattern, appSharedAssetPattern} {
-		if err := addAsset(pattern.FindString(appSource)); err != nil {
-			return "", err
-		}
-	}
+	// The page has already initialized these imports. Identify exported values
+	// by their role rather than assuming they still live in app-initial.
 	expression := fmt.Sprintf(`(async () => {
+  const dependencies = { registryURL: "", navigationURL: "" };
   for (const url of %s) {
-    try {
-      const module = await import(url);
-      if (Object.values(module).some(value =>
-        value && typeof value === "object"
-        && typeof value.dispatchHostMessage === "function"
-      )) return url;
-    } catch (_) {}
+    const values = Object.values(await import(url));
+    if (!dependencies.registryURL && values.some(value =>
+      Array.isArray(value)
+      && value.some(entry => entry?.slug === "general-settings")
+      && value.some(entry => entry?.slug === "personalization")
+    )) dependencies.registryURL = url;
+    if (!dependencies.navigationURL && values.some(value =>
+      value && typeof value === "object"
+      && typeof value.dispatchHostMessage === "function"
+    )) dependencies.navigationURL = url;
+    if (dependencies.registryURL && dependencies.navigationURL) break;
   }
-  return "";
+  return dependencies;
 })()`, JSONLiteral(candidates))
 	raw, err := s.call(ctx, "Runtime.evaluate", map[string]any{
 		"expression": expression, "returnByValue": true, "awaitPromise": true,
 	})
 	if err != nil {
-		return "", err
+		return settingsDependencies{}, err
 	}
 	var result struct {
 		Result struct {
-			Value string `json:"value"`
+			Value settingsDependencies `json:"value"`
 		} `json:"result"`
 		ExceptionDetails json.RawMessage `json:"exceptionDetails"`
 	}
 	if err := json.Unmarshal(raw, &result); err != nil {
-		return "", err
+		return settingsDependencies{}, err
 	}
-	if len(result.ExceptionDetails) != 0 || result.Result.Value == "" {
-		return "", errors.New("当前 Codex 构建中未找到设置导航模块")
+	if len(result.ExceptionDetails) != 0 {
+		return settingsDependencies{}, errors.New("无法读取 Codex 设置依赖，请更新 Codex Tweaks 后重试")
+	}
+	if result.Result.Value.RegistryURL == "" || result.Result.Value.NavigationURL == "" {
+		return settingsDependencies{}, errors.New("当前 Codex 设置结构不受支持，请更新 Codex Tweaks 后重试")
 	}
 	return result.Result.Value, nil
 }
 
-func matchAsset(pattern *regexp.Regexp, source string) string {
-	match := pattern.FindStringSubmatch(source)
-	if len(match) == 2 {
-		return match[1]
-	}
-	return pattern.FindString(source)
-}
-
-func (s *rendererBridgeSession) findScript(pattern *regexp.Regexp) (string, string) {
-	s.scriptMu.RLock()
-	defer s.scriptMu.RUnlock()
-	for scriptURL, scriptID := range s.scripts {
-		if pattern.MatchString(scriptURL) {
-			return scriptURL, scriptID
+func settingsAssetURL(assets []string, pattern *regexp.Regexp) (string, error) {
+	var found string
+	for _, asset := range assets {
+		if !pattern.MatchString(asset) {
+			continue
 		}
-	}
-	return "", ""
-}
-
-func (s *rendererBridgeSession) waitForMatchingScript(
-	ctx context.Context,
-	pattern *regexp.Regexp,
-) (string, string) {
-	if scriptURL, scriptID := s.findScript(pattern); scriptID != "" {
-		return scriptURL, scriptID
-	}
-	ticker := time.NewTicker(20 * time.Millisecond)
-	defer ticker.Stop()
-	timer := time.NewTimer(2 * time.Second)
-	defer timer.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return "", ""
-		case <-timer.C:
-			return "", ""
-		case <-ticker.C:
-			if scriptURL, scriptID := s.findScript(pattern); scriptID != "" {
-				return scriptURL, scriptID
-			}
+		if found != "" {
+			return "", errors.New("Codex 资源目录存在多个匹配项，请重新安装 Codex 后重试")
 		}
+		found = asset
 	}
+	if found == "" {
+		return "", errors.New("没有找到 Codex 设置资源，请更新 Codex Tweaks 后重试")
+	}
+	return found, nil
 }
 
 func (s *rendererBridgeSession) waitForScript(ctx context.Context, scriptURL string) string {

@@ -556,12 +556,11 @@ func injectionScriptWithRendererBridge(
     globalThis[globalKey] = adapter;
 
     try {
-      const [appModule, visibilityModule, navigationModule] = await Promise.all([
-        import(configuration.appModuleUrl),
-        import(configuration.visibilityModuleUrl),
-        import(configuration.navigationModuleUrl || configuration.appModuleUrl)
+      const [registryModule, navigationModule] = await Promise.all([
+        import(configuration.registryModuleUrl),
+        import(configuration.navigationModuleUrl)
       ]);
-      registry = Object.values(appModule).find((value) =>
+      registry = Object.values(registryModule).find((value) =>
         Array.isArray(value)
         && value.some((entry) => entry?.slug === "general-settings")
         && value.some((entry) => entry?.slug === "personalization")
@@ -614,12 +613,10 @@ func injectionScriptWithRendererBridge(
         throw new Error("Codex settings registry is immutable");
       }
 
-      iconMap = globalThis[configuration.iconRegistryKey] ?? Object.values(visibilityModule).find((value) =>
-        value && typeof value === "object"
-        && typeof value.personalization === "function"
-        && typeof value["general-settings"] === "function"
-      );
-      if (!iconMap) throw new Error("Codex settings icon registry unavailable");
+      iconMap = globalThis[configuration.iconRegistryKey];
+      if (!iconMap?.personalization?.component || !iconMap["general-settings"]?.component) {
+        throw new Error("Codex settings icon registry unavailable");
+      }
       observer.observe(document.documentElement, { childList: true, subtree: true });
       scanMounts();
       return adapter;

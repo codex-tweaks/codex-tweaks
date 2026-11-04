@@ -318,13 +318,14 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
 	originalSettingsSlug, _ := original["settingsSlug"].(string)
 	appModuleURL := ""
 	navigationModuleURL := ""
+	navigationModuleID := ""
 	openedCustom := false
 	restoreNavigation := func(restoreContext context.Context) {
 		if !openedCustom || appModuleURL == "" {
 			return
 		}
 		restoreExpression := fmt.Sprintf(`(async () => {
-          const appModule = await import(%s);
+          const appModule = await %s;
           const bus = Object.values(appModule).find((value) =>
             value && typeof value === "object"
             && typeof value.dispatchHostMessage === "function"
@@ -332,7 +333,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
           if (!bus) return { restored: false };
           %s
           return { restored: true };
-        })()`, JSONLiteral(navigationModuleURL), func() string {
+        })()`, settingsModuleExpression(navigationModuleURL, navigationModuleID), func() string {
 			if originalSettingsSlug != "" {
 				return fmt.Sprintf(`bus.dispatchHostMessage({
               type: "navigate-to-route",
@@ -386,6 +387,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
 	}
 	appModuleURL = configuration.RegistryModuleURL
 	navigationModuleURL = configuration.NavigationModuleURL
+	navigationModuleID = configuration.NavigationModuleID
 	if _, err := service.evaluate(ctx, `(() => {
       const records = [];
       const originalConsoleError = console.error;
@@ -414,7 +416,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
 	}
 	diagnosticsExpression := fmt.Sprintf(`(async () => {
       const slug = globalThis.__CODEX_TWEAKS_UI_LIVE_TEST__?.slug;
-      const appModule = await import(%s);
+      const appModule = await %s;
       const visibilityModule = await import(%s);
       const registry = Object.values(appModule).find((value) =>
         Array.isArray(value)
@@ -438,7 +440,7 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
         routeRegistered,
         visibleWhenRejected: registry?.filter(() => false).some((entry) => entry?.slug === slug)
       };
-    })()`, JSONLiteral(configuration.RegistryModuleURL), JSONLiteral(configuration.VisibilityModuleURL), JSONLiteral(configuration.RouteRegistryKey))
+    })()`, settingsModuleExpression(configuration.RegistryModuleURL, configuration.RegistryModuleID), JSONLiteral(configuration.VisibilityModuleURL), JSONLiteral(configuration.RouteRegistryKey))
 	diagnostics, diagnosticError := service.evaluate(ctx, diagnosticsExpression, *target.WebSocketDebuggerURL)
 	if diagnosticError != nil {
 		t.Fatal(diagnosticError)
@@ -716,7 +718,7 @@ func TestCustomBackgroundSettingsRouteLive(t *testing.T) {
 	originalSlug, _ := original["activeSlug"].(string)
 	navigate := func(sectionSlug string, replace bool) {
 		expression := fmt.Sprintf(`(async () => {
-          const appModule = await import(%s);
+          const appModule = await %s;
           const bus = Object.values(appModule).find((value) =>
             value && typeof value === "object"
             && value.handlers instanceof Map
@@ -729,7 +731,7 @@ func TestCustomBackgroundSettingsRouteLive(t *testing.T) {
             replace: %s
           });
           return { navigated: true };
-        })()`, JSONLiteral(configuration.NavigationModuleURL), JSONLiteral(sectionSlug), JSONLiteral(replace))
+        })()`, settingsModuleExpression(configuration.NavigationModuleURL, configuration.NavigationModuleID), JSONLiteral(sectionSlug), JSONLiteral(replace))
 		if _, evaluateError := service.evaluate(ctx, expression, *target.WebSocketDebuggerURL); evaluateError != nil {
 			t.Fatal(evaluateError)
 		}
@@ -740,7 +742,7 @@ func TestCustomBackgroundSettingsRouteLive(t *testing.T) {
 			return
 		}
 		expression := fmt.Sprintf(`(async () => {
-          const appModule = await import(%s);
+          const appModule = await %s;
           const bus = Object.values(appModule).find((value) =>
             value && typeof value === "object"
             && value.handlers instanceof Map
@@ -748,7 +750,7 @@ func TestCustomBackgroundSettingsRouteLive(t *testing.T) {
           );
           bus?.dispatchHostMessage({ type: "navigate-back" });
           return { restored: Boolean(bus) };
-        })()`, JSONLiteral(configuration.NavigationModuleURL))
+        })()`, settingsModuleExpression(configuration.NavigationModuleURL, configuration.NavigationModuleID))
 		_, _ = service.evaluate(context.Background(), expression, *target.WebSocketDebuggerURL)
 	}
 	defer restore()

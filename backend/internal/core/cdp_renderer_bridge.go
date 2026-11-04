@@ -106,6 +106,8 @@ type rendererBridgeSession struct {
 	settingsRegistryURL        string
 	settingsVisibilityURL      string
 	settingsNavigationURL      string
+	settingsRegistryModuleID   string
+	settingsNavigationModuleID string
 	settingsAdapterError       error
 	settingsAdapterRetryAt     time.Time
 	settingsAdapterLoggedError string

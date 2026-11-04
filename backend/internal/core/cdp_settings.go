@@ -15,6 +15,7 @@ var settingsPageScriptPattern = regexp.MustCompile(`/settings-page-[A-Za-z0-9_]+
 var settingsRouteScriptPattern = regexp.MustCompile(`/app-runtime-[A-Za-z0-9_]+\.js$`)
 var visibilityAssetPattern = regexp.MustCompile(`\./use-visible-settings-sections-[A-Za-z0-9_-]+\.js`)
 var staticModuleImportPattern = regexp.MustCompile(`\bfrom\s*["'](\./[A-Za-z0-9_./-]+\.js)["']`)
+var rspackEntryScriptPattern = regexp.MustCompile(`/[0-9]+\.[a-f0-9]+\.js$`)
 
 func (s *rendererBridgeSession) ensureSettingsAdapter(
 	ctx context.Context,
@@ -56,6 +57,7 @@ func (s *rendererBridgeSession) ensureSettingsAdapter(
 		return &SettingsAdapterConfiguration{
 			RegistryModuleURL: s.settingsRegistryURL, VisibilityModuleURL: s.settingsVisibilityURL,
 			NavigationModuleURL: s.settingsNavigationURL, IconRegistryKey: settingsIconRegistryKey,
+			RegistryModuleID: s.settingsRegistryModuleID, NavigationModuleID: s.settingsNavigationModuleID,
 			RouteRegistryKey: settingsRouteRegistryKey,
 			Sections:         sections,
 		}, nil
@@ -65,6 +67,13 @@ func (s *rendererBridgeSession) ensureSettingsAdapter(
 	if err != nil {
 		return nil, err
 	}
+	for _, asset := range assets {
+		if rspackEntryScriptPattern.MatchString(asset) {
+			return s.ensureRspackSettingsAdapter(ctx, sections, generation)
+		}
+	}
+	s.settingsRegistryModuleID = ""
+	s.settingsNavigationModuleID = ""
 	settingsModuleURL, err := settingsAssetURL(assets, settingsPageScriptPattern)
 	if err != nil {
 		return nil, err

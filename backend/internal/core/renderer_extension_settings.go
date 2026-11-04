@@ -32,6 +32,8 @@ type SettingsAdapterConfiguration struct {
 	RegistryModuleURL   string                   `json:"registryModuleUrl"`
 	VisibilityModuleURL string                   `json:"visibilityModuleUrl"`
 	NavigationModuleURL string                   `json:"navigationModuleUrl"`
+	RegistryModuleID    string                   `json:"registryModuleId,omitempty"`
+	NavigationModuleID  string                   `json:"navigationModuleId,omitempty"`
 	IconRegistryKey     string                   `json:"iconRegistryKey"`
 	RouteRegistryKey    string                   `json:"routeRegistryKey"`
 	Sections            []RuntimeSettingsSection `json:"sections"`

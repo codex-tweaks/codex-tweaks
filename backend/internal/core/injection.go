@@ -556,9 +556,13 @@ func injectionScriptWithRendererBridge(
     globalThis[globalKey] = adapter;
 
     try {
+      const loadModule = async (url, moduleID) => {
+        const module = await import(url);
+        return moduleID ? module.__webpack_require__(moduleID) : module;
+      };
       const [registryModule, navigationModule] = await Promise.all([
-        import(configuration.registryModuleUrl),
-        import(configuration.navigationModuleUrl)
+        loadModule(configuration.registryModuleUrl, configuration.registryModuleId),
+        loadModule(configuration.navigationModuleUrl, configuration.navigationModuleId)
       ]);
       registry = Object.values(registryModule).find((value) =>
         Array.isArray(value)

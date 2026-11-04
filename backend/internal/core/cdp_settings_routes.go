@@ -12,6 +12,10 @@ const settingsRouteRegistryKey = "__CODEX_TWEAKS_SETTINGS_ROUTE_REGISTRY__"
 // Routes are converted to plain objects in app module scope before React renders
 // them. Discover that registry once per execution context, never via DOM/Fibers.
 func (s *rendererBridgeSession) exposeSettingsRouteRegistry(ctx context.Context, moduleURL string) error {
+	return s.exposeSettingsRouteRegistryInModule(ctx, moduleURL, "")
+}
+
+func (s *rendererBridgeSession) exposeSettingsRouteRegistryInModule(ctx context.Context, moduleURL, moduleID string) error {
 	group := "codex-tweaks-settings-routes"
 	defer func() {
 		_, _ = s.call(ctx, "Runtime.releaseObjectGroup", map[string]any{"objectGroup": group})
@@ -20,9 +24,9 @@ func (s *rendererBridgeSession) exposeSettingsRouteRegistry(ctx context.Context,
 	// Keep remote descriptions bounded: returning every exported function from a
 	// large application bundle can serialize megabytes of function source.
 	raw, err := s.call(ctx, "Runtime.evaluate", map[string]any{
-		"expression": fmt.Sprintf(`import(%s).then(module => Object.values(module)
+		"expression": fmt.Sprintf(`%s.then(module => Object.values(module)
   .filter(value => typeof value === "function" && value.name && value.toString().length <= 2048)
-  .slice(0, 16))`, JSONLiteral(moduleURL)),
+  .slice(0, 16))`, settingsModuleExpression(moduleURL, moduleID)),
 		"awaitPromise": true, "objectGroup": group,
 	})
 	if err != nil {
@@ -56,7 +60,7 @@ func (s *rendererBridgeSession) exposeSettingsRouteRegistry(ctx context.Context,
 				return err
 			}
 			for _, scope := range scopes.Result {
-				if scope.Value.Description != "Module" || scope.Value.ObjectID == "" || seenScopes[scope.Value.ObjectID] {
+				if !settingsModuleScope(scope.Value.Description, moduleID) || scope.Value.ObjectID == "" || seenScopes[scope.Value.ObjectID] {
 					continue
 				}
 				seenScopes[scope.Value.ObjectID] = true

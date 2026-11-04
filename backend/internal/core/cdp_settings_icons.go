@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 )
 
 const settingsIconRegistryKey = "__CODEX_TWEAKS_SETTINGS_ICON_REGISTRY__"
@@ -39,12 +38,16 @@ func (s *rendererBridgeSession) settingsProperties(ctx context.Context, objectID
 // accessor. Read only that module's scopes through CDP; never evaluate a paused
 // frame, patch application sources, or search global/user state.
 func (s *rendererBridgeSession) exposeSettingsIconRegistry(ctx context.Context, moduleURL string) error {
+	return s.exposeSettingsIconRegistryInModule(ctx, moduleURL, "")
+}
+
+func (s *rendererBridgeSession) exposeSettingsIconRegistryInModule(ctx context.Context, moduleURL, moduleID string) error {
 	group := "codex-tweaks-settings-icons"
 	defer func() {
 		_, _ = s.call(ctx, "Runtime.releaseObjectGroup", map[string]any{"objectGroup": group})
 	}()
 	raw, err := s.call(ctx, "Runtime.evaluate", map[string]any{
-		"expression":   fmt.Sprintf("import(%s).then(module => Object.values(module))", JSONLiteral(moduleURL)),
+		"expression":   settingsModuleExpression(moduleURL, moduleID) + ".then(module => Object.values(module))",
 		"awaitPromise": true, "objectGroup": group,
 	})
 	if err != nil {
@@ -80,7 +83,7 @@ func (s *rendererBridgeSession) exposeSettingsIconRegistry(ctx context.Context, 
 				return err
 			}
 			for _, scope := range scopes.Result {
-				if scope.Value.Description != "Module" || scope.Value.ObjectID == "" {
+				if !settingsModuleScope(scope.Value.Description, moduleID) || scope.Value.ObjectID == "" {
 					continue
 				}
 				variables, err := s.settingsProperties(ctx, scope.Value.ObjectID)

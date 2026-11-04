@@ -8,7 +8,7 @@ import (
 func TestRspackSettingsDiscovery(t *testing.T) {
 	node, err := exec.LookPath("node")
 	if err != nil {
-		t.Skip("Node.js is not available")
+		t.Fatal("Node.js is required; install the tools declared in mise.toml")
 	}
 	// Only matching settings modules may be instantiated. Discovery must wait
 	// for async startup, and reject missing or ambiguous settings factories.

@@ -9,6 +9,38 @@ import (
 
 const settingsRouteRegistryKey = "__CODEX_TWEAKS_SETTINGS_ROUTE_REGISTRY__"
 
+const settingsRouteRegistryDiscovery = `function(key) {
+  if (!this.object) return false;
+  const arrays = Object.values(this.object).filter(Array.isArray);
+  const seen = new Set();
+  const registries = [];
+  const queue = arrays.flatMap(array => array);
+  for (let index = 0; index < queue.length && index < 10000; index++) {
+    const route = queue[index];
+    if (!route || typeof route !== "object" || seen.has(route)
+        || !Object.hasOwn(route, "id")) continue;
+    seen.add(route);
+    const modalRoutes = route.element?.props?.settingsRoutes;
+    if (Array.isArray(modalRoutes)) queue.push(...modalRoutes);
+    const children = route.children;
+    if (!Array.isArray(children)) continue;
+    if (route.path === "/settings"
+        && children.some(child => child.path === "general-settings")
+        && children.some(child => child.path === "personalization")) {
+      const template = children.find(child => child.path === "*");
+      if (!template?.element || Object.isFrozen(children)) return false;
+      if (!registries.some(registry => registry.children === children)) {
+        registries.push({ children, template });
+      }
+    }
+    queue.push(...children);
+  }
+  if (!registries.length) return false;
+  // Codex keeps separate route objects for the main router and settings modal.
+  globalThis[key] = { ...registries[0], registries };
+  return true;
+}`
+
 // Routes are converted to plain objects in app module scope before React renders
 // them. Discover that registry once per execution context, never via DOM/Fibers.
 func (s *rendererBridgeSession) exposeSettingsRouteRegistry(ctx context.Context, moduleURL string) error {
@@ -82,30 +114,7 @@ func (s *rendererBridgeSession) publishSettingsRouteRegistry(ctx context.Context
 		"objectId": scopeID, "arguments": []map[string]any{{"value": settingsRouteRegistryKey}}, "returnByValue": true,
 		// CDP represents an internal module scope as {description, object}. Read
 		// only route-shaped arrays in that module, not global or component state.
-		"functionDeclaration": `function(key) {
-  if (!this.object) return false;
-  const arrays = Object.values(this.object).filter(Array.isArray);
-  const seen = new Set();
-  const queue = arrays.flatMap(array => array);
-  for (let index = 0; index < queue.length && index < 10000; index++) {
-    const route = queue[index];
-    if (!route || typeof route !== "object" || seen.has(route)
-        || !Object.hasOwn(route, "id")) continue;
-    seen.add(route);
-    const children = route.children;
-    if (!Array.isArray(children)) continue;
-    if (route.path === "/settings"
-        && children.some(child => child.path === "general-settings")
-        && children.some(child => child.path === "personalization")) {
-      const template = children.find(child => child.path === "*");
-      if (!template?.element || Object.isFrozen(children)) return false;
-      globalThis[key] = { children, template };
-      return true;
-    }
-    queue.push(...children);
-  }
-  return false;
-}`,
+		"functionDeclaration": settingsRouteRegistryDiscovery,
 	})
 	if err != nil {
 		return false, err

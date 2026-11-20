@@ -92,7 +92,7 @@ func TestInjectionExposesTypedNodeAndSettingsExtensions(t *testing.T) {
 		"createPackageNode(", "createPackageUI(", "ui.settingsSections",
 		"settleNodeInvocation", "emitNodeEvent",
 		"registry.push({ slug: descriptor.slug })", "iconMap[descriptor.slug]",
-		"settingsRouteChildren.splice(", "dispatchHostMessage", "labelRegistry", "groupRegistry",
+		"children.splice(", "dispatchHostMessage", "labelRegistry", "groupRegistry",
 		"settingsAdapter?.cleanup?.()",
 		"nodePendingLimit = 64",
 		"settingsAdapterReady",

@@ -185,8 +185,7 @@ func injectionScriptWithRendererBridge(
     let labelRegistry = null;
     let groupRegistry = null;
     let navigationBus = null;
-    let settingsRouteChildren = null;
-    let routeTemplate = null;
+    let settingsRouteRegistries = [];
     let adapterDisposed = false;
 
     const originalArrayMapDescriptor = Object.getOwnPropertyDescriptor(Array.prototype, "map");
@@ -201,7 +200,8 @@ func injectionScriptWithRendererBridge(
     };
     const isSettingsGroupRegistry = (value) =>
       Array.isArray(value)
-      && value.some((group) => group?.key === "personal" && group.slugs?.includes?.("personalization"))
+      && value.some((group) => (group?.key === "personal" || group?.key === "app")
+        && group.slugs?.includes?.("personalization"))
       && value.some((group) => group?.key === "integrations")
       && value.some((group) => group?.key === "coding");
     const applyGroupPlacements = () => {
@@ -214,8 +214,11 @@ func injectionScriptWithRendererBridge(
       }
       for (const descriptor of descriptors.values()) {
         if (!routeElements.has(descriptor.slug)) continue;
+        // Package group names remain stable when Codex reorganizes its sidebar.
+        const groupAliases = { personal: "app", archived: "data-privacy" };
         const group = groupRegistry.find((candidate) => candidate?.key === descriptor.group)
-          ?? groupRegistry.find((candidate) => candidate?.key === "personal")
+          ?? groupRegistry.find((candidate) => candidate?.key === groupAliases[descriptor.group])
+          ?? groupRegistry.find((candidate) => candidate?.slugs?.includes?.("personalization"))
           ?? groupRegistry[0];
         if (!Array.isArray(group?.slugs)) continue;
         const afterIndex = descriptor.after ? group.slugs.indexOf(descriptor.after) : -1;
@@ -238,52 +241,55 @@ func injectionScriptWithRendererBridge(
     }
 
     const initializeRoutes = () => {
-      const routes = globalThis[configuration.routeRegistryKey];
-      const children = routes?.children;
-      if (!Array.isArray(children) || !routes.template?.element) {
+      const registries = globalThis[configuration.routeRegistryKey];
+      if (!Array.isArray(registries) || !registries.length) {
         throw new Error("Codex settings route registry unavailable");
       }
-      if (Object.isFrozen(children)) throw new Error("Codex settings route registry is immutable");
-      settingsRouteChildren = children;
-      routeTemplate = routes.template;
+      settingsRouteRegistries = registries;
     };
     const installRoute = (descriptor) => {
       if (routeElements.has(descriptor.slug)) return;
-      const hostElement = {
-        ...routeTemplate.element,
-        key: null,
-        type: "div",
-        props: {
-          "aria-label": descriptor.title,
-          "data-codex-tweaks-settings-section-host": descriptor.slug,
-          className: "h-full min-h-0 overflow-y-auto",
-          role: "tabpanel"
-        },
-        _owner: null
-      };
-      const routeElement = {
-        ...routeTemplate,
-        id: "codex-tweaks-settings-" + descriptor.slug,
-        children: undefined,
-        element: hostElement,
-        index: undefined,
-        path: descriptor.slug
-      };
-      const wildcardIndex = settingsRouteChildren.findIndex(
-        (candidate) => candidate?.path === "*"
-      );
-      settingsRouteChildren.splice(
-        wildcardIndex >= 0 ? wildcardIndex : settingsRouteChildren.length,
-        0,
-        routeElement
-      );
-      routeElements.set(descriptor.slug, routeElement);
+      const installed = [];
+      for (const { children, template: routeTemplate } of settingsRouteRegistries) {
+        const hostElement = {
+          ...routeTemplate.element,
+          key: null,
+          type: "div",
+          props: {
+            "aria-label": descriptor.title,
+            "data-codex-tweaks-settings-section-host": descriptor.slug,
+            className: "h-full min-h-0 overflow-y-auto",
+            role: "tabpanel"
+          },
+          _owner: null
+        };
+        const routeElement = {
+          ...routeTemplate,
+          id: "codex-tweaks-settings-" + descriptor.slug,
+          children: undefined,
+          element: hostElement,
+          index: undefined,
+          path: descriptor.slug
+        };
+        const wildcardIndex = children.findIndex(
+          (candidate) => candidate?.path === "*"
+        );
+        children.splice(
+          wildcardIndex >= 0 ? wildcardIndex : children.length,
+          0,
+          routeElement
+        );
+        installed.push({ children, routeElement });
+      }
+      routeElements.set(descriptor.slug, installed);
     };
     const removeRoute = (slug) => {
-      const routeElement = routeElements.get(slug);
-      if (!routeElement || !settingsRouteChildren) return;
-      const index = settingsRouteChildren.indexOf(routeElement);
-      if (index >= 0) settingsRouteChildren.splice(index, 1);
+      const installed = routeElements.get(slug);
+      if (!installed) return;
+      for (const { children, routeElement } of installed) {
+        const index = children.indexOf(routeElement);
+        if (index >= 0) children.splice(index, 1);
+      }
       routeElements.delete(slug);
     };
 
@@ -371,7 +377,7 @@ func injectionScriptWithRendererBridge(
       mounted.delete(element);
     };
     const scanMounts = () => {
-      if (adapterDisposed || !settingsRouteChildren || !renderers.size) return;
+      if (adapterDisposed || !settingsRouteRegistries.length || !renderers.size) return;
       for (const [element, record] of mounted) {
         if (!element.isConnected || renderers.get(record.slug) !== record.renderer) {
           cleanupMount(element, record);
@@ -444,7 +450,7 @@ func injectionScriptWithRendererBridge(
 
     const adapter = {
       get ready() {
-        return Boolean(settingsRouteChildren) && !adapterDisposed;
+        return settingsRouteRegistries.length > 0 && !adapterDisposed;
       },
       has(slug) {
         return renderers.has(slug);
@@ -459,7 +465,7 @@ func injectionScriptWithRendererBridge(
         if (typeof mount !== "function") {
           throw new TypeError("Settings section mount must be a function");
         }
-        if (adapterDisposed || !settingsRouteChildren || !registry || !iconMap || !navigationBus) {
+        if (adapterDisposed || !settingsRouteRegistries.length || !registry || !iconMap || !navigationBus) {
           throw new Error("Codex settings module is not ready");
         }
         if (renderers.has(descriptor.slug)) {
@@ -590,7 +596,8 @@ func injectionScriptWithRendererBridge(
           }
           const result = callback.call(thisArg, entry, index, source);
           if (result?.section === entry && typeof result.visible === "boolean"
-              && typeof result.pending === "boolean" && typeof result.error === "boolean") {
+              && typeof result.pending === "boolean"
+              && (result.error === undefined || typeof result.error === "boolean")) {
             projectsVisibility = true;
           }
           return result;

@@ -93,12 +93,11 @@ const modal = makeRoute("modal");
 const wrapper = {id:"wrapper",element:{props:{settingsRoutes:[modal]}},children:[main]};
 const scope = {object:{routes:[wrapper],duplicate:[main],unrelated:[{path:"/settings"}]}};
 assert.equal(discover.call(scope,"routes"), true);
-assert.equal(globalThis.routes.registries.length, 2);
-assert.equal(globalThis.routes.registries[0].children, main.children);
-assert.equal(globalThis.routes.registries[1].children, modal.children);
+assert.equal(globalThis.routes.length, 2);
+assert.equal(globalThis.routes[0].children, main.children);
+assert.equal(globalThis.routes[1].children, modal.children);
 const configuration = {routeRegistryKey:"routes"};
 const routeElements = new Map();
-let settingsRouteChildren = null;
 let settingsRouteRegistries = [];
 `+routes+`
 initializeRoutes();
@@ -112,9 +111,13 @@ for (const route of [main,modal]) {
 removeRoute("background");
 for (const route of [main,modal]) assert.deepEqual(route.children.map(r=>r.path), ["general-settings","personalization","*"]);
 assert.equal(routeElements.size, 0);
-// Legacy builds expose a single table. Both install and cleanup still work.
-globalThis.routes = {children:main.children,template:main.children.at(-1)};
-initializeRoutes(); installRoute(descriptor); removeRoute("background");
+// Builds with a single route table use the same discovery and installation paths.
+assert.equal(discover.call({object:{routes:[main]}},"routes"), true);
+assert.equal(globalThis.routes.length, 1);
+initializeRoutes();
+installRoute(descriptor);
+assert.equal(main.children[2].path, "background");
+removeRoute("background");
 assert.equal(main.children.length, 3);
 delete globalThis.rejected;
 Object.freeze(modal.children);

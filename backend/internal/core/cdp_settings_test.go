@@ -429,9 +429,10 @@ func TestSettingsAdapterLiveInjection(t *testing.T) {
         && typeof value["general-settings"] === "function"
       );
       const routes = globalThis[%s];
-      const routeRegistered = routes?.children?.some((route) =>
-        route.path === slug && route.element?.props?.["data-codex-tweaks-settings-section-host"] === slug
-      ) ?? false;
+      const routeRegistered = routes?.length > 0 && routes.every(({ children }) =>
+        children.some((route) => route.path === slug
+          && route.element?.props?.["data-codex-tweaks-settings-section-host"] === slug)
+      );
       return {
         slug,
         customIconValid: typeof iconMap?.[slug] === "function" || Boolean(iconMap?.[slug]?.component),

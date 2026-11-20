@@ -37,7 +37,7 @@ const settingsRouteRegistryDiscovery = `function(key) {
   }
   if (!registries.length) return false;
   // Codex keeps separate route objects for the main router and settings modal.
-  globalThis[key] = { ...registries[0], registries };
+  globalThis[key] = registries;
   return true;
 }`
 

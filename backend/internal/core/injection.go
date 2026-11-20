@@ -185,7 +185,6 @@ func injectionScriptWithRendererBridge(
     let labelRegistry = null;
     let groupRegistry = null;
     let navigationBus = null;
-    let settingsRouteChildren = null;
     let settingsRouteRegistries = [];
     let adapterDisposed = false;
 
@@ -242,18 +241,11 @@ func injectionScriptWithRendererBridge(
     }
 
     const initializeRoutes = () => {
-      const routes = globalThis[configuration.routeRegistryKey];
-      const children = routes?.children;
-      if (!Array.isArray(children) || !routes.template?.element) {
+      const registries = globalThis[configuration.routeRegistryKey];
+      if (!Array.isArray(registries) || !registries.length) {
         throw new Error("Codex settings route registry unavailable");
       }
-      if (Object.isFrozen(children)) throw new Error("Codex settings route registry is immutable");
-      settingsRouteChildren = children;
-      settingsRouteRegistries = routes.registries ?? [routes];
-      if (settingsRouteRegistries.some((registry) => !Array.isArray(registry.children)
-          || !registry.template?.element || Object.isFrozen(registry.children))) {
-        throw new Error("Codex settings route registry is immutable or unavailable");
-      }
+      settingsRouteRegistries = registries;
     };
     const installRoute = (descriptor) => {
       if (routeElements.has(descriptor.slug)) return;
@@ -385,7 +377,7 @@ func injectionScriptWithRendererBridge(
       mounted.delete(element);
     };
     const scanMounts = () => {
-      if (adapterDisposed || !settingsRouteChildren || !renderers.size) return;
+      if (adapterDisposed || !settingsRouteRegistries.length || !renderers.size) return;
       for (const [element, record] of mounted) {
         if (!element.isConnected || renderers.get(record.slug) !== record.renderer) {
           cleanupMount(element, record);
@@ -458,7 +450,7 @@ func injectionScriptWithRendererBridge(
 
     const adapter = {
       get ready() {
-        return Boolean(settingsRouteChildren) && !adapterDisposed;
+        return settingsRouteRegistries.length > 0 && !adapterDisposed;
       },
       has(slug) {
         return renderers.has(slug);
@@ -473,7 +465,7 @@ func injectionScriptWithRendererBridge(
         if (typeof mount !== "function") {
           throw new TypeError("Settings section mount must be a function");
         }
-        if (adapterDisposed || !settingsRouteChildren || !registry || !iconMap || !navigationBus) {
+        if (adapterDisposed || !settingsRouteRegistries.length || !registry || !iconMap || !navigationBus) {
           throw new Error("Codex settings module is not ready");
         }
         if (renderers.has(descriptor.slug)) {
